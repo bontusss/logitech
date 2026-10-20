@@ -1,0 +1,11 @@
+.env
+*.env.*
+node_modules
+frontend/.output
+frontend/.nuxt
+backend/internal/web/dist/*
+!backend/internal/web/dist/.gitkeep
+backend/bin
+.run/
+*.log
+docker-compose.override.yml
