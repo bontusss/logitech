@@ -52,7 +52,7 @@ func main() {
 	}
 }
 
-func health(pool *sql.DB, dsn string) http.HandlerFunc {
+func health(pool *sql.DB, _ string) http.HandlerFunc {
 	type resp struct {
 		Status string `json:"status"`
 		DB     string `json:"db"`
