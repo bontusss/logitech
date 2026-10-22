@@ -82,7 +82,7 @@ func main() {
 	defer redisStore.Close()
 
 	authHandler := handler.NewAuthHandler(cfg, queries, redisStore)
-	staffHandler := handler.NewStaffHandler(queries)
+	staffHandler := handler.NewStaffHandler(cfg, queries)
 	branchHandler := handler.NewBranchHandler(queries)
 
 	r := gin.Default()
@@ -104,11 +104,21 @@ func main() {
 			protected.GET("/auth/me", authHandler.GetMe)
 			protected.POST("/auth/logout", authHandler.Logout)
 
+			// Staff / user management
 			protected.POST("/staff", staffHandler.CreateStaff)
 			protected.GET("/staff", auth.RequireRoles(auth.RoleSystemAdmin, auth.RoleOwner, auth.RoleManager), staffHandler.ListStaff)
 			protected.GET("/staff/:id", staffHandler.GetStaff)
+			protected.PUT("/staff/:id", auth.RequireRoles(auth.RoleSystemAdmin, auth.RoleOwner, auth.RoleManager), staffHandler.UpdateStaff)
+			protected.DELETE("/staff/:id", auth.RequireRoles(auth.RoleSystemAdmin, auth.RoleOwner, auth.RoleManager), staffHandler.RevokeStaff)
+			protected.POST("/staff/:id/reset-pin", auth.RequireRoles(auth.RoleSystemAdmin, auth.RoleOwner, auth.RoleManager), staffHandler.ResetStaffPin)
+			protected.POST("/staff/:id/unlock", auth.RequireRoles(auth.RoleSystemAdmin, auth.RoleOwner, auth.RoleManager), staffHandler.UnlockStaffAccount)
+			protected.GET("/staff/:id/first-login", staffHandler.FirstLoginStatus)
 
+			// Branches: read for all authenticated users, CRUD for the owner (and system admin)
 			protected.GET("/branches", branchHandler.ListBranches)
+			protected.POST("/branches", auth.RequireRoles(auth.RoleSystemAdmin, auth.RoleOwner), branchHandler.CreateBranch)
+			protected.PUT("/branches/:id", auth.RequireRoles(auth.RoleSystemAdmin, auth.RoleOwner), branchHandler.UpdateBranch)
+			protected.DELETE("/branches/:id", auth.RequireRoles(auth.RoleSystemAdmin, auth.RoleOwner), branchHandler.DeleteBranch)
 		}
 	}
 

@@ -8,12 +8,18 @@ import (
 	"backend/internal/auth"
 	"backend/internal/config"
 	"backend/internal/db/sqlc"
+	"backend/internal/generator"
 	"backend/internal/redis"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 )
+
+// maxFailedLoginAttempts is the number of failed login attempts before the
+// account is locked. A locked account can be reopened by the manager of the
+// staff's branch, or by the owner across all branches.
+const maxFailedLoginAttempts = 3
 
 // AuthHandler handles authentication requests.
 type AuthHandler struct {
@@ -32,9 +38,16 @@ func NewAuthHandler(cfg *config.Config, queries *sqlc.Queries, store *redis.Stor
 }
 
 // LoginRequest defines credentials for staff or admin login.
+//
+// For regular users, "pin" holds either their personal PIN or, before the PIN
+// has been set (first login / after a PIN reset), the one-time password issued
+// by the system. On first login "new_pin" is required; it becomes the user's
+// personal PIN (max 10 chars).
 type LoginRequest struct {
-	StaffID  string `json:"staff_id" example:"STF-001"`
-	Pin      string `json:"pin" example:"1001"`
+	StaffID string `json:"staff_id" example:"GAL-001"`
+	Pin     string `json:"pin" example:"7Y3B9QK2"`
+	// NewPin is required on first login (and after a PIN reset) to create the personal PIN.
+	NewPin   string `json:"new_pin,omitempty" example:"987654"`
 	Username string `json:"username,omitempty" example:"admin"`
 	Password string `json:"password,omitempty" example:"adminpassword123"`
 }
@@ -47,15 +60,18 @@ type AdminLoginRequest struct {
 
 // StaffProfile represents the public user info returned in auth responses.
 type StaffProfile struct {
-	ID        string `json:"id" example:"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1"`
-	StaffID   string `json:"staff_id" example:"STF-001"`
-	FullName  string `json:"full_name" example:"Chinedu Okafor"`
-	Role      string `json:"role" example:"staff"`
-	BranchID  string `json:"branch_id,omitempty" example:"11111111-1111-4111-8111-111111111111"`
-	Phone     string `json:"phone,omitempty" example:"08031110001"`
-	Email     string `json:"email,omitempty" example:"staff@logitech.example"`
-	Status    string `json:"status" example:"active"`
-	CreatedAt string `json:"created_at,omitempty"`
+	ID            string `json:"id" example:"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1"`
+	StaffID       string `json:"staff_id" example:"GAL-001"`
+	FullName      string `json:"full_name" example:"Chinedu Okafor"`
+	Role          string `json:"role" example:"staff"`
+	JobRole       string `json:"job_role,omitempty" example:"operations"`
+	BranchID      string `json:"branch_id,omitempty" example:"11111111-1111-4111-8111-111111111111"`
+	Phone         string `json:"phone,omitempty" example:"08031110001"`
+	Email         string `json:"email,omitempty" example:"staff@logitech.example"`
+	Status        string `json:"status" example:"active"`
+	FirstLoginDone bool  `json:"first_login_done" example:"true"`
+	Locked        bool   `json:"locked" example:"false"`
+	CreatedAt     string `json:"created_at,omitempty"`
 }
 
 // AuthResponse represents the response with the generated JWT token and user info.
@@ -71,9 +87,30 @@ type ErrorResponse struct {
 	Error string `json:"error" example:"invalid credentials"`
 }
 
+// newStaffProfile maps a staff row onto the public profile representation.
+func newStaffProfile(s sqlc.Staff) StaffProfile {
+	return StaffProfile{
+		ID:             s.ID.String(),
+		StaffID:        s.StaffID,
+		FullName:       s.FullName,
+		Role:           string(s.Role),
+		JobRole:        jobRoleString(s.JobRole),
+		BranchID:       s.BranchID.String(),
+		Phone:          s.Phone.String,
+		Email:          s.Email.String,
+		Status:         string(s.Status),
+		FirstLoginDone: s.FirstLoginDone,
+		Locked:         s.LockedAt.Valid,
+		CreatedAt:      s.CreatedAt.Format(time.RFC3339),
+	}
+}
+
 // Login godoc
 // @Summary Staff and Admin Login
-// @Description Authenticate staff using staff_id and 4-digit alphanumeric PIN, or system admin using username and password.
+// @Description Authenticate staff using staff_id and a secret, or system admin using username and password.
+// @Description - First login / after a PIN reset: "pin" holds the one-time password and "new_pin" is required; the new PIN (4-10 chars) becomes the user's personal PIN.
+// @Description - Afterwards: "pin" holds the personal PIN.
+// @Description The account locks after 3 failed login attempts; a locked staff account can be reopened by the manager of its branch or by the owner.
 // @Tags auth
 // @Accept json
 // @Produce json
@@ -107,7 +144,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		return
 	}
 
-	staff, err := h.queries.GetStaffByStaffID(c.Request.Context(), sql.NullString{String: req.StaffID, Valid: true})
+	staff, err := h.queries.GetStaffByStaffID(c.Request.Context(), req.StaffID)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, ErrorResponse{Error: "invalid staff_id or pin"})
 		return
@@ -118,28 +155,70 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		return
 	}
 
-	// Verify PIN: first check plain pin match, or bcrypt check against password_hash
-	pinMatches := staff.Pin == req.Pin
-	if !pinMatches && staff.PasswordHash != "" {
-		if bcryptErr := bcrypt.CompareHashAndPassword([]byte(staff.PasswordHash), []byte(req.Pin)); bcryptErr == nil {
-			pinMatches = true
-		}
-	}
-
-	if !pinMatches {
-		c.JSON(http.StatusUnauthorized, ErrorResponse{Error: "invalid staff_id or pin"})
+	// A locked account cannot log in; it must be reopened by the branch
+	// manager or the owner.
+	if staff.LockedAt.Valid {
+		c.JSON(http.StatusForbidden, ErrorResponse{Error: "account is locked after too many failed login attempts; contact your branch manager or the owner to unlock it"})
 		return
 	}
 
-	ttl := 24 * time.Hour
+	// 3. Pin-reset pending (first login or after reset): the provided secret
+	// must match the outstanding one-time password, and a new PIN is required.
+	otpPending := !staff.FirstLoginDone || staff.OtpHash.Valid
+	if otpPending {
+		if req.NewPin == "" {
+			c.JSON(http.StatusBadRequest, ErrorResponse{Error: "your one-time password was accepted for a first login; provide new_pin (4-10 characters) to create your PIN"})
+			return
+		}
+		if !compareOtpHash(staff.OtpHash, req.Pin) {
+			c.JSON(h.handleFailedLogin(c, staff.ID), ErrorResponse{Error: "invalid staff_id or one-time password"})
+			return
+		}
+		if !generator.ValidatePin(req.NewPin) {
+			c.JSON(http.StatusBadRequest, ErrorResponse{Error: "new_pin must be between 4 and 10 characters"})
+			return
+		}
+
+		hash, err := bcrypt.GenerateFromPassword([]byte(req.NewPin), bcrypt.DefaultCost)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "failed to hash credentials"})
+			return
+		}
+
+		updated, err := h.queries.CompleteFirstLogin(c.Request.Context(), sqlc.CompleteFirstLoginParams{
+			ID:      staff.ID,
+			PinHash: sql.NullString{String: string(hash), Valid: true},
+		})
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "failed to save your PIN: " + err.Error()})
+			return
+		}
+		staff = updated
+	} else {
+		// 4. Normal login: verify against the saved PIN hash.
+		if staff.PinHash.Valid && bcrypt.CompareHashAndPassword([]byte(staff.PinHash.String), []byte(req.Pin)) == nil {
+			if staff.FailedLoginAttempts > 0 {
+				_, _ = h.queries.ResetLoginState(c.Request.Context(), staff.ID)
+			}
+		} else if staff.OtpHash.Valid && compareOtpHash(staff.OtpHash, req.Pin) {
+			// Valid one-time password after a PIN reset that already had a first login.
+			c.JSON(http.StatusBadRequest, ErrorResponse{Error: "your one-time password was accepted; provide new_pin (4-10 characters) to create a new PIN"})
+			return
+		} else {
+			c.JSON(h.handleFailedLogin(c, staff.ID), ErrorResponse{Error: "invalid staff_id or pin"})
+			return
+		}
+	}
+
 	token, err := auth.GenerateToken(
 		staff.ID.String(),
-		staff.StaffID.String,
+		staff.StaffID,
 		staff.FullName,
 		string(staff.Role),
+		jobRoleString(staff.JobRole),
 		staff.BranchID.String(),
 		h.cfg.JWTSecret,
-		ttl,
+		24*time.Hour,
 	)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "failed to generate authentication token"})
@@ -149,19 +228,41 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	c.JSON(http.StatusOK, AuthResponse{
 		Token:     token,
 		TokenType: "Bearer",
-		ExpiresIn: int64(ttl.Seconds()),
-		User: StaffProfile{
-			ID:        staff.ID.String(),
-			StaffID:   staff.StaffID.String,
-			FullName:  staff.FullName,
-			Role:      string(staff.Role),
-			BranchID:  staff.BranchID.String(),
-			Phone:     staff.Phone.String,
-			Email:     staff.Email.String,
-			Status:    string(staff.Status),
-			CreatedAt: staff.CreatedAt.Format(time.RFC3339),
-		},
+		ExpiresIn: int64((24 * time.Hour).Seconds()),
+		User:      newStaffProfile(staff),
 	})
+}
+
+// jobRoleString renders an optional staff job role as a plain string
+// (empty for owner/manager accounts).
+func jobRoleString(nr sqlc.NullStaffJobRole) string {
+	if !nr.Valid {
+		return ""
+	}
+	return string(nr.StaffJobRole)
+}
+
+// compareOtpHash compares a clear-text one-time password against its bcrypt hash.
+func compareOtpHash(hash sql.NullString, secret string) bool {
+	if !hash.Valid || hash.String == "" {
+		return false
+	}
+	return bcrypt.CompareHashAndPassword([]byte(hash.String), []byte(secret)) == nil
+}
+
+// handleFailedLogin records a failed attempt and locks the account after 3
+// failures. It returns the HTTP status to respond with.
+func (h *AuthHandler) handleFailedLogin(c *gin.Context, staffID uuid.UUID) int {		row, err := h.queries.RecordFailedLogin(c.Request.Context(), sqlc.RecordFailedLoginParams{
+			ID:                  staffID,
+			FailedLoginAttempts: maxFailedLoginAttempts,
+		})
+	if err != nil {
+		return http.StatusUnauthorized
+	}
+	if row.LockedAt.Valid {
+		return http.StatusForbidden
+	}
+	return http.StatusUnauthorized
 }
 
 // AdminLogin godoc
@@ -198,6 +299,7 @@ func (h *AuthHandler) issueAdminToken(c *gin.Context) {
 		"System Administrator",
 		auth.RoleSystemAdmin,
 		"",
+		"",
 		h.cfg.JWTSecret,
 		ttl,
 	)
@@ -211,12 +313,13 @@ func (h *AuthHandler) issueAdminToken(c *gin.Context) {
 		TokenType: "Bearer",
 		ExpiresIn: int64(ttl.Seconds()),
 		User: StaffProfile{
-			ID:       "admin",
-			StaffID:  "SYS-ADMIN",
-			FullName: "System Administrator",
-			Role:     auth.RoleSystemAdmin,
-			Email:    h.cfg.AdminEmail,
-			Status:   "active",
+			ID:             "admin",
+			StaffID:        "SYS-ADMIN",
+			FullName:       "System Administrator",
+			Role:           auth.RoleSystemAdmin,
+			Email:          h.cfg.AdminEmail,
+			Status:         "active",
+			FirstLoginDone: true,
 		},
 	})
 }
@@ -239,12 +342,13 @@ func (h *AuthHandler) GetMe(c *gin.Context) {
 
 	if claims.Role == auth.RoleSystemAdmin {
 		c.JSON(http.StatusOK, StaffProfile{
-			ID:       "admin",
-			StaffID:  "SYS-ADMIN",
-			FullName: "System Administrator",
-			Role:     auth.RoleSystemAdmin,
-			Email:    h.cfg.AdminEmail,
-			Status:   "active",
+			ID:             "admin",
+			StaffID:        "SYS-ADMIN",
+			FullName:       "System Administrator",
+			Role:           auth.RoleSystemAdmin,
+			Email:          h.cfg.AdminEmail,
+			Status:         "active",
+			FirstLoginDone: true,
 		})
 		return
 	}
@@ -261,17 +365,7 @@ func (h *AuthHandler) GetMe(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, StaffProfile{
-		ID:        staff.ID.String(),
-		StaffID:   staff.StaffID.String,
-		FullName:  staff.FullName,
-		Role:      string(staff.Role),
-		BranchID:  staff.BranchID.String(),
-		Phone:     staff.Phone.String,
-		Email:     staff.Email.String,
-		Status:    string(staff.Status),
-		CreatedAt: staff.CreatedAt.Format(time.RFC3339),
-	})
+	c.JSON(http.StatusOK, newStaffProfile(staff))
 }
 
 // Logout godoc

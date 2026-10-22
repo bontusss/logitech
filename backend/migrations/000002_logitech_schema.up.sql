@@ -4,6 +4,14 @@ CREATE TYPE "staff_role" AS ENUM (
   'staff'
 );
 
+-- Job sub-roles for staff: operations, dispatch, receiving.
+-- Managers can perform all of them.
+CREATE TYPE "staff_job_role" AS ENUM (
+  'operations',
+  'dispatch',
+  'receiving'
+);
+
 CREATE TYPE "record_status" AS ENUM (
   'active',
   'inactive'
@@ -125,13 +133,28 @@ CREATE TABLE "staff" (
   "full_name" varchar(150) NOT NULL,
   "phone" varchar(30),
   "email" varchar(255) UNIQUE,
-  "staff_id" varchar(10) UNIQUE,
-  "pin" varchar(4) UNIQUE NOT NULL,
-  "password_hash" varchar(255) NOT NULL,
+  -- Auto-generated on creation, format: <STAFF_ID_PREFIX>-NNN (e.g. GAL-001);
+  -- prefix is configurable via the STAFF_ID_PREFIX env var.
+  "staff_id" varchar(10) UNIQUE NOT NULL,
+  -- bcrypt hash of the pending one-time password (issued at creation and on PIN
+  -- reset). NULL once consumed, i.e. after the user sets their PIN.
+  "otp_hash" varchar(255),
+  -- bcrypt hash of the personal PIN chosen by the user on first login (max 10 chars).
+  "pin_hash" varchar(255),
   "role" staff_role NOT NULL,
+  -- Only meaningful when role = 'staff'.
+  "job_role" staff_job_role,
   "status" record_status NOT NULL DEFAULT 'active',
+  "first_login_done" boolean NOT NULL DEFAULT false,
+  "first_login_at" timestamptz,
+  "failed_login_attempts" int NOT NULL DEFAULT 0,
+  -- Set after 3 failed login attempts; cleared by the branch manager or the owner.
+  "locked_at" timestamptz,
+  -- Staff are created by their branch manager; managers by the owner.
+  "created_by" uuid,
   "created_at" timestamptz NOT NULL DEFAULT (now()),
-  "updated_at" timestamptz NOT NULL DEFAULT (now())
+  "updated_at" timestamptz NOT NULL DEFAULT (now()),
+  CONSTRAINT "staff_job_role_required" CHECK ("role" <> 'staff' OR "job_role" IS NOT NULL)
 );
 
 CREATE TABLE "customers" (
@@ -332,9 +355,14 @@ CREATE INDEX ON "activity_logs" ("user_id");
 
 CREATE INDEX ON "activity_logs" ("created_at");
 
-COMMENT ON COLUMN "staff"."staff_id" IS 'eg: stf-001';
+COMMENT ON COLUMN "staff"."otp_hash" IS 'One-time password issued at creation / on PIN reset; NULL once consumed';
+COMMENT ON COLUMN "staff"."pin_hash" IS 'Personal PIN hash, chosen by the user on first login (max 10 chars)';
+COMMENT ON COLUMN "staff"."job_role" IS 'operations | dispatch | receiving; required when role = staff';
+COMMENT ON COLUMN "staff"."locked_at" IS 'Set after 3 failed login attempts';
 
 ALTER TABLE "staff" ADD FOREIGN KEY ("branch_id") REFERENCES "branches" ("id") DEFERRABLE INITIALLY IMMEDIATE;
+
+ALTER TABLE "staff" ADD FOREIGN KEY ("created_by") REFERENCES "staff" ("id") DEFERRABLE INITIALLY IMMEDIATE;
 
 ALTER TABLE "drivers" ADD FOREIGN KEY ("branch_id") REFERENCES "branches" ("id") DEFERRABLE INITIALLY IMMEDIATE;
 

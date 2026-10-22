@@ -8,53 +8,86 @@ package sqlc
 import (
 	"context"
 	"database/sql"
-	"time"
 
 	"github.com/google/uuid"
 )
-
-const checkPinExists = `-- name: CheckPinExists :one
-SELECT EXISTS(SELECT 1 FROM staff WHERE pin = $1)
-`
-
-func (q *Queries) CheckPinExists(ctx context.Context, pin string) (bool, error) {
-	row := q.db.QueryRowContext(ctx, checkPinExists, pin)
-	var exists bool
-	err := row.Scan(&exists)
-	return exists, err
-}
 
 const checkStaffIDExists = `-- name: CheckStaffIDExists :one
 SELECT EXISTS(SELECT 1 FROM staff WHERE staff_id = $1)
 `
 
-func (q *Queries) CheckStaffIDExists(ctx context.Context, staffID sql.NullString) (bool, error) {
+func (q *Queries) CheckStaffIDExists(ctx context.Context, staffID string) (bool, error) {
 	row := q.db.QueryRowContext(ctx, checkStaffIDExists, staffID)
 	var exists bool
 	err := row.Scan(&exists)
 	return exists, err
 }
 
+const completeFirstLogin = `-- name: CompleteFirstLogin :one
+UPDATE staff
+SET pin_hash = $2,
+    otp_hash = NULL,
+    first_login_done = true,
+    first_login_at = now(),
+    failed_login_attempts = 0,
+    updated_at = now()
+WHERE id = $1
+RETURNING id, branch_id, full_name, phone, email, staff_id, otp_hash, pin_hash, role, job_role, status, first_login_done, first_login_at, failed_login_attempts, locked_at, created_by, created_at, updated_at
+`
+
+type CompleteFirstLoginParams struct {
+	ID      uuid.UUID      `json:"id"`
+	PinHash sql.NullString `json:"pin_hash"`
+}
+
+func (q *Queries) CompleteFirstLogin(ctx context.Context, arg CompleteFirstLoginParams) (Staff, error) {
+	row := q.db.QueryRowContext(ctx, completeFirstLogin, arg.ID, arg.PinHash)
+	var i Staff
+	err := row.Scan(
+		&i.ID,
+		&i.BranchID,
+		&i.FullName,
+		&i.Phone,
+		&i.Email,
+		&i.StaffID,
+		&i.OtpHash,
+		&i.PinHash,
+		&i.Role,
+		&i.JobRole,
+		&i.Status,
+		&i.FirstLoginDone,
+		&i.FirstLoginAt,
+		&i.FailedLoginAttempts,
+		&i.LockedAt,
+		&i.CreatedBy,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const createStaff = `-- name: CreateStaff :one
 INSERT INTO staff (
-    id, branch_id, full_name, phone, email, staff_id, pin, password_hash, role, status
+    id, branch_id, full_name, phone, email, staff_id, otp_hash,
+    role, job_role, status, created_by
 ) VALUES (
-    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10
+    $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11
 )
-RETURNING id, branch_id, full_name, phone, email, staff_id, pin, password_hash, role, status, created_at, updated_at
+RETURNING id, branch_id, full_name, phone, email, staff_id, otp_hash, pin_hash, role, job_role, status, first_login_done, first_login_at, failed_login_attempts, locked_at, created_by, created_at, updated_at
 `
 
 type CreateStaffParams struct {
-	ID           uuid.UUID      `json:"id"`
-	BranchID     uuid.UUID      `json:"branch_id"`
-	FullName     string         `json:"full_name"`
-	Phone        sql.NullString `json:"phone"`
-	Email        sql.NullString `json:"email"`
-	StaffID      sql.NullString `json:"staff_id"`
-	Pin          string         `json:"pin"`
-	PasswordHash string         `json:"password_hash"`
-	Role         StaffRole      `json:"role"`
-	Status       RecordStatus   `json:"status"`
+	ID        uuid.UUID        `json:"id"`
+	BranchID  uuid.UUID        `json:"branch_id"`
+	FullName  string           `json:"full_name"`
+	Phone     sql.NullString   `json:"phone"`
+	Email     sql.NullString   `json:"email"`
+	StaffID   string           `json:"staff_id"`
+	OtpHash   sql.NullString   `json:"otp_hash"`
+	Role      StaffRole        `json:"role"`
+	JobRole   NullStaffJobRole `json:"job_role"`
+	Status    RecordStatus     `json:"status"`
+	CreatedBy uuid.NullUUID    `json:"created_by"`
 }
 
 func (q *Queries) CreateStaff(ctx context.Context, arg CreateStaffParams) (Staff, error) {
@@ -65,10 +98,11 @@ func (q *Queries) CreateStaff(ctx context.Context, arg CreateStaffParams) (Staff
 		arg.Phone,
 		arg.Email,
 		arg.StaffID,
-		arg.Pin,
-		arg.PasswordHash,
+		arg.OtpHash,
 		arg.Role,
+		arg.JobRole,
 		arg.Status,
+		arg.CreatedBy,
 	)
 	var i Staff
 	err := row.Scan(
@@ -78,10 +112,16 @@ func (q *Queries) CreateStaff(ctx context.Context, arg CreateStaffParams) (Staff
 		&i.Phone,
 		&i.Email,
 		&i.StaffID,
-		&i.Pin,
-		&i.PasswordHash,
+		&i.OtpHash,
+		&i.PinHash,
 		&i.Role,
+		&i.JobRole,
 		&i.Status,
+		&i.FirstLoginDone,
+		&i.FirstLoginAt,
+		&i.FailedLoginAttempts,
+		&i.LockedAt,
+		&i.CreatedBy,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -100,8 +140,7 @@ func (q *Queries) GetNextStaffIDSequence(ctx context.Context) (int64, error) {
 }
 
 const getStaffByEmail = `-- name: GetStaffByEmail :one
-SELECT id, branch_id, full_name, phone, email, staff_id, pin, password_hash, role, status, created_at, updated_at
-FROM staff
+SELECT id, branch_id, full_name, phone, email, staff_id, otp_hash, pin_hash, role, job_role, status, first_login_done, first_login_at, failed_login_attempts, locked_at, created_by, created_at, updated_at FROM staff
 WHERE email = $1 LIMIT 1
 `
 
@@ -115,10 +154,16 @@ func (q *Queries) GetStaffByEmail(ctx context.Context, email sql.NullString) (St
 		&i.Phone,
 		&i.Email,
 		&i.StaffID,
-		&i.Pin,
-		&i.PasswordHash,
+		&i.OtpHash,
+		&i.PinHash,
 		&i.Role,
+		&i.JobRole,
 		&i.Status,
+		&i.FirstLoginDone,
+		&i.FirstLoginAt,
+		&i.FailedLoginAttempts,
+		&i.LockedAt,
+		&i.CreatedBy,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -126,8 +171,7 @@ func (q *Queries) GetStaffByEmail(ctx context.Context, email sql.NullString) (St
 }
 
 const getStaffByID = `-- name: GetStaffByID :one
-SELECT id, branch_id, full_name, phone, email, staff_id, pin, password_hash, role, status, created_at, updated_at
-FROM staff
+SELECT id, branch_id, full_name, phone, email, staff_id, otp_hash, pin_hash, role, job_role, status, first_login_done, first_login_at, failed_login_attempts, locked_at, created_by, created_at, updated_at FROM staff
 WHERE id = $1 LIMIT 1
 `
 
@@ -141,10 +185,16 @@ func (q *Queries) GetStaffByID(ctx context.Context, id uuid.UUID) (Staff, error)
 		&i.Phone,
 		&i.Email,
 		&i.StaffID,
-		&i.Pin,
-		&i.PasswordHash,
+		&i.OtpHash,
+		&i.PinHash,
 		&i.Role,
+		&i.JobRole,
 		&i.Status,
+		&i.FirstLoginDone,
+		&i.FirstLoginAt,
+		&i.FailedLoginAttempts,
+		&i.LockedAt,
+		&i.CreatedBy,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -152,12 +202,11 @@ func (q *Queries) GetStaffByID(ctx context.Context, id uuid.UUID) (Staff, error)
 }
 
 const getStaffByStaffID = `-- name: GetStaffByStaffID :one
-SELECT id, branch_id, full_name, phone, email, staff_id, pin, password_hash, role, status, created_at, updated_at
-FROM staff
-WHERE staff_id = $1 LIMIT 1
+SELECT id, branch_id, full_name, phone, email, staff_id, otp_hash, pin_hash, role, job_role, status, first_login_done, first_login_at, failed_login_attempts, locked_at, created_by, created_at, updated_at FROM staff
+WHERE staff_id ILIKE $1 LIMIT 1
 `
 
-func (q *Queries) GetStaffByStaffID(ctx context.Context, staffID sql.NullString) (Staff, error) {
+func (q *Queries) GetStaffByStaffID(ctx context.Context, staffID string) (Staff, error) {
 	row := q.db.QueryRowContext(ctx, getStaffByStaffID, staffID)
 	var i Staff
 	err := row.Scan(
@@ -167,10 +216,16 @@ func (q *Queries) GetStaffByStaffID(ctx context.Context, staffID sql.NullString)
 		&i.Phone,
 		&i.Email,
 		&i.StaffID,
-		&i.Pin,
-		&i.PasswordHash,
+		&i.OtpHash,
+		&i.PinHash,
 		&i.Role,
+		&i.JobRole,
 		&i.Status,
+		&i.FirstLoginDone,
+		&i.FirstLoginAt,
+		&i.FailedLoginAttempts,
+		&i.LockedAt,
+		&i.CreatedBy,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -178,34 +233,19 @@ func (q *Queries) GetStaffByStaffID(ctx context.Context, staffID sql.NullString)
 }
 
 const listStaff = `-- name: ListStaff :many
-SELECT id, branch_id, full_name, phone, email, staff_id, pin, role, status, created_at, updated_at
-FROM staff
+SELECT id, branch_id, full_name, phone, email, staff_id, otp_hash, pin_hash, role, job_role, status, first_login_done, first_login_at, failed_login_attempts, locked_at, created_by, created_at, updated_at FROM staff
 ORDER BY created_at DESC
 `
 
-type ListStaffRow struct {
-	ID        uuid.UUID      `json:"id"`
-	BranchID  uuid.UUID      `json:"branch_id"`
-	FullName  string         `json:"full_name"`
-	Phone     sql.NullString `json:"phone"`
-	Email     sql.NullString `json:"email"`
-	StaffID   sql.NullString `json:"staff_id"`
-	Pin       string         `json:"pin"`
-	Role      StaffRole      `json:"role"`
-	Status    RecordStatus   `json:"status"`
-	CreatedAt time.Time      `json:"created_at"`
-	UpdatedAt time.Time      `json:"updated_at"`
-}
-
-func (q *Queries) ListStaff(ctx context.Context) ([]ListStaffRow, error) {
+func (q *Queries) ListStaff(ctx context.Context) ([]Staff, error) {
 	rows, err := q.db.QueryContext(ctx, listStaff)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []ListStaffRow
+	var items []Staff
 	for rows.Next() {
-		var i ListStaffRow
+		var i Staff
 		if err := rows.Scan(
 			&i.ID,
 			&i.BranchID,
@@ -213,9 +253,16 @@ func (q *Queries) ListStaff(ctx context.Context) ([]ListStaffRow, error) {
 			&i.Phone,
 			&i.Email,
 			&i.StaffID,
-			&i.Pin,
+			&i.OtpHash,
+			&i.PinHash,
 			&i.Role,
+			&i.JobRole,
 			&i.Status,
+			&i.FirstLoginDone,
+			&i.FirstLoginAt,
+			&i.FailedLoginAttempts,
+			&i.LockedAt,
+			&i.CreatedBy,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -233,35 +280,20 @@ func (q *Queries) ListStaff(ctx context.Context) ([]ListStaffRow, error) {
 }
 
 const listStaffByBranch = `-- name: ListStaffByBranch :many
-SELECT id, branch_id, full_name, phone, email, staff_id, pin, role, status, created_at, updated_at
-FROM staff
+SELECT id, branch_id, full_name, phone, email, staff_id, otp_hash, pin_hash, role, job_role, status, first_login_done, first_login_at, failed_login_attempts, locked_at, created_by, created_at, updated_at FROM staff
 WHERE branch_id = $1
 ORDER BY created_at DESC
 `
 
-type ListStaffByBranchRow struct {
-	ID        uuid.UUID      `json:"id"`
-	BranchID  uuid.UUID      `json:"branch_id"`
-	FullName  string         `json:"full_name"`
-	Phone     sql.NullString `json:"phone"`
-	Email     sql.NullString `json:"email"`
-	StaffID   sql.NullString `json:"staff_id"`
-	Pin       string         `json:"pin"`
-	Role      StaffRole      `json:"role"`
-	Status    RecordStatus   `json:"status"`
-	CreatedAt time.Time      `json:"created_at"`
-	UpdatedAt time.Time      `json:"updated_at"`
-}
-
-func (q *Queries) ListStaffByBranch(ctx context.Context, branchID uuid.UUID) ([]ListStaffByBranchRow, error) {
+func (q *Queries) ListStaffByBranch(ctx context.Context, branchID uuid.UUID) ([]Staff, error) {
 	rows, err := q.db.QueryContext(ctx, listStaffByBranch, branchID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []ListStaffByBranchRow
+	var items []Staff
 	for rows.Next() {
-		var i ListStaffByBranchRow
+		var i Staff
 		if err := rows.Scan(
 			&i.ID,
 			&i.BranchID,
@@ -269,9 +301,16 @@ func (q *Queries) ListStaffByBranch(ctx context.Context, branchID uuid.UUID) ([]
 			&i.Phone,
 			&i.Email,
 			&i.StaffID,
-			&i.Pin,
+			&i.OtpHash,
+			&i.PinHash,
 			&i.Role,
+			&i.JobRole,
 			&i.Status,
+			&i.FirstLoginDone,
+			&i.FirstLoginAt,
+			&i.FailedLoginAttempts,
+			&i.LockedAt,
+			&i.CreatedBy,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -288,35 +327,63 @@ func (q *Queries) ListStaffByBranch(ctx context.Context, branchID uuid.UUID) ([]
 	return items, nil
 }
 
-const updateStaffStatus = `-- name: UpdateStaffStatus :one
+const recordFailedLogin = `-- name: RecordFailedLogin :one
 UPDATE staff
-SET status = $2, updated_at = now()
+SET failed_login_attempts = failed_login_attempts + 1,
+    locked_at = CASE WHEN failed_login_attempts + 1 >= $2 THEN now() ELSE locked_at END
 WHERE id = $1
-RETURNING id, branch_id, full_name, phone, email, staff_id, pin, role, status, created_at, updated_at
+RETURNING failed_login_attempts, locked_at
 `
 
-type UpdateStaffStatusParams struct {
-	ID     uuid.UUID    `json:"id"`
-	Status RecordStatus `json:"status"`
+type RecordFailedLoginParams struct {
+	ID                  uuid.UUID `json:"id"`
+	FailedLoginAttempts int32     `json:"failed_login_attempts"`
 }
 
-type UpdateStaffStatusRow struct {
-	ID        uuid.UUID      `json:"id"`
-	BranchID  uuid.UUID      `json:"branch_id"`
-	FullName  string         `json:"full_name"`
-	Phone     sql.NullString `json:"phone"`
-	Email     sql.NullString `json:"email"`
-	StaffID   sql.NullString `json:"staff_id"`
-	Pin       string         `json:"pin"`
-	Role      StaffRole      `json:"role"`
-	Status    RecordStatus   `json:"status"`
-	CreatedAt time.Time      `json:"created_at"`
-	UpdatedAt time.Time      `json:"updated_at"`
+type RecordFailedLoginRow struct {
+	FailedLoginAttempts int32        `json:"failed_login_attempts"`
+	LockedAt            sql.NullTime `json:"locked_at"`
 }
 
-func (q *Queries) UpdateStaffStatus(ctx context.Context, arg UpdateStaffStatusParams) (UpdateStaffStatusRow, error) {
-	row := q.db.QueryRowContext(ctx, updateStaffStatus, arg.ID, arg.Status)
-	var i UpdateStaffStatusRow
+func (q *Queries) RecordFailedLogin(ctx context.Context, arg RecordFailedLoginParams) (RecordFailedLoginRow, error) {
+	row := q.db.QueryRowContext(ctx, recordFailedLogin, arg.ID, arg.FailedLoginAttempts)
+	var i RecordFailedLoginRow
+	err := row.Scan(&i.FailedLoginAttempts, &i.LockedAt)
+	return i, err
+}
+
+const resetLoginState = `-- name: ResetLoginState :one
+UPDATE staff
+SET failed_login_attempts = 0
+WHERE id = $1
+RETURNING failed_login_attempts
+`
+
+func (q *Queries) ResetLoginState(ctx context.Context, id uuid.UUID) (int32, error) {
+	row := q.db.QueryRowContext(ctx, resetLoginState, id)
+	var failed_login_attempts int32
+	err := row.Scan(&failed_login_attempts)
+	return failed_login_attempts, err
+}
+
+const startPinReset = `-- name: StartPinReset :one
+UPDATE staff
+SET otp_hash = $2,
+    failed_login_attempts = 0,
+    locked_at = NULL,
+    updated_at = now()
+WHERE id = $1
+RETURNING id, branch_id, full_name, phone, email, staff_id, otp_hash, pin_hash, role, job_role, status, first_login_done, first_login_at, failed_login_attempts, locked_at, created_by, created_at, updated_at
+`
+
+type StartPinResetParams struct {
+	ID      uuid.UUID      `json:"id"`
+	OtpHash sql.NullString `json:"otp_hash"`
+}
+
+func (q *Queries) StartPinReset(ctx context.Context, arg StartPinResetParams) (Staff, error) {
+	row := q.db.QueryRowContext(ctx, startPinReset, arg.ID, arg.OtpHash)
+	var i Staff
 	err := row.Scan(
 		&i.ID,
 		&i.BranchID,
@@ -324,9 +391,140 @@ func (q *Queries) UpdateStaffStatus(ctx context.Context, arg UpdateStaffStatusPa
 		&i.Phone,
 		&i.Email,
 		&i.StaffID,
-		&i.Pin,
+		&i.OtpHash,
+		&i.PinHash,
 		&i.Role,
+		&i.JobRole,
 		&i.Status,
+		&i.FirstLoginDone,
+		&i.FirstLoginAt,
+		&i.FailedLoginAttempts,
+		&i.LockedAt,
+		&i.CreatedBy,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const unlockStaffAccount = `-- name: UnlockStaffAccount :one
+UPDATE staff
+SET locked_at = NULL,
+    failed_login_attempts = 0,
+    updated_at = now()
+WHERE id = $1
+RETURNING id, branch_id, full_name, phone, email, staff_id, otp_hash, pin_hash, role, job_role, status, first_login_done, first_login_at, failed_login_attempts, locked_at, created_by, created_at, updated_at
+`
+
+func (q *Queries) UnlockStaffAccount(ctx context.Context, id uuid.UUID) (Staff, error) {
+	row := q.db.QueryRowContext(ctx, unlockStaffAccount, id)
+	var i Staff
+	err := row.Scan(
+		&i.ID,
+		&i.BranchID,
+		&i.FullName,
+		&i.Phone,
+		&i.Email,
+		&i.StaffID,
+		&i.OtpHash,
+		&i.PinHash,
+		&i.Role,
+		&i.JobRole,
+		&i.Status,
+		&i.FirstLoginDone,
+		&i.FirstLoginAt,
+		&i.FailedLoginAttempts,
+		&i.LockedAt,
+		&i.CreatedBy,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const updateStaffDetails = `-- name: UpdateStaffDetails :one
+UPDATE staff
+SET full_name = COALESCE($1, full_name),
+    phone     = COALESCE($2, phone),
+    email     = COALESCE($3, email),
+    job_role  = COALESCE($4, job_role),
+    updated_at = now()
+WHERE id = $5
+RETURNING id, branch_id, full_name, phone, email, staff_id, otp_hash, pin_hash, role, job_role, status, first_login_done, first_login_at, failed_login_attempts, locked_at, created_by, created_at, updated_at
+`
+
+type UpdateStaffDetailsParams struct {
+	FullName sql.NullString   `json:"full_name"`
+	Phone    sql.NullString   `json:"phone"`
+	Email    sql.NullString   `json:"email"`
+	JobRole  NullStaffJobRole `json:"job_role"`
+	ID       uuid.UUID        `json:"id"`
+}
+
+func (q *Queries) UpdateStaffDetails(ctx context.Context, arg UpdateStaffDetailsParams) (Staff, error) {
+	row := q.db.QueryRowContext(ctx, updateStaffDetails,
+		arg.FullName,
+		arg.Phone,
+		arg.Email,
+		arg.JobRole,
+		arg.ID,
+	)
+	var i Staff
+	err := row.Scan(
+		&i.ID,
+		&i.BranchID,
+		&i.FullName,
+		&i.Phone,
+		&i.Email,
+		&i.StaffID,
+		&i.OtpHash,
+		&i.PinHash,
+		&i.Role,
+		&i.JobRole,
+		&i.Status,
+		&i.FirstLoginDone,
+		&i.FirstLoginAt,
+		&i.FailedLoginAttempts,
+		&i.LockedAt,
+		&i.CreatedBy,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const updateStaffStatus = `-- name: UpdateStaffStatus :one
+UPDATE staff
+SET status = $2, updated_at = now()
+WHERE id = $1
+RETURNING id, branch_id, full_name, phone, email, staff_id, otp_hash, pin_hash, role, job_role, status, first_login_done, first_login_at, failed_login_attempts, locked_at, created_by, created_at, updated_at
+`
+
+type UpdateStaffStatusParams struct {
+	ID     uuid.UUID    `json:"id"`
+	Status RecordStatus `json:"status"`
+}
+
+func (q *Queries) UpdateStaffStatus(ctx context.Context, arg UpdateStaffStatusParams) (Staff, error) {
+	row := q.db.QueryRowContext(ctx, updateStaffStatus, arg.ID, arg.Status)
+	var i Staff
+	err := row.Scan(
+		&i.ID,
+		&i.BranchID,
+		&i.FullName,
+		&i.Phone,
+		&i.Email,
+		&i.StaffID,
+		&i.OtpHash,
+		&i.PinHash,
+		&i.Role,
+		&i.JobRole,
+		&i.Status,
+		&i.FirstLoginDone,
+		&i.FirstLoginAt,
+		&i.FailedLoginAttempts,
+		&i.LockedAt,
+		&i.CreatedBy,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)

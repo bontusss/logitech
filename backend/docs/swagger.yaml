@@ -51,16 +51,43 @@ definitions:
         example: active
         type: string
     type: object
+  handler.CreateBranchRequest:
+    properties:
+      address:
+        example: 5 Zoo Road
+        type: string
+      code:
+        example: KAN-01
+        type: string
+      name:
+        example: Kano Branch
+        type: string
+      phone:
+        example: "08030000004"
+        type: string
+      state:
+        example: Kano
+        type: string
+    required:
+    - code
+    - name
+    type: object
   handler.CreateStaffRequest:
     properties:
       branch_id:
         example: 11111111-1111-4111-8111-111111111111
         type: string
       email:
-        example: ada@logitech.example
+        example: staff1@logitech.example
         type: string
       full_name:
-        example: Ada Nwosu
+        example: Tunde Bello
+        type: string
+      job_role:
+        description: |-
+          JobRole is required when role = "staff" and must be one of
+          operations, dispatch, receiving. Ignored for owner/manager.
+        example: operations
         type: string
       phone:
         example: "08031110002"
@@ -71,6 +98,7 @@ definitions:
     required:
     - branch_id
     - full_name
+    - role
     type: object
   handler.CreateStaffResponse:
     properties:
@@ -80,25 +108,31 @@ definitions:
       created_at:
         type: string
       email:
-        example: ada@logitech.example
+        example: staff1@logitech.example
         type: string
+      first_login_done:
+        example: false
+        type: boolean
       full_name:
-        example: Ada Nwosu
+        example: Tunde Bello
         type: string
       id:
         example: ffffffff-ffff-4fff-8fff-ffffffffffff
         type: string
+      job_role:
+        example: operations
+        type: string
+      one_time_password:
+        example: 7Y3B9QK2
+        type: string
       phone:
         example: "08031110002"
-        type: string
-      pin:
-        example: 9A4F
         type: string
       role:
         example: staff
         type: string
       staff_id:
-        example: STF-005
+        example: GAL-005
         type: string
       status:
         example: active
@@ -110,19 +144,46 @@ definitions:
         example: invalid credentials
         type: string
     type: object
+  handler.FirstLoginStatusResponse:
+    properties:
+      first_login_at:
+        description: FirstLoginAt is set once the user has completed first login (RFC3339).
+        example: "2026-10-22T09:15:00Z"
+        type: string
+      first_login_done:
+        example: true
+        type: boolean
+      staff_id:
+        example: GAL-003
+        type: string
+    type: object
   handler.LoginRequest:
     properties:
+      new_pin:
+        description: NewPin is required on first login (and after a PIN reset) to
+          create the personal PIN.
+        example: "987654"
+        type: string
       password:
         example: adminpassword123
         type: string
       pin:
-        example: "1001"
+        example: 7Y3B9QK2
         type: string
       staff_id:
-        example: STF-001
+        example: GAL-001
         type: string
       username:
         example: admin
+        type: string
+    type: object
+  handler.ResetStaffPinResponse:
+    properties:
+      one_time_password:
+        example: 9XKM28LP
+        type: string
+      staff_id:
+        example: GAL-003
         type: string
     type: object
   handler.StaffProfile:
@@ -135,12 +196,21 @@ definitions:
       email:
         example: staff@logitech.example
         type: string
+      first_login_done:
+        example: true
+        type: boolean
       full_name:
         example: Chinedu Okafor
         type: string
       id:
         example: aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1
         type: string
+      job_role:
+        example: operations
+        type: string
+      locked:
+        example: false
+        type: boolean
       phone:
         example: "08031110001"
         type: string
@@ -148,9 +218,49 @@ definitions:
         example: staff
         type: string
       staff_id:
-        example: STF-001
+        example: GAL-001
         type: string
       status:
+        example: active
+        type: string
+    type: object
+  handler.UpdateBranchRequest:
+    properties:
+      address:
+        example: 5 Zoo Road
+        type: string
+      name:
+        example: Kano Branch
+        type: string
+      phone:
+        example: "08030000004"
+        type: string
+      state:
+        example: Kano
+        type: string
+      status:
+        example: active
+        type: string
+    type: object
+  handler.UpdateStaffRequest:
+    properties:
+      email:
+        example: staff1@logitech.example
+        type: string
+      full_name:
+        example: Tunde Bello
+        type: string
+      job_role:
+        description: JobRole may be changed only for staff members; manager/owner
+          accounts have none.
+        example: operations
+        type: string
+      phone:
+        example: "08031110002"
+        type: string
+      status:
+        description: 'Status: "active" re-grants access (e.g. after a revoke); owner/system
+          admin only.'
         example: active
         type: string
     type: object
@@ -218,8 +328,11 @@ paths:
     post:
       consumes:
       - application/json
-      description: Authenticate staff using staff_id and 4-digit alphanumeric PIN,
-        or system admin using username and password.
+      description: |-
+        Authenticate staff using staff_id and a secret, or system admin using username and password.
+        - First login / after a PIN reset: "pin" holds the one-time password and "new_pin" is required; the new PIN (4-10 chars) becomes the user's personal PIN.
+        - Afterwards: "pin" holds the personal PIN.
+        The account locks after 3 failed login attempts; a locked staff account can be reopened by the manager of its branch or by the owner.
       parameters:
       - description: Login Credentials
         in: body
@@ -311,6 +424,125 @@ paths:
       summary: List All Branches
       tags:
       - branches
+    post:
+      consumes:
+      - application/json
+      description: Creates a new branch. Only the owner (or system admin) can manage
+        branches.
+      parameters:
+      - description: Branch Details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.CreateBranchRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/handler.BranchResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create a branch
+      tags:
+      - branches
+  /api/branches/{id}:
+    delete:
+      description: Marks a branch inactive (soft delete, its data is retained). Only
+        the owner (or system admin) can manage branches.
+      parameters:
+      - description: Branch UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.BranchResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete a branch
+      tags:
+      - branches
+    put:
+      consumes:
+      - application/json
+      description: Updates branch details. Only the owner (or system admin) can manage
+        branches.
+      parameters:
+      - description: Branch UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Fields to update
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.UpdateBranchRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.BranchResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update a branch
+      tags:
+      - branches
   /api/hello:
     get:
       description: Returns a simple greeting message from the Logitech API server.
@@ -326,8 +558,9 @@ paths:
       - example
   /api/staff:
     get:
-      description: Retrieve a list of staff members. Accessible by system_admin, owner,
-        and manager.
+      description: |-
+        Retrieve a list of staff members. Accessible by system_admin, owner, and manager.
+        Managers are always limited to the staff of their own assigned branch.
       parameters:
       - description: Filter by Branch UUID
         in: query
@@ -359,10 +592,10 @@ paths:
       consumes:
       - application/json
       description: |-
-        Creates a new staff member. Role creation rules:
-        - Managers can ONLY create staff (role: staff).
-        - System Admin can ONLY create owners and managers (role: owner or manager).
-        staff_id (e.g. STF-001) and a 4-digit alphanumeric PIN are auto-generated.
+        Creates a new user. Creation rules:
+        - Managers can ONLY create staff (role: staff) in their own branch; a job_role (operations, dispatch or receiving) is required.
+        - The owner can ONLY create managers. The system admin can ONLY create owners.
+        A staff_id (e.g. GAL-001, prefix configurable via STAFF_ID_PREFIX) is auto-generated, and a one-time password is returned once so the user can log in and choose their personal PIN (max 10 chars).
       parameters:
       - description: Staff Creation Details
         in: body
@@ -395,12 +628,46 @@ paths:
             $ref: '#/definitions/handler.ErrorResponse'
       security:
       - BearerAuth: []
-      summary: Create a staff, manager, or owner
+      summary: Create a staff member or a manager
       tags:
       - staff
   /api/staff/{id}:
+    delete:
+      description: Revokes a user's access by marking their account inactive. Managers
+        can revoke staff in their own branch; the owner can revoke anyone.
+      parameters:
+      - description: Staff UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.StaffProfile'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Revoke staff access
+      tags:
+      - staff
     get:
-      description: Get details for a specific staff member by UUID.
+      description: Get details for a specific staff member by UUID. Staff can only
+        fetch their own profile; managers only staff in their own branch.
       parameters:
       - description: Staff UUID
         in: path
@@ -429,6 +696,157 @@ paths:
       security:
       - BearerAuth: []
       summary: Get Staff Details
+      tags:
+      - staff
+    put:
+      consumes:
+      - application/json
+      description: Update a staff member's details. Managers can only update staff
+        in their own branch; the owner can update anyone. Changing status (e.g. re-activating
+        a revoked account) is owner/system admin only.
+      parameters:
+      - description: Staff UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Fields to update
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.UpdateStaffRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.StaffProfile'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update staff details
+      tags:
+      - staff
+  /api/staff/{id}/first-login:
+    get:
+      description: Reports whether the staff has completed their first login (i.e.
+        created their personal PIN), and when. Staff can query their own status; managers
+        only staff in their own branch; the owner can query anyone.
+      parameters:
+      - description: Staff UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.FirstLoginStatusResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Check if a staff has performed their first login
+      tags:
+      - staff
+  /api/staff/{id}/reset-pin:
+    post:
+      description: |-
+        Generates a new one-time password for the user, invalidating their current PIN. The one-time password is returned once and must be given to the user, who uses it at login (with new_pin) to choose a new PIN. Any lockout on the account is cleared.
+        Managers can reset the PIN of staff in their own branch; the owner can reset any PIN.
+      parameters:
+      - description: Staff UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ResetStaffPinResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Reset a staff PIN
+      tags:
+      - staff
+  /api/staff/{id}/unlock:
+    post:
+      description: Removes the lockout from an account that was locked after 3 failed
+        login attempts. Managers can unlock staff of their own branch; the owner can
+        unlock accounts across all branches.
+      parameters:
+      - description: Staff UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.StaffProfile'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Unlock a locked account
       tags:
       - staff
   /health:

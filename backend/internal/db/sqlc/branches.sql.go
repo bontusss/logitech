@@ -7,13 +7,54 @@ package sqlc
 
 import (
 	"context"
+	"database/sql"
 
 	"github.com/google/uuid"
 )
 
+const createBranch = `-- name: CreateBranch :one
+INSERT INTO branches (id, name, code, address, state, phone, status)
+VALUES ($1, $2, $3, $4, $5, $6, $7)
+RETURNING id, name, code, address, state, phone, status, created_at, updated_at
+`
+
+type CreateBranchParams struct {
+	ID      uuid.UUID      `json:"id"`
+	Name    string         `json:"name"`
+	Code    string         `json:"code"`
+	Address sql.NullString `json:"address"`
+	State   sql.NullString `json:"state"`
+	Phone   sql.NullString `json:"phone"`
+	Status  RecordStatus   `json:"status"`
+}
+
+func (q *Queries) CreateBranch(ctx context.Context, arg CreateBranchParams) (Branch, error) {
+	row := q.db.QueryRowContext(ctx, createBranch,
+		arg.ID,
+		arg.Name,
+		arg.Code,
+		arg.Address,
+		arg.State,
+		arg.Phone,
+		arg.Status,
+	)
+	var i Branch
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Code,
+		&i.Address,
+		&i.State,
+		&i.Phone,
+		&i.Status,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const getBranchByCode = `-- name: GetBranchByCode :one
-SELECT id, name, code, address, state, phone, status, created_at, updated_at
-FROM branches
+SELECT id, name, code, address, state, phone, status, created_at, updated_at FROM branches
 WHERE code = $1 LIMIT 1
 `
 
@@ -35,8 +76,7 @@ func (q *Queries) GetBranchByCode(ctx context.Context, code string) (Branch, err
 }
 
 const getBranchByID = `-- name: GetBranchByID :one
-SELECT id, name, code, address, state, phone, status, created_at, updated_at
-FROM branches
+SELECT id, name, code, address, state, phone, status, created_at, updated_at FROM branches
 WHERE id = $1 LIMIT 1
 `
 
@@ -58,8 +98,7 @@ func (q *Queries) GetBranchByID(ctx context.Context, id uuid.UUID) (Branch, erro
 }
 
 const listBranches = `-- name: ListBranches :many
-SELECT id, name, code, address, state, phone, status, created_at, updated_at
-FROM branches
+SELECT id, name, code, address, state, phone, status, created_at, updated_at FROM branches
 ORDER BY name ASC
 `
 
@@ -94,4 +133,73 @@ func (q *Queries) ListBranches(ctx context.Context) ([]Branch, error) {
 		return nil, err
 	}
 	return items, nil
+}
+
+const softDeleteBranch = `-- name: SoftDeleteBranch :one
+UPDATE branches
+SET status = 'inactive', updated_at = now()
+WHERE id = $1
+RETURNING id, name, code, address, state, phone, status, created_at, updated_at
+`
+
+func (q *Queries) SoftDeleteBranch(ctx context.Context, id uuid.UUID) (Branch, error) {
+	row := q.db.QueryRowContext(ctx, softDeleteBranch, id)
+	var i Branch
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Code,
+		&i.Address,
+		&i.State,
+		&i.Phone,
+		&i.Status,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const updateBranch = `-- name: UpdateBranch :one
+UPDATE branches
+SET name    = COALESCE($1, name),
+    address = COALESCE($2, address),
+    state   = COALESCE($3, state),
+    phone   = COALESCE($4, phone),
+    status  = COALESCE($5, status),
+    updated_at = now()
+WHERE id = $6
+RETURNING id, name, code, address, state, phone, status, created_at, updated_at
+`
+
+type UpdateBranchParams struct {
+	Name    sql.NullString   `json:"name"`
+	Address sql.NullString   `json:"address"`
+	State   sql.NullString   `json:"state"`
+	Phone   sql.NullString   `json:"phone"`
+	Status  NullRecordStatus `json:"status"`
+	ID      uuid.UUID        `json:"id"`
+}
+
+func (q *Queries) UpdateBranch(ctx context.Context, arg UpdateBranchParams) (Branch, error) {
+	row := q.db.QueryRowContext(ctx, updateBranch,
+		arg.Name,
+		arg.Address,
+		arg.State,
+		arg.Phone,
+		arg.Status,
+		arg.ID,
+	)
+	var i Branch
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Code,
+		&i.Address,
+		&i.State,
+		&i.Phone,
+		&i.Status,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
 }

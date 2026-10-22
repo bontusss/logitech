@@ -7,29 +7,29 @@ VALUES
 ('33333333-3333-4333-8333-333333333333', 'Ibadan Branch', 'IBA-01', '8 Ring Road', 'Oyo', '08030000003');
 
 INSERT INTO staff (
-    id, branch_id, full_name, phone, email, staff_id, pin,
-    password_hash, role
+    id, branch_id, full_name, phone, email, staff_id,
+    otp_hash, role, job_role, status, first_login_done
 )
 VALUES
 ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1',
  '11111111-1111-4111-8111-111111111111',
  'Chinedu Okafor', '08031110001', 'owner@galopin.example',
- 'STF-001', '1001', 'DEMO_HASH_NOT_FOR_LOGIN', 'owner'),
+ 'GAL-001', 'DEMO_HASH_NOT_FOR_LOGIN', 'owner', NULL, 'active', true),
 
 ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa2',
  '11111111-1111-4111-8111-111111111111',
  'Ada Nwosu', '08031110002', 'manager@galopin.example',
- 'STF-002', '1002', 'DEMO_HASH_NOT_FOR_LOGIN', 'manager'),
+ 'GAL-002', 'DEMO_HASH_NOT_FOR_LOGIN', 'manager', NULL, 'active', true),
 
 ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa3',
  '11111111-1111-4111-8111-111111111111',
  'Tunde Bello', '08031110003', 'staff1@galopin.example',
- 'STF-003', '1003', 'DEMO_HASH_NOT_FOR_LOGIN', 'staff'),
+ 'GAL-003', 'DEMO_HASH_NOT_FOR_LOGIN', 'staff', 'operations', 'active', true),
 
 ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa4',
  '22222222-2222-4222-8222-222222222222',
  'Mary James', '08031110004', 'staff2@galopin.example',
- 'STF-004', '1004', 'DEMO_HASH_NOT_FOR_LOGIN', 'staff');
+ 'GAL-004', 'DEMO_HASH_NOT_FOR_LOGIN', 'staff', 'receiving', 'active', true);
 
 INSERT INTO customers (id, full_name, phone, email, customer_type)
 VALUES

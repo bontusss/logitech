@@ -547,6 +547,49 @@ func (ns NullRecordStatus) Value() (driver.Value, error) {
 	return string(ns.RecordStatus), nil
 }
 
+type StaffJobRole string
+
+const (
+	StaffJobRoleOperations StaffJobRole = "operations"
+	StaffJobRoleDispatch   StaffJobRole = "dispatch"
+	StaffJobRoleReceiving  StaffJobRole = "receiving"
+)
+
+func (e *StaffJobRole) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = StaffJobRole(s)
+	case string:
+		*e = StaffJobRole(s)
+	default:
+		return fmt.Errorf("unsupported scan type for StaffJobRole: %T", src)
+	}
+	return nil
+}
+
+type NullStaffJobRole struct {
+	StaffJobRole StaffJobRole `json:"staff_job_role"`
+	Valid        bool         `json:"valid"` // Valid is true if StaffJobRole is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullStaffJobRole) Scan(value interface{}) error {
+	if value == nil {
+		ns.StaffJobRole, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.StaffJobRole.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullStaffJobRole) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.StaffJobRole), nil
+}
+
 type StaffRole string
 
 const (
@@ -857,14 +900,23 @@ type Staff struct {
 	FullName string         `json:"full_name"`
 	Phone    sql.NullString `json:"phone"`
 	Email    sql.NullString `json:"email"`
-	// eg: stf-001
-	StaffID      sql.NullString `json:"staff_id"`
-	Pin          string         `json:"pin"`
-	PasswordHash string         `json:"password_hash"`
-	Role         StaffRole      `json:"role"`
-	Status       RecordStatus   `json:"status"`
-	CreatedAt    time.Time      `json:"created_at"`
-	UpdatedAt    time.Time      `json:"updated_at"`
+	StaffID  string         `json:"staff_id"`
+	// One-time password issued at creation / on PIN reset; NULL once consumed
+	OtpHash sql.NullString `json:"otp_hash"`
+	// Personal PIN hash, chosen by the user on first login (max 10 chars)
+	PinHash sql.NullString `json:"pin_hash"`
+	Role    StaffRole      `json:"role"`
+	// operations | dispatch | receiving; required when role = staff
+	JobRole             NullStaffJobRole `json:"job_role"`
+	Status              RecordStatus     `json:"status"`
+	FirstLoginDone      bool             `json:"first_login_done"`
+	FirstLoginAt        sql.NullTime     `json:"first_login_at"`
+	FailedLoginAttempts int32            `json:"failed_login_attempts"`
+	// Set after 3 failed login attempts
+	LockedAt  sql.NullTime  `json:"locked_at"`
+	CreatedBy uuid.NullUUID `json:"created_by"`
+	CreatedAt time.Time     `json:"created_at"`
+	UpdatedAt time.Time     `json:"updated_at"`
 }
 
 type SyncOperation struct {

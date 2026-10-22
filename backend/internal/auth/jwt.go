@@ -20,6 +20,9 @@ type Claims struct {
 	StaffID  string `json:"staff_id"`
 	FullName string `json:"full_name"`
 	Role     string `json:"role"`
+	// JobRole is the staff job sub-role (operations, dispatch, receiving);
+	// empty for owner/manager, who can perform all job roles.
+	JobRole   string `json:"job_role,omitempty"`
 	BranchID string `json:"branch_id,omitempty"`
 	jwt.RegisteredClaims
 }
@@ -29,13 +32,14 @@ var (
 )
 
 // GenerateToken generates a signed JWT token string.
-func GenerateToken(userID, staffID, fullName, role, branchID string, secret string, ttl time.Duration) (string, error) {
+func GenerateToken(userID, staffID, fullName, role, jobRole, branchID string, secret string, ttl time.Duration) (string, error) {
 	now := time.Now()
 	claims := Claims{
 		UserID:   userID,
 		StaffID:  staffID,
 		FullName: fullName,
 		Role:     role,
+		JobRole:  jobRole,
 		BranchID: branchID,
 		RegisteredClaims: jwt.RegisteredClaims{
 			Subject:   userID,

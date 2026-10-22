@@ -2,6 +2,7 @@ package config
 
 import (
 	"os"
+	"strings"
 
 	"backend/internal/db"
 )
@@ -15,6 +16,9 @@ type Config struct {
 	AdminUsername string
 	AdminPassword string
 	AdminEmail    string
+	// StaffIDPrefix is the prefix used for auto-generated staff IDs
+	// (e.g. "GAL" produces GAL-001, GAL-002, ...).
+	StaffIDPrefix string
 }
 
 // Load loads configuration from environment variables with sensible defaults.
@@ -54,6 +58,12 @@ func Load() *Config {
 		adminEmail = "admin@logitech.example"
 	}
 
+	staffIDPrefix := os.Getenv("STAFF_ID_PREFIX")
+	if staffIDPrefix == "" {
+		staffIDPrefix = "GAL"
+	}
+	staffIDPrefix = strings.ToUpper(strings.TrimSpace(staffIDPrefix))
+
 	return &Config{
 		Port:          port,
 		DatabaseURL:   dbURL,
@@ -62,5 +72,6 @@ func Load() *Config {
 		AdminUsername: adminUsername,
 		AdminPassword: adminPassword,
 		AdminEmail:    adminEmail,
+		StaffIDPrefix: staffIDPrefix,
 	}
 }
