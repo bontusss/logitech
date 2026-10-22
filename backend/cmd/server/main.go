@@ -7,20 +7,49 @@
 //
 // The server can be started independently of the frontend via `make run-be`
 // (or `cd backend && go run ./cmd/server`).
+// @title Logitech API
+// @version 1.0
+// @description Logistics and Manifest Management API for Logitech.
+// @termsOfService http://swagger.io/terms/
+
+// @contact.name Logitech API Support
+// @contact.url https://github.com/bontusss/logitech
+// @contact.email support@logitech.example
+
+// @license.name Apache 2.0
+// @license.url http://www.apache.org/licenses/LICENSE-2.0.html
+
+// @host localhost:8080
+// @BasePath /
+
 package main
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"log/slog"
 	"net/http"
 	"os"
-	"database/sql"
 	"time"
 
+	_ "backend/docs"
 	"backend/internal/db"
 	"backend/internal/web"
+
+	httpSwagger "github.com/swaggo/http-swagger/v2"
 )
+
+// HealthResponse represents the health check status response.
+type HealthResponse struct {
+	Status string `json:"status" example:"ok"`
+	DB     string `json:"db" example:"up"`
+}
+
+// HelloResponse represents the sample hello response.
+type HelloResponse struct {
+	Message string `json:"message" example:"hello from Go"`
+}
 
 func main() {
 	addr := os.Getenv("PORT")
@@ -43,6 +72,13 @@ func main() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /health", health(pool, dsn))
 	mux.HandleFunc("GET /api/hello", hello)
+
+	// Swagger API documentation
+	mux.HandleFunc("GET /swagger", func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "/swagger/index.html", http.StatusMovedPermanently)
+	})
+	mux.HandleFunc("/swagger/", httpSwagger.Handler())
+
 	mux.Handle("/", web.Handler())
 
 	slog.Info("server listening", "addr", addr)
@@ -52,14 +88,18 @@ func main() {
 	}
 }
 
+// health checks server and database connectivity.
+//
+// @Summary Check service health
+// @Description Returns the service status and PostgreSQL database connection state.
+// @Tags system
+// @Produce json
+// @Success 200 {object} HealthResponse
+// @Router /health [get]
 func health(pool *sql.DB, _ string) http.HandlerFunc {
-	type resp struct {
-		Status string `json:"status"`
-		DB     string `json:"db"`
-	}
 	return func(w http.ResponseWriter, r *http.Request) {
 		code := http.StatusOK
-		out := resp{Status: "ok", DB: "down"}
+		out := HealthResponse{Status: "ok", DB: "down"}
 		if pool != nil {
 			ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
 			defer cancel()
@@ -73,8 +113,16 @@ func health(pool *sql.DB, _ string) http.HandlerFunc {
 	}
 }
 
+// hello returns a sample greeting message.
+//
+// @Summary Hello message
+// @Description Returns a simple greeting message from the Logitech API server.
+// @Tags example
+// @Produce json
+// @Success 200 {object} HelloResponse
+// @Router /api/hello [get]
 func hello(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, http.StatusOK, map[string]string{"message": "hello from Go"})
+	writeJSON(w, http.StatusOK, HelloResponse{Message: "hello from Go"})
 }
 
 func writeJSON(w http.ResponseWriter, code int, v any) {

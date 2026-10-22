@@ -1,0 +1,86 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "description": "Logistics and Manifest Management API for Logitech.",
+        "title": "Logitech API",
+        "termsOfService": "http://swagger.io/terms/",
+        "contact": {
+            "name": "Logitech API Support",
+            "url": "https://github.com/bontusss/logitech",
+            "email": "support@logitech.example"
+        },
+        "license": {
+            "name": "Apache 2.0",
+            "url": "http://www.apache.org/licenses/LICENSE-2.0.html"
+        },
+        "version": "1.0"
+    },
+    "host": "localhost:8080",
+    "basePath": "/",
+    "paths": {
+        "/api/hello": {
+            "get": {
+                "description": "Returns a simple greeting message from the Logitech API server.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "example"
+                ],
+                "summary": "Hello message",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/main.HelloResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/health": {
+            "get": {
+                "description": "Returns the service status and PostgreSQL database connection state.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "system"
+                ],
+                "summary": "Check service health",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/main.HealthResponse"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "main.HealthResponse": {
+            "type": "object",
+            "properties": {
+                "db": {
+                    "type": "string",
+                    "example": "up"
+                },
+                "status": {
+                    "type": "string",
+                    "example": "ok"
+                }
+            }
+        },
+        "main.HelloResponse": {
+            "type": "object",
+            "properties": {
+                "message": {
+                    "type": "string",
+                    "example": "hello from Go"
+                }
+            }
+        }
+    }
+}

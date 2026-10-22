@@ -10,8 +10,10 @@
 #   make run-be   run go server alone
 #   make run-fe   run nuxt dev alone
 #   make build    build embedded binary (nuxt generate -> go:embed -> go build)
+#   make swagger  generate swagger / openapi documentation
 #
 # Health check: curl http://localhost:8080/health
+# Swagger docs: http://localhost:8080/swagger/index.html
 
 DB                := db
 BE_PORT           ?= 8080
@@ -21,7 +23,7 @@ RUN_DIR           := .run
 
 export BE_PORT DATABASE_URL
 
-.PHONY: s_up s_down db_up db_down m_up m_down run-be run-fe build clean help
+.PHONY: s_up s_down db_up db_down m_up m_down run-be run-fe build clean help swagger
 
 ## ---- stack (s_up / s_down) ---------------------------------------------
 
@@ -96,6 +98,12 @@ embed-copy:
 	@rm -rf internal/web/dist
 	@cp -R ../frontend/.output/public internal/web/dist
 	@find internal/web/dist -type f -exec touch {} +
+
+## ---- docs (swagger) ---------------------------------------------------------
+
+swagger: ## generate swagger / openapi documentation
+	@echo "==> generating swagger docs"
+	swag init -g main.go -d cmd/server -o docs
 
 clean: ## remove build artifacts and runtime files
 	@rm -rf bin $(RUN_DIR)

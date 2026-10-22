@@ -1,0 +1,58 @@
+basePath: /
+definitions:
+  main.HealthResponse:
+    properties:
+      db:
+        example: up
+        type: string
+      status:
+        example: ok
+        type: string
+    type: object
+  main.HelloResponse:
+    properties:
+      message:
+        example: hello from Go
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact:
+    email: support@logitech.example
+    name: Logitech API Support
+    url: https://github.com/bontusss/logitech
+  description: Logistics and Manifest Management API for Logitech.
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  termsOfService: http://swagger.io/terms/
+  title: Logitech API
+  version: "1.0"
+paths:
+  /api/hello:
+    get:
+      description: Returns a simple greeting message from the Logitech API server.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/main.HelloResponse'
+      summary: Hello message
+      tags:
+      - example
+  /health:
+    get:
+      description: Returns the service status and PostgreSQL database connection state.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/main.HealthResponse'
+      summary: Check service health
+      tags:
+      - system
+swagger: "2.0"

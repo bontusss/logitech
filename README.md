@@ -25,6 +25,7 @@ When startup completes, open:
 - Frontend: http://localhost:3000
 - Backend health check: http://localhost:8080/health
 - Example API endpoint: http://localhost:8080/api/hello
+- Swagger API docs: http://localhost:8080/swagger/index.html
 
 The Go server connects to the local database using
 `postgres://app:app@localhost:5432/appdb?sslmode=disable` by default. The
@@ -72,3 +73,16 @@ make -C backend run-be BE_PORT=8081 DATABASE_URL='postgres://app:app@localhost:5
 The frontend API base defaults to `http://localhost:8080`; override it with
 `NUXT_PUBLIC_API_BASE` when running the frontend against a backend at another
 URL.
+
+## API Documentation (Swagger)
+
+Interactive Swagger UI documentation is available at:
+
+- `http://localhost:8080/swagger/index.html` (or `http://localhost:8080/swagger`)
+- OpenAPI JSON specification: `http://localhost:8080/swagger/doc.json`
+
+To regenerate Swagger documentation after adding or updating endpoints and annotations:
+
+```sh
+make -C backend swagger
+```
