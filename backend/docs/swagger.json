@@ -416,6 +416,178 @@
                 }
             }
         },
+        "/api/managers": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieve a list of manager accounts. Accessible by the owner (and system admin), optionally filtered by branch.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "managers"
+                ],
+                "summary": "List manager accounts",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Filter by Branch UUID",
+                        "name": "branch_id",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/handler.StaffProfile"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Creates a manager account for a branch. Only the owner (or system admin) can manage managers. A staff_id is auto-generated and a one-time password is returned once, to be given to the manager for their first login.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "managers"
+                ],
+                "summary": "Create a manager account",
+                "parameters": [
+                    {
+                        "description": "Manager Details",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.CreateUserRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/handler.CreateUserResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/owners": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Creates an owner account. Only the system admin can create owners. A staff_id is auto-generated and a one-time password is returned once, to be given to the owner for their first login.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "owners"
+                ],
+                "summary": "Create an owner account",
+                "parameters": [
+                    {
+                        "description": "Owner Details",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.CreateUserRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/handler.CreateUserResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/staff": {
             "get": {
                 "security": [
@@ -469,7 +641,7 @@
                         "BearerAuth": []
                     }
                 ],
-                "description": "Creates a new user. Creation rules:\n- Managers can ONLY create staff (role: staff) in their own branch; a job_role (operations, dispatch or receiving) is required.\n- The owner can ONLY create managers. The system admin can ONLY create owners.\nA staff_id (e.g. GAL-001, prefix configurable via STAFF_ID_PREFIX) is auto-generated, and a one-time password is returned once so the user can log in and choose their personal PIN (max 10 chars).",
+                "description": "Creates a staff member (role: staff) with a required job_role: operations, dispatch or receiving. Accessible to owners and managers only.\n- Managers can only create staff in their own branch (branch_id is forced from their token).\n- Owners can create staff in any branch.\nA staff_id (e.g. GAL-001, prefix configurable via STAFF_ID_PREFIX) is auto-generated, and a one-time password is returned once so the user can log in and choose their personal PIN (max 10 chars).",
                 "consumes": [
                     "application/json"
                 ],
@@ -479,7 +651,7 @@
                 "tags": [
                     "staff"
                 ],
-                "summary": "Create a staff member or a manager",
+                "summary": "Create a staff member",
                 "parameters": [
                     {
                         "description": "Staff Creation Details",
@@ -978,8 +1150,7 @@
             "type": "object",
             "required": [
                 "branch_id",
-                "full_name",
-                "role"
+                "full_name"
             ],
             "properties": {
                 "branch_id": {
@@ -995,9 +1166,49 @@
                     "example": "Tunde Bello"
                 },
                 "job_role": {
-                    "description": "JobRole is required when role = \"staff\" and must be one of\noperations, dispatch, receiving. Ignored for owner/manager.",
+                    "description": "JobRole is required and must be one of operations, dispatch, receiving.",
                     "type": "string",
                     "example": "operations"
+                },
+                "phone": {
+                    "type": "string",
+                    "example": "08031110002"
+                }
+            }
+        },
+        "handler.CreateStaffResponse": {
+            "type": "object",
+            "properties": {
+                "branch_id": {
+                    "type": "string",
+                    "example": "11111111-1111-4111-8111-111111111111"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string",
+                    "example": "staff1@logitech.example"
+                },
+                "first_login_done": {
+                    "type": "boolean",
+                    "example": false
+                },
+                "full_name": {
+                    "type": "string",
+                    "example": "Tunde Bello"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "ffffffff-ffff-4fff-8fff-ffffffffffff"
+                },
+                "job_role": {
+                    "type": "string",
+                    "example": "operations"
+                },
+                "one_time_password": {
+                    "type": "string",
+                    "example": "7Y3B9QK2"
                 },
                 "phone": {
                     "type": "string",
@@ -1006,10 +1217,43 @@
                 "role": {
                     "type": "string",
                     "example": "staff"
+                },
+                "staff_id": {
+                    "type": "string",
+                    "example": "GAL-005"
+                },
+                "status": {
+                    "type": "string",
+                    "example": "active"
                 }
             }
         },
-        "handler.CreateStaffResponse": {
+        "handler.CreateUserRequest": {
+            "type": "object",
+            "required": [
+                "branch_id",
+                "full_name"
+            ],
+            "properties": {
+                "branch_id": {
+                    "type": "string",
+                    "example": "11111111-1111-4111-8111-111111111111"
+                },
+                "email": {
+                    "type": "string",
+                    "example": "staff1@logitech.example"
+                },
+                "full_name": {
+                    "type": "string",
+                    "example": "Tunde Bello"
+                },
+                "phone": {
+                    "type": "string",
+                    "example": "08031110002"
+                }
+            }
+        },
+        "handler.CreateUserResponse": {
             "type": "object",
             "properties": {
                 "branch_id": {

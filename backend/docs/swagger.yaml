@@ -84,10 +84,41 @@ definitions:
         example: Tunde Bello
         type: string
       job_role:
-        description: |-
-          JobRole is required when role = "staff" and must be one of
-          operations, dispatch, receiving. Ignored for owner/manager.
+        description: JobRole is required and must be one of operations, dispatch,
+          receiving.
         example: operations
+        type: string
+      phone:
+        example: "08031110002"
+        type: string
+    required:
+    - branch_id
+    - full_name
+    type: object
+  handler.CreateStaffResponse:
+    properties:
+      branch_id:
+        example: 11111111-1111-4111-8111-111111111111
+        type: string
+      created_at:
+        type: string
+      email:
+        example: staff1@logitech.example
+        type: string
+      first_login_done:
+        example: false
+        type: boolean
+      full_name:
+        example: Tunde Bello
+        type: string
+      id:
+        example: ffffffff-ffff-4fff-8fff-ffffffffffff
+        type: string
+      job_role:
+        example: operations
+        type: string
+      one_time_password:
+        example: 7Y3B9QK2
         type: string
       phone:
         example: "08031110002"
@@ -95,12 +126,32 @@ definitions:
       role:
         example: staff
         type: string
+      staff_id:
+        example: GAL-005
+        type: string
+      status:
+        example: active
+        type: string
+    type: object
+  handler.CreateUserRequest:
+    properties:
+      branch_id:
+        example: 11111111-1111-4111-8111-111111111111
+        type: string
+      email:
+        example: staff1@logitech.example
+        type: string
+      full_name:
+        example: Tunde Bello
+        type: string
+      phone:
+        example: "08031110002"
+        type: string
     required:
     - branch_id
     - full_name
-    - role
     type: object
-  handler.CreateStaffResponse:
+  handler.CreateUserResponse:
     properties:
       branch_id:
         example: 11111111-1111-4111-8111-111111111111
@@ -556,6 +607,120 @@ paths:
       summary: Hello message
       tags:
       - example
+  /api/managers:
+    get:
+      description: Retrieve a list of manager accounts. Accessible by the owner (and
+        system admin), optionally filtered by branch.
+      parameters:
+      - description: Filter by Branch UUID
+        in: query
+        name: branch_id
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/handler.StaffProfile'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List manager accounts
+      tags:
+      - managers
+    post:
+      consumes:
+      - application/json
+      description: Creates a manager account for a branch. Only the owner (or system
+        admin) can manage managers. A staff_id is auto-generated and a one-time password
+        is returned once, to be given to the manager for their first login.
+      parameters:
+      - description: Manager Details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.CreateUserRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/handler.CreateUserResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create a manager account
+      tags:
+      - managers
+  /api/owners:
+    post:
+      consumes:
+      - application/json
+      description: Creates an owner account. Only the system admin can create owners.
+        A staff_id is auto-generated and a one-time password is returned once, to
+        be given to the owner for their first login.
+      parameters:
+      - description: Owner Details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.CreateUserRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/handler.CreateUserResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create an owner account
+      tags:
+      - owners
   /api/staff:
     get:
       description: |-
@@ -592,9 +757,9 @@ paths:
       consumes:
       - application/json
       description: |-
-        Creates a new user. Creation rules:
-        - Managers can ONLY create staff (role: staff) in their own branch; a job_role (operations, dispatch or receiving) is required.
-        - The owner can ONLY create managers. The system admin can ONLY create owners.
+        Creates a staff member (role: staff) with a required job_role: operations, dispatch or receiving. Accessible to owners and managers only.
+        - Managers can only create staff in their own branch (branch_id is forced from their token).
+        - Owners can create staff in any branch.
         A staff_id (e.g. GAL-001, prefix configurable via STAFF_ID_PREFIX) is auto-generated, and a one-time password is returned once so the user can log in and choose their personal PIN (max 10 chars).
       parameters:
       - description: Staff Creation Details
@@ -628,7 +793,7 @@ paths:
             $ref: '#/definitions/handler.ErrorResponse'
       security:
       - BearerAuth: []
-      summary: Create a staff member or a manager
+      summary: Create a staff member
       tags:
       - staff
   /api/staff/{id}:

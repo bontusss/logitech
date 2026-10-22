@@ -64,6 +64,9 @@ func setupTestRouter(t *testing.T) (*gin.Engine, *sql.DB, *sqlc.Queries, *config
 			protected.POST("/staff/:id/reset-pin", staffHandler.ResetStaffPin)
 			protected.POST("/staff/:id/unlock", staffHandler.UnlockStaffAccount)
 			protected.GET("/staff/:id/first-login", staffHandler.FirstLoginStatus)
+			protected.POST("/owners", auth.RequireRoles(auth.RoleSystemAdmin), staffHandler.CreateOwner)
+			protected.POST("/managers", auth.RequireRoles(auth.RoleSystemAdmin, auth.RoleOwner), staffHandler.CreateManager)
+			protected.GET("/managers", auth.RequireRoles(auth.RoleSystemAdmin, auth.RoleOwner), staffHandler.ListManagers)
 			protected.GET("/branches", branchHandler.ListBranches)
 			protected.POST("/branches", branchHandler.CreateBranch)
 			protected.PUT("/branches/:id", branchHandler.UpdateBranch)
@@ -145,17 +148,16 @@ func TestAuthAndStaffCreationFlow(t *testing.T) {
 	w = postJSON(r, "/api/staff", adminAuth.Token, map[string]string{
 		"branch_id": testBranchID,
 		"full_name": "Test Direct Staff",
-		"role":      "staff",
+		"job_role":  "operations",
 	})
 	if w.Code != http.StatusForbidden {
-		t.Fatalf("expected 403 Forbidden when admin tries to create role 'staff', got %d: %s", w.Code, w.Body.String())
+		t.Fatalf("expected 403 Forbidden when admin tries to create staff, got %d: %s", w.Code, w.Body.String())
 	}
 
 	// 4. System admin creates an "owner" -> must be SUCCESSFUL (201)
-	w = postJSON(r, "/api/staff", adminAuth.Token, map[string]string{
+	w = postJSON(r, "/api/owners", adminAuth.Token, map[string]string{
 		"branch_id": testBranchID,
 		"full_name": "Test Owner",
-		"role":      "owner",
 	})
 	if w.Code != http.StatusCreated {
 		t.Fatalf("expected 201 Created for admin creating owner, got %d: %s", w.Code, w.Body.String())
@@ -191,23 +193,22 @@ func TestAuthAndStaffCreationFlow(t *testing.T) {
 	}
 
 	// 6. Owner creates a "manager" -> must be SUCCESSFUL (201)
-	w = postJSON(r, "/api/staff", ownerAuth.Token, map[string]string{
+	w = postJSON(r, "/api/managers", ownerAuth.Token, map[string]string{
 		"branch_id": testBranchID,
 		"full_name": "Test Branch Manager",
-		"role":      "manager",
 	})
 	if w.Code != http.StatusCreated {
 		t.Fatalf("expected 201 Created for owner creating manager, got %d: %s", w.Code, w.Body.String())
 	}
-	var createdManager handler.CreateStaffResponse
+	var createdManager handler.CreateUserResponse
 	if err := json.Unmarshal(w.Body.Bytes(), &createdManager); err != nil {
 		t.Fatalf("failed to decode created manager response: %v", err)
 	}
 	if createdManager.Role != "manager" {
 		t.Errorf("expected role manager, got %s", createdManager.Role)
 	}
-	if createdManager.StaffID == "" || createdManager.StaffID[len(createdManager.StaffID)-3:] != createdManager.StaffID[len(createdManager.StaffID)-3:] {
-		t.Errorf("expected form <-NNN staff id, got %q", createdManager.StaffID)
+	if createdManager.StaffID == "" {
+		t.Errorf("expected auto-generated staff id, got empty")
 	}
 
 	// 7. Manager's first login with the one-time password and new _pin
@@ -223,27 +224,25 @@ func TestAuthAndStaffCreationFlow(t *testing.T) {
 		t.Fatalf("expected logged-in role manager, got %s", mgrAuth.User.Role)
 	}
 
-	// 8. Manager attempts to create an "owner" -> must be FORBIDDEN
-	w = postJSON(r, "/api/staff", mgrAuth.Token, map[string]string{
+	// 8. Manager attempts to create a manager -> must be FORBIDDEN
+	w = postJSON(r, "/api/managers", mgrAuth.Token, map[string]string{
 		"branch_id": testBranchID,
-		"full_name": "Unauthorized Owner",
-		"role":      "owner",
+		"full_name": "Unauthorized Manager",
 	})
 	if w.Code != http.StatusForbidden {
 		t.Fatalf("expected 403 Forbidden when manager attempts to create owner, got %d: %s", w.Code, w.Body.String())
 	}
 
-	// 9. Manager creates an "owner" with job_role=operations -> 201
+	// 9. Manager creates staff with job_role=operations -> 201
 	w = postJSON(r, "/api/staff", mgrAuth.Token, map[string]string{
 		"branch_id": testBranchID,
 		"full_name": "Test Front Desk Staff",
-		"role":      "staff",
 		"job_role":  "operations",
 	})
 	if w.Code != http.StatusCreated {
 		t.Fatalf("expected 201 Created when manager creates staff, got %d: %s", w.Code, w.Body.String())
 	}
-	var createdStaff handler.CreateStaffResponse
+	var createdStaff handler.CreateUserResponse
 	if err := json.Unmarshal(w.Body.Bytes(), &createdStaff); err != nil {
 		t.Fatalf("failed to decode created staff: %v", err)
 	}

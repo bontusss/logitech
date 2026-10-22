@@ -34,6 +34,16 @@ SELECT * FROM staff
 WHERE branch_id = $1
 ORDER BY created_at DESC;
 
+-- name: ListManagers :many
+SELECT * FROM staff
+WHERE role = 'manager'
+ORDER BY created_at DESC;
+
+-- name: ListManagersByBranch :many
+SELECT * FROM staff
+WHERE role = 'manager' AND branch_id = $1
+ORDER BY created_at DESC;
+
 -- name: UpdateStaffDetails :one
 UPDATE staff
 SET full_name = COALESCE(sqlc.narg('full_name'), full_name),

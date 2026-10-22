@@ -104,7 +104,7 @@ func main() {
 			protected.GET("/auth/me", authHandler.GetMe)
 			protected.POST("/auth/logout", authHandler.Logout)
 
-			// Staff / user management
+			// Staff CRUD (POST creates staff only: owner or manager; managers in own branch)
 			protected.POST("/staff", staffHandler.CreateStaff)
 			protected.GET("/staff", auth.RequireRoles(auth.RoleSystemAdmin, auth.RoleOwner, auth.RoleManager), staffHandler.ListStaff)
 			protected.GET("/staff/:id", staffHandler.GetStaff)
@@ -113,6 +113,15 @@ func main() {
 			protected.POST("/staff/:id/reset-pin", auth.RequireRoles(auth.RoleSystemAdmin, auth.RoleOwner, auth.RoleManager), staffHandler.ResetStaffPin)
 			protected.POST("/staff/:id/unlock", auth.RequireRoles(auth.RoleSystemAdmin, auth.RoleOwner, auth.RoleManager), staffHandler.UnlockStaffAccount)
 			protected.GET("/staff/:id/first-login", staffHandler.FirstLoginStatus)
+
+			// Manager accounts: CRUD by the owner (system admin as bootstrap superuser)
+			protected.POST("/managers", auth.RequireRoles(auth.RoleSystemAdmin, auth.RoleOwner), staffHandler.CreateManager)
+			protected.GET("/managers", auth.RequireRoles(auth.RoleSystemAdmin, auth.RoleOwner), staffHandler.ListManagers)
+			protected.PUT("/managers/:id", auth.RequireRoles(auth.RoleSystemAdmin, auth.RoleOwner), staffHandler.UpdateStaff)
+			protected.DELETE("/managers/:id", auth.RequireRoles(auth.RoleSystemAdmin, auth.RoleOwner), staffHandler.RevokeStaff)
+
+			// Owner accounts: created by the system admin only
+			protected.POST("/owners", auth.RequireRoles(auth.RoleSystemAdmin), staffHandler.CreateOwner)
 
 			// Branches: read for all authenticated users, CRUD for the owner (and system admin)
 			protected.GET("/branches", branchHandler.ListBranches)

@@ -30,41 +30,22 @@ func NewStaffHandler(cfg *config.Config, queries *sqlc.Queries) *StaffHandler {
 	}
 }
 
-// CreateStaffRequest defines the body for creating a new user/staff member.
+// CreateStaffRequest defines the body for creating a staff member.
 type CreateStaffRequest struct {
 	BranchID string `json:"branch_id" binding:"required" example:"11111111-1111-4111-8111-111111111111"`
 	FullName string `json:"full_name" binding:"required" example:"Tunde Bello"`
 	Phone    string `json:"phone,omitempty" example:"08031110002"`
 	Email    string `json:"email,omitempty" example:"staff1@logitech.example"`
-	Role     string `json:"role" binding:"required" example:"staff"`
-	// JobRole is required when role = "staff" and must be one of
-	// operations, dispatch, receiving. Ignored for owner/manager.
-	JobRole string `json:"job_role,omitempty" example:"operations"`
-}
-
-// CreateStaffResponse represents the result of staff creation. The one-time
-// password is returned exactly once, at creation time, and must be handed to
-// the user so they can log in and set their personal PIN.
-type CreateStaffResponse struct {
-	ID             string `json:"id" example:"ffffffff-ffff-4fff-8fff-ffffffffffff"`
-	BranchID       string `json:"branch_id" example:"11111111-1111-4111-8111-111111111111"`
-	FullName       string `json:"full_name" example:"Tunde Bello"`
-	Phone          string `json:"phone,omitempty" example:"08031110002"`
-	Email          string `json:"email,omitempty" example:"staff1@logitech.example"`
-	StaffID        string `json:"staff_id" example:"GAL-005"`
-	OneTimePassword string `json:"one_time_password" example:"7Y3B9QK2"`
-	Role           string `json:"role" example:"staff"`
-	JobRole        string `json:"job_role,omitempty" example:"operations"`
-	Status         string `json:"status" example:"active"`
-	FirstLoginDone bool   `json:"first_login_done" example:"false"`
-	CreatedAt      string `json:"created_at"`
-}
-
+	// JobRole is required and must be one of operations, dispatch, receiving.
+	JobRole string `json:"job_role" example:"operations"`
+}// CreateStaffResponse is the unified user-creation response, shared by
+// owner, manager and staff creation.
+type CreateStaffResponse = CreateUserResponse
 // CreateStaff godoc
-// @Summary Create a staff member or a manager
-// @Description Creates a new user. Creation rules:
-// @Description - Managers can ONLY create staff (role: staff) in their own branch; a job_role (operations, dispatch or receiving) is required.
-// @Description - The owner can ONLY create managers. The system admin can ONLY create owners.
+// @Summary Create a staff member
+// @Description Creates a staff member (role: staff) with a required job_role: operations, dispatch or receiving. Accessible to owners and managers only.
+// @Description - Managers can only create staff in their own branch (branch_id is forced from their token).
+// @Description - Owners can create staff in any branch.
 // @Description A staff_id (e.g. GAL-001, prefix configurable via STAFF_ID_PREFIX) is auto-generated, and a one-time password is returned once so the user can log in and choose their personal PIN (max 10 chars).
 // @Tags staff
 // @Accept json
@@ -84,159 +65,49 @@ func (h *StaffHandler) CreateStaff(c *gin.Context) {
 		return
 	}
 
+	// Only owners and managers create staff members.
+	if claims.Role != auth.RoleOwner && claims.Role != auth.RoleManager {
+		c.JSON(http.StatusForbidden, ErrorResponse{
+			Error: "permission denied: only owners and managers can create staff",
+		})
+		return
+	}
+
 	var req CreateStaffRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, ErrorResponse{Error: "invalid request payload: " + err.Error()})
 		return
 	}
 
-	targetRole := strings.ToLower(strings.TrimSpace(req.Role))
-
-	// Enforce role-based creation rules:
-	// 1. System admin can only create an owner.
-	// 2. Owner can only create a manager.
-	// 3. Manager can only create staff, and only in their own branch.
-	switch claims.Role {
-	case auth.RoleSystemAdmin:
-		if targetRole != auth.RoleOwner {
-			c.JSON(http.StatusForbidden, ErrorResponse{
-				Error: "system admin can only create an owner; managers are created by the owner and staff by a manager",
-			})
-			return
-		}
-
-	case auth.RoleOwner:
-		if targetRole != auth.RoleManager {
-			c.JSON(http.StatusForbidden, ErrorResponse{
-				Error: "only the owner can create managers; staff members are created by their branch manager",
-			})
-			return
-		}
-
-	case auth.RoleManager:
-		if targetRole != auth.RoleStaff {
-			c.JSON(http.StatusForbidden, ErrorResponse{
-				Error: "managers can only create staff",
-			})
-			return
-		}
+	// Managers are limited to their assigned branch.
+	if claims.Role == auth.RoleManager {
 		if claims.BranchID == "" {
 			c.JSON(http.StatusForbidden, ErrorResponse{Error: "your account is not assigned to a branch; cannot create staff"})
 			return
 		}
-		// Manager operations are limited to their assigned branch.
 		req.BranchID = claims.BranchID
-
-	default:
-		c.JSON(http.StatusForbidden, ErrorResponse{
-			Error: "permission denied: only managers can create staff, and only the owner can create managers",
-		})
-		return
 	}
 
 	// Staff must always carry a job role.
-	var jobRole sqlc.NullStaffJobRole
-	if targetRole == auth.RoleStaff {
-		switch strings.ToLower(strings.TrimSpace(req.JobRole)) {
-		case "operations":
-			jobRole = sqlc.NullStaffJobRole{StaffJobRole: sqlc.StaffJobRoleOperations, Valid: true}
-		case "dispatch":
-			jobRole = sqlc.NullStaffJobRole{StaffJobRole: sqlc.StaffJobRoleDispatch, Valid: true}
-		case "receiving":
-			jobRole = sqlc.NullStaffJobRole{StaffJobRole: sqlc.StaffJobRoleReceiving, Valid: true}
-		default:
-			c.JSON(http.StatusBadRequest, ErrorResponse{
-				Error: "job_role is required for staff and must be one of: operations, dispatch, receiving",
-			})
-			return
-		}
-	}
-
-	// Verify branch exists and is active.
-	branchUUID, err := uuid.Parse(req.BranchID)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, ErrorResponse{Error: "invalid branch_id format (must be UUID)"})
+	jobRole, errMsg := parseJobRole(req.JobRole)
+	if errMsg != nil {
+		c.JSON(http.StatusBadRequest, *errMsg)
 		return
 	}
 
-	branch, err := h.queries.GetBranchByID(c.Request.Context(), branchUUID)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, ErrorResponse{Error: "branch not found with specified branch_id"})
-		return
+	base := CreateUserRequest{
+		BranchID: req.BranchID,
+		FullName: req.FullName,
+		Phone:    req.Phone,
+		Email:    req.Email,
 	}
-	if branch.Status != sqlc.RecordStatusActive {
-		c.JSON(http.StatusBadRequest, ErrorResponse{Error: "branch is inactive"})
-		return
-	}
-
-	// Check email uniqueness if provided
-	if strings.TrimSpace(req.Email) != "" {
-		existing, err := h.queries.GetStaffByEmail(c.Request.Context(), sql.NullString{String: req.Email, Valid: true})
-		if err == nil && existing.ID != uuid.Nil {
-			c.JSON(http.StatusBadRequest, ErrorResponse{Error: "email already in use by another staff member"})
-			return
-		}
-	}
-
-	// 1. Auto-generate sequential staff_id (e.g. GAL-001).
-	staffID, err := generator.GenerateStaffID(c.Request.Context(), h.queries, h.cfg.StaffIDPrefix)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "failed to generate unique staff_id: " + err.Error()})
+	created, otp, createErr := h.createUser(c, claims, sqlc.StaffRoleStaff, jobRole, base)
+	if createErr != nil {
+		c.JSON(errorStatus(createErr.Error), *createErr)
 		return
 	}
 
-	// 2. Generate a one-time password (returned once in the response body).
-	oneTimePassword, err := generator.GenerateOneTimePassword()
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "failed to generate one-time password: " + err.Error()})
-		return
-	}
-
-	// 3. Hash the one-time password; the user picks their own PIN on first login.
-	otpHash, err := bcrypt.GenerateFromPassword([]byte(oneTimePassword), bcrypt.DefaultCost)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "failed to hash credentials: " + err.Error()})
-		return
-	}
-
-	creatorUUID, err := uuid.Parse(claims.UserID)
-	if err != nil {
-		creatorUUID = uuid.Nil
-	}
-
-	newID := uuid.New()
-	createdStaff, err := h.queries.CreateStaff(c.Request.Context(), sqlc.CreateStaffParams{
-		ID:        newID,
-		BranchID:  branchUUID,
-		FullName:  strings.TrimSpace(req.FullName),
-		Phone:     sql.NullString{String: strings.TrimSpace(req.Phone), Valid: strings.TrimSpace(req.Phone) != ""},
-		Email:     sql.NullString{String: strings.TrimSpace(req.Email), Valid: strings.TrimSpace(req.Email) != ""},
-		StaffID:   staffID,
-		OtpHash:   sql.NullString{String: string(otpHash), Valid: true},
-		Role:      sqlc.StaffRole(targetRole),
-		JobRole:   jobRole,
-		Status:    sqlc.RecordStatusActive,
-		CreatedBy: uuid.NullUUID{UUID: creatorUUID, Valid: creatorUUID != uuid.Nil},
-	})
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "failed to save staff record: " + err.Error()})
-		return
-	}
-
-	c.JSON(http.StatusCreated, CreateStaffResponse{
-		ID:              createdStaff.ID.String(),
-		BranchID:        createdStaff.BranchID.String(),
-		FullName:        createdStaff.FullName,
-		Phone:           createdStaff.Phone.String,
-		Email:           createdStaff.Email.String,
-		StaffID:         createdStaff.StaffID,
-		OneTimePassword: oneTimePassword,
-		Role:            string(createdStaff.Role),
-		JobRole:         jobRoleString(createdStaff.JobRole),
-		Status:          string(createdStaff.Status),
-		FirstLoginDone:  createdStaff.FirstLoginDone,
-		CreatedAt:       createdStaff.CreatedAt.Format(time.RFC3339),
-	})
+	c.JSON(http.StatusCreated, createUserResponse(created, otp))
 }
 
 // ListStaff godoc

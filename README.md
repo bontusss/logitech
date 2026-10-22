@@ -17,7 +17,7 @@ migrations, backend, and frontend:
 ```sh
 cd frontend && npm ci
 cd ..
-make -C backend s_up
+make s_up
 ```
 
 When startup completes, open:
@@ -34,7 +34,7 @@ database runs in Docker Compose and keeps its data in a named volume.
 Stop the services with:
 
 ```sh
-make -C backend s_down
+make s_down
 ```
 
 Backend and frontend logs are written to `backend/.run/be.log` and
@@ -46,20 +46,20 @@ Install frontend dependencies as above. Start PostgreSQL and apply database
 migrations:
 
 ```sh
-make -C backend db_up m_up
+make db_up m_up
 ```
 
 Then start each server in its own terminal from the project root:
 
 ```sh
-make -C backend run-be
+make run-be
 ```
 
 ```sh
-make -C backend run-fe
+make run-fe
 ```
 
-Stop PostgreSQL when finished with `make -C backend db_down`. The database
+Stop PostgreSQL when finished with `make db_down`. The database
 volume is retained.
 
 ## Configuration
@@ -67,7 +67,7 @@ volume is retained.
 The backend accepts `BE_PORT` (default `8080`) and `DATABASE_URL`. For example:
 
 ```sh
-make -C backend run-be BE_PORT=8081 DATABASE_URL='postgres://app:app@localhost:5432/appdb?sslmode=disable'
+make run-be BE_PORT=8081 DATABASE_URL='postgres://app:app@localhost:5432/appdb?sslmode=disable'
 ```
 
 The frontend API base defaults to `http://localhost:8080`; override it with
@@ -87,7 +87,7 @@ Interactive Swagger UI documentation is available at:
 To regenerate Swagger documentation after adding or updating endpoints and annotations:
 
 ```sh
-make -C backend swagger
+make swagger
 ```
 
 ## Authentication & Staff Management
@@ -100,13 +100,15 @@ There are three kinds of users, plus a system administrator seeded from env:
 
 - **System Administrator** (`ADMIN_USERNAME` and `ADMIN_PASSWORD` in `.env`):
   - Logs in via `POST /api/auth/admin/login` or `POST /api/auth/login`.
-  - Can only create `owner` accounts via `POST /api/staff`.
+  - Creates `owner` accounts via `POST /api/owners`.
 - **Owner**:
-  - Created by the System Admin.
-  - Can CRUD managers (`POST/PUT/DELETE /api/staff`) and branches
+  - Created by the System Admin (`POST /api/owners`).
+  - Can CRUD managers (`POST/GET /api/managers`,
+    `PUT/DELETE /api/managers/:id`) and branches
     (`POST/PUT/DELETE /api/branches`), and can manage any user or branch.
+  - Can also create staff members in any branch (`POST /api/staff`).
 - **Manager**:
-  - Created by the Owner.
+  - Created by the Owner (`POST /api/managers`).
   - Can CRUD staff details in **their own branch only**
     (`PUT/DELETE /api/staff/:id`).
   - Creates staff with `POST /api/staff` (job_role required); operations are
@@ -119,13 +121,13 @@ There are three kinds of users, plus a system administrator seeded from env:
 
 #### Staff IDs, PINs and first login
 
-- Every user gets an auto-generated `staff_id` (e.g. `GAL-001`; prefix is
-  configurable via `STAFF_ID_PREFIX`) at creation time.
+- Every user (owner, manager, staff) gets an auto-generated `staff_id` (e.g.
+  `GAL-001`; prefix is configurable via `STAFF_ID_PREFIX`) at creation time.
 - A one-time password is returned once, in the creation response, and given to
   the user.
 - On first login, the user authenticates with `staff_id` + one-time password
   **and** a `new_pin` (4–10 chars). That PIN becomes their permanent credential
-  when `first_login_done` flips to true.
+  and `first_login_done` flips to true.
 - `GET /api/staff/:id/first-login` reports whether a user has performed their
   first login and when.
 - A manager (or owner) can force a PIN reset with
@@ -147,5 +149,5 @@ There are three kinds of users, plus a system administrator seeded from env:
 To regenerate Go code from SQL queries (`backend/internal/db/queries`) and schema:
 
 ```sh
-make -C backend sqlc
+make sqlc
 ```

@@ -232,6 +232,102 @@ func (q *Queries) GetStaffByStaffID(ctx context.Context, staffID string) (Staff,
 	return i, err
 }
 
+const listManagers = `-- name: ListManagers :many
+SELECT id, branch_id, full_name, phone, email, staff_id, otp_hash, pin_hash, role, job_role, status, first_login_done, first_login_at, failed_login_attempts, locked_at, created_by, created_at, updated_at FROM staff
+WHERE role = 'manager'
+ORDER BY created_at DESC
+`
+
+func (q *Queries) ListManagers(ctx context.Context) ([]Staff, error) {
+	rows, err := q.db.QueryContext(ctx, listManagers)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Staff
+	for rows.Next() {
+		var i Staff
+		if err := rows.Scan(
+			&i.ID,
+			&i.BranchID,
+			&i.FullName,
+			&i.Phone,
+			&i.Email,
+			&i.StaffID,
+			&i.OtpHash,
+			&i.PinHash,
+			&i.Role,
+			&i.JobRole,
+			&i.Status,
+			&i.FirstLoginDone,
+			&i.FirstLoginAt,
+			&i.FailedLoginAttempts,
+			&i.LockedAt,
+			&i.CreatedBy,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listManagersByBranch = `-- name: ListManagersByBranch :many
+SELECT id, branch_id, full_name, phone, email, staff_id, otp_hash, pin_hash, role, job_role, status, first_login_done, first_login_at, failed_login_attempts, locked_at, created_by, created_at, updated_at FROM staff
+WHERE role = 'manager' AND branch_id = $1
+ORDER BY created_at DESC
+`
+
+func (q *Queries) ListManagersByBranch(ctx context.Context, branchID uuid.UUID) ([]Staff, error) {
+	rows, err := q.db.QueryContext(ctx, listManagersByBranch, branchID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Staff
+	for rows.Next() {
+		var i Staff
+		if err := rows.Scan(
+			&i.ID,
+			&i.BranchID,
+			&i.FullName,
+			&i.Phone,
+			&i.Email,
+			&i.StaffID,
+			&i.OtpHash,
+			&i.PinHash,
+			&i.Role,
+			&i.JobRole,
+			&i.Status,
+			&i.FirstLoginDone,
+			&i.FirstLoginAt,
+			&i.FailedLoginAttempts,
+			&i.LockedAt,
+			&i.CreatedBy,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listStaff = `-- name: ListStaff :many
 SELECT id, branch_id, full_name, phone, email, staff_id, otp_hash, pin_hash, role, job_role, status, first_login_done, first_login_at, failed_login_attempts, locked_at, created_by, created_at, updated_at FROM staff
 ORDER BY created_at DESC

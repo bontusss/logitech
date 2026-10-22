@@ -23,6 +23,8 @@ type Querier interface {
 	GetStaffByID(ctx context.Context, id uuid.UUID) (Staff, error)
 	GetStaffByStaffID(ctx context.Context, staffID string) (Staff, error)
 	ListBranches(ctx context.Context) ([]Branch, error)
+	ListManagers(ctx context.Context) ([]Staff, error)
+	ListManagersByBranch(ctx context.Context, branchID uuid.UUID) ([]Staff, error)
 	ListStaff(ctx context.Context) ([]Staff, error)
 	ListStaffByBranch(ctx context.Context, branchID uuid.UUID) ([]Staff, error)
 	RecordFailedLogin(ctx context.Context, arg RecordFailedLoginParams) (RecordFailedLoginRow, error)
