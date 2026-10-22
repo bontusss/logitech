@@ -23,7 +23,7 @@ RUN_DIR           := .run
 
 export BE_PORT DATABASE_URL
 
-.PHONY: s_up s_down db_up db_down m_up m_down run-be run-fe build clean help swagger
+.PHONY: s_up s_down db_up db_down m_up m_down run-be run-fe build clean help swagger sqlc
 
 ## ---- stack (s_up / s_down) ---------------------------------------------
 
@@ -103,7 +103,13 @@ embed-copy:
 
 swagger: ## generate swagger / openapi documentation
 	@echo "==> generating swagger docs"
-	swag init -g main.go -d cmd/server -o docs
+	swag init -g main.go -d cmd/server,internal/handler -o docs
+
+## ---- sqlc -------------------------------------------------------------------
+
+sqlc: ## generate sqlc code from queries and schema
+	@echo "==> generating sqlc code"
+	sqlc generate
 
 clean: ## remove build artifacts and runtime files
 	@rm -rf bin $(RUN_DIR)

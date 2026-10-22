@@ -18,6 +18,203 @@
     "host": "localhost:8080",
     "basePath": "/",
     "paths": {
+        "/api/auth/admin/login": {
+            "post": {
+                "description": "Authenticate as system administrator using credentials configured in environment.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "System Admin Login",
+                "parameters": [
+                    {
+                        "description": "Admin Credentials",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.AdminLoginRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handler.AuthResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/auth/login": {
+            "post": {
+                "description": "Authenticate staff using staff_id and 4-digit alphanumeric PIN, or system admin using username and password.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Staff and Admin Login",
+                "parameters": [
+                    {
+                        "description": "Login Credentials",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.LoginRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handler.AuthResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/auth/logout": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Invalidate the current session token using Redis token revocation.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "User Logout",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/auth/me": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns the profile and role details of the currently authenticated user.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Get Current Authenticated User Profile",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handler.StaffProfile"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/branches": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieve a list of all branches.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "branches"
+                ],
+                "summary": "List All Branches",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/handler.BranchResponse"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/hello": {
             "get": {
                 "description": "Returns a simple greeting message from the Logitech API server.",
@@ -33,6 +230,167 @@
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/main.HelloResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/staff": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieve a list of staff members. Accessible by system_admin, owner, and manager.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "staff"
+                ],
+                "summary": "List Staff Members",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Filter by Branch UUID",
+                        "name": "branch_id",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/handler.StaffProfile"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Creates a new staff member. Role creation rules:\n- Managers can ONLY create staff (role: staff).\n- System Admin can ONLY create owners and managers (role: owner or manager).\nstaff_id (e.g. STF-001) and a 4-digit alphanumeric PIN are auto-generated.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "staff"
+                ],
+                "summary": "Create a staff, manager, or owner",
+                "parameters": [
+                    {
+                        "description": "Staff Creation Details",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.CreateStaffRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/handler.CreateStaffResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/staff/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get details for a specific staff member by UUID.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "staff"
+                ],
+                "summary": "Get Staff Details",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Staff UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handler.StaffProfile"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
                         }
                     }
                 }
@@ -60,6 +418,221 @@
         }
     },
     "definitions": {
+        "handler.AdminLoginRequest": {
+            "type": "object",
+            "required": [
+                "password",
+                "username"
+            ],
+            "properties": {
+                "password": {
+                    "type": "string",
+                    "example": "adminpassword123"
+                },
+                "username": {
+                    "type": "string",
+                    "example": "admin"
+                }
+            }
+        },
+        "handler.AuthResponse": {
+            "type": "object",
+            "properties": {
+                "expires_in": {
+                    "type": "integer",
+                    "example": 86400
+                },
+                "token": {
+                    "type": "string"
+                },
+                "token_type": {
+                    "type": "string",
+                    "example": "Bearer"
+                },
+                "user": {
+                    "$ref": "#/definitions/handler.StaffProfile"
+                }
+            }
+        },
+        "handler.BranchResponse": {
+            "type": "object",
+            "properties": {
+                "address": {
+                    "type": "string",
+                    "example": "12 Apapa Road"
+                },
+                "code": {
+                    "type": "string",
+                    "example": "LAG-01"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "11111111-1111-4111-8111-111111111111"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Lagos Main Branch"
+                },
+                "phone": {
+                    "type": "string",
+                    "example": "08030000001"
+                },
+                "state": {
+                    "type": "string",
+                    "example": "Lagos"
+                },
+                "status": {
+                    "type": "string",
+                    "example": "active"
+                }
+            }
+        },
+        "handler.CreateStaffRequest": {
+            "type": "object",
+            "required": [
+                "branch_id",
+                "full_name"
+            ],
+            "properties": {
+                "branch_id": {
+                    "type": "string",
+                    "example": "11111111-1111-4111-8111-111111111111"
+                },
+                "email": {
+                    "type": "string",
+                    "example": "ada@logitech.example"
+                },
+                "full_name": {
+                    "type": "string",
+                    "example": "Ada Nwosu"
+                },
+                "phone": {
+                    "type": "string",
+                    "example": "08031110002"
+                },
+                "role": {
+                    "type": "string",
+                    "example": "staff"
+                }
+            }
+        },
+        "handler.CreateStaffResponse": {
+            "type": "object",
+            "properties": {
+                "branch_id": {
+                    "type": "string",
+                    "example": "11111111-1111-4111-8111-111111111111"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string",
+                    "example": "ada@logitech.example"
+                },
+                "full_name": {
+                    "type": "string",
+                    "example": "Ada Nwosu"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "ffffffff-ffff-4fff-8fff-ffffffffffff"
+                },
+                "phone": {
+                    "type": "string",
+                    "example": "08031110002"
+                },
+                "pin": {
+                    "type": "string",
+                    "example": "9A4F"
+                },
+                "role": {
+                    "type": "string",
+                    "example": "staff"
+                },
+                "staff_id": {
+                    "type": "string",
+                    "example": "STF-005"
+                },
+                "status": {
+                    "type": "string",
+                    "example": "active"
+                }
+            }
+        },
+        "handler.ErrorResponse": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string",
+                    "example": "invalid credentials"
+                }
+            }
+        },
+        "handler.LoginRequest": {
+            "type": "object",
+            "properties": {
+                "password": {
+                    "type": "string",
+                    "example": "adminpassword123"
+                },
+                "pin": {
+                    "type": "string",
+                    "example": "1001"
+                },
+                "staff_id": {
+                    "type": "string",
+                    "example": "STF-001"
+                },
+                "username": {
+                    "type": "string",
+                    "example": "admin"
+                }
+            }
+        },
+        "handler.StaffProfile": {
+            "type": "object",
+            "properties": {
+                "branch_id": {
+                    "type": "string",
+                    "example": "11111111-1111-4111-8111-111111111111"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string",
+                    "example": "staff@logitech.example"
+                },
+                "full_name": {
+                    "type": "string",
+                    "example": "Chinedu Okafor"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1"
+                },
+                "phone": {
+                    "type": "string",
+                    "example": "08031110001"
+                },
+                "role": {
+                    "type": "string",
+                    "example": "staff"
+                },
+                "staff_id": {
+                    "type": "string",
+                    "example": "STF-001"
+                },
+                "status": {
+                    "type": "string",
+                    "example": "active"
+                }
+            }
+        },
         "main.HealthResponse": {
             "type": "object",
             "properties": {
@@ -81,6 +654,14 @@
                     "example": "hello from Go"
                 }
             }
+        }
+    },
+    "securityDefinitions": {
+        "BearerAuth": {
+            "description": "Type \"Bearer\" followed by a space and your JWT token.",
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header"
         }
     }
 }

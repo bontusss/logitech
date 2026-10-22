@@ -19,6 +19,11 @@
 // @license.name Apache 2.0
 // @license.url http://www.apache.org/licenses/LICENSE-2.0.html
 
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
+// @description Type "Bearer" followed by a space and your JWT token.
+
 // @host localhost:8080
 // @BasePath /
 
@@ -33,7 +38,12 @@ import (
 	"time"
 
 	_ "backend/docs"
+	"backend/internal/auth"
+	"backend/internal/config"
 	"backend/internal/db"
+	"backend/internal/db/sqlc"
+	"backend/internal/handler"
+	"backend/internal/redis"
 	"backend/internal/web"
 
 	"github.com/gin-gonic/gin"
@@ -53,16 +63,9 @@ type HelloResponse struct {
 }
 
 func main() {
-	addr := os.Getenv("PORT")
-	if addr == "" {
-		addr = "8080"
-	}
-	dsn := os.Getenv("DATABASE_URL")
-	if dsn == "" {
-		dsn = db.DefaultDSN
-	}
+	cfg := config.Load()
 
-	pool, err := db.Open(dsn)
+	pool, err := db.Open(cfg.DatabaseURL)
 	if err != nil {
 		slog.Warn("db open failed, /health will report db=down", "err", err)
 		pool = nil
@@ -70,14 +73,43 @@ func main() {
 		pool.SetMaxOpenConns(10)
 	}
 
+	var queries *sqlc.Queries
+	if pool != nil {
+		queries = sqlc.New(pool)
+	}
+
+	redisStore := redis.NewStore(cfg.RedisURL)
+	defer redisStore.Close()
+
+	authHandler := handler.NewAuthHandler(cfg, queries, redisStore)
+	staffHandler := handler.NewStaffHandler(queries)
+	branchHandler := handler.NewBranchHandler(queries)
+
 	r := gin.Default()
 	r.Use(cors())
 
-	r.GET("/health", health(pool, dsn))
+	r.GET("/health", health(pool, cfg.DatabaseURL))
 
+	// API routes
 	api := r.Group("/api")
 	{
 		api.GET("/hello", hello)
+		api.POST("/auth/login", authHandler.Login)
+		api.POST("/auth/admin/login", authHandler.AdminLogin)
+
+		// Protected endpoints
+		protected := api.Group("")
+		protected.Use(auth.AuthRequired(cfg.JWTSecret, redisStore))
+		{
+			protected.GET("/auth/me", authHandler.GetMe)
+			protected.POST("/auth/logout", authHandler.Logout)
+
+			protected.POST("/staff", staffHandler.CreateStaff)
+			protected.GET("/staff", auth.RequireRoles(auth.RoleSystemAdmin, auth.RoleOwner, auth.RoleManager), staffHandler.ListStaff)
+			protected.GET("/staff/:id", staffHandler.GetStaff)
+
+			protected.GET("/branches", branchHandler.ListBranches)
+		}
 	}
 
 	// Swagger API documentation
@@ -91,8 +123,8 @@ func main() {
 	r.GET("/", frontend)
 	r.NoRoute(frontend)
 
-	slog.Info("server listening", "addr", addr)
-	if err := r.Run(":" + addr); err != nil {
+	slog.Info("server listening", "port", cfg.Port)
+	if err := r.Run(":" + cfg.Port); err != nil {
 		slog.Error("server exited", "err", err)
 		os.Exit(1)
 	}

@@ -1,5 +1,159 @@
 basePath: /
 definitions:
+  handler.AdminLoginRequest:
+    properties:
+      password:
+        example: adminpassword123
+        type: string
+      username:
+        example: admin
+        type: string
+    required:
+    - password
+    - username
+    type: object
+  handler.AuthResponse:
+    properties:
+      expires_in:
+        example: 86400
+        type: integer
+      token:
+        type: string
+      token_type:
+        example: Bearer
+        type: string
+      user:
+        $ref: '#/definitions/handler.StaffProfile'
+    type: object
+  handler.BranchResponse:
+    properties:
+      address:
+        example: 12 Apapa Road
+        type: string
+      code:
+        example: LAG-01
+        type: string
+      created_at:
+        type: string
+      id:
+        example: 11111111-1111-4111-8111-111111111111
+        type: string
+      name:
+        example: Lagos Main Branch
+        type: string
+      phone:
+        example: "08030000001"
+        type: string
+      state:
+        example: Lagos
+        type: string
+      status:
+        example: active
+        type: string
+    type: object
+  handler.CreateStaffRequest:
+    properties:
+      branch_id:
+        example: 11111111-1111-4111-8111-111111111111
+        type: string
+      email:
+        example: ada@logitech.example
+        type: string
+      full_name:
+        example: Ada Nwosu
+        type: string
+      phone:
+        example: "08031110002"
+        type: string
+      role:
+        example: staff
+        type: string
+    required:
+    - branch_id
+    - full_name
+    type: object
+  handler.CreateStaffResponse:
+    properties:
+      branch_id:
+        example: 11111111-1111-4111-8111-111111111111
+        type: string
+      created_at:
+        type: string
+      email:
+        example: ada@logitech.example
+        type: string
+      full_name:
+        example: Ada Nwosu
+        type: string
+      id:
+        example: ffffffff-ffff-4fff-8fff-ffffffffffff
+        type: string
+      phone:
+        example: "08031110002"
+        type: string
+      pin:
+        example: 9A4F
+        type: string
+      role:
+        example: staff
+        type: string
+      staff_id:
+        example: STF-005
+        type: string
+      status:
+        example: active
+        type: string
+    type: object
+  handler.ErrorResponse:
+    properties:
+      error:
+        example: invalid credentials
+        type: string
+    type: object
+  handler.LoginRequest:
+    properties:
+      password:
+        example: adminpassword123
+        type: string
+      pin:
+        example: "1001"
+        type: string
+      staff_id:
+        example: STF-001
+        type: string
+      username:
+        example: admin
+        type: string
+    type: object
+  handler.StaffProfile:
+    properties:
+      branch_id:
+        example: 11111111-1111-4111-8111-111111111111
+        type: string
+      created_at:
+        type: string
+      email:
+        example: staff@logitech.example
+        type: string
+      full_name:
+        example: Chinedu Okafor
+        type: string
+      id:
+        example: aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1
+        type: string
+      phone:
+        example: "08031110001"
+        type: string
+      role:
+        example: staff
+        type: string
+      staff_id:
+        example: STF-001
+        type: string
+      status:
+        example: active
+        type: string
+    type: object
   main.HealthResponse:
     properties:
       db:
@@ -29,6 +183,134 @@ info:
   title: Logitech API
   version: "1.0"
 paths:
+  /api/auth/admin/login:
+    post:
+      consumes:
+      - application/json
+      description: Authenticate as system administrator using credentials configured
+        in environment.
+      parameters:
+      - description: Admin Credentials
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.AdminLoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.AuthResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      summary: System Admin Login
+      tags:
+      - auth
+  /api/auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Authenticate staff using staff_id and 4-digit alphanumeric PIN,
+        or system admin using username and password.
+      parameters:
+      - description: Login Credentials
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.AuthResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      summary: Staff and Admin Login
+      tags:
+      - auth
+  /api/auth/logout:
+    post:
+      description: Invalidate the current session token using Redis token revocation.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: User Logout
+      tags:
+      - auth
+  /api/auth/me:
+    get:
+      description: Returns the profile and role details of the currently authenticated
+        user.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.StaffProfile'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get Current Authenticated User Profile
+      tags:
+      - auth
+  /api/branches:
+    get:
+      description: Retrieve a list of all branches.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/handler.BranchResponse'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List All Branches
+      tags:
+      - branches
   /api/hello:
     get:
       description: Returns a simple greeting message from the Logitech API server.
@@ -42,6 +324,113 @@ paths:
       summary: Hello message
       tags:
       - example
+  /api/staff:
+    get:
+      description: Retrieve a list of staff members. Accessible by system_admin, owner,
+        and manager.
+      parameters:
+      - description: Filter by Branch UUID
+        in: query
+        name: branch_id
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/handler.StaffProfile'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List Staff Members
+      tags:
+      - staff
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Creates a new staff member. Role creation rules:
+        - Managers can ONLY create staff (role: staff).
+        - System Admin can ONLY create owners and managers (role: owner or manager).
+        staff_id (e.g. STF-001) and a 4-digit alphanumeric PIN are auto-generated.
+      parameters:
+      - description: Staff Creation Details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.CreateStaffRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/handler.CreateStaffResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create a staff, manager, or owner
+      tags:
+      - staff
+  /api/staff/{id}:
+    get:
+      description: Get details for a specific staff member by UUID.
+      parameters:
+      - description: Staff UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.StaffProfile'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get Staff Details
+      tags:
+      - staff
   /health:
     get:
       description: Returns the service status and PostgreSQL database connection state.
@@ -55,4 +444,10 @@ paths:
       summary: Check service health
       tags:
       - system
+securityDefinitions:
+  BearerAuth:
+    description: Type "Bearer" followed by a space and your JWT token.
+    in: header
+    name: Authorization
+    type: apiKey
 swagger: "2.0"

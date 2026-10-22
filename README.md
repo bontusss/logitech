@@ -86,3 +86,30 @@ To regenerate Swagger documentation after adding or updating endpoints and annot
 ```sh
 make -C backend swagger
 ```
+
+## Authentication & Staff Management
+
+The backend uses JWT tokens for authentication, sqlc for type-safe database queries, and Redis for token revocation (with in-memory fallback).
+
+### Role Hierarchy & Staff Creation
+
+- **System Administrator** (`ADMIN_USERNAME` and `ADMIN_PASSWORD` in `.env`):
+  - Can log in via `POST /api/auth/admin/login` or `POST /api/auth/login`.
+  - Can only create `owner` and `manager` roles via `POST /api/staff`.
+- **Manager**:
+  - Created by System Admin.
+  - Can only create `staff` role via `POST /api/staff`.
+- **Staff**:
+  - Created by Manager.
+  - Can log in using auto-generated `staff_id` and 4-digit alphanumeric `pin`.
+  - Cannot create staff members.
+
+When any staff member is created, their `staff_id` (e.g. `STF-001`) and a 4-digit alphanumeric `pin` are automatically generated and returned in the creation response.
+
+### sqlc Code Generation
+
+To regenerate Go code from SQL queries (`backend/internal/db/queries`) and schema:
+
+```sh
+make -C backend sqlc
+```
