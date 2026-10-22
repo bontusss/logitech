@@ -27,7 +27,6 @@ package main
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"log/slog"
 	"net/http"
 	"os"
@@ -37,7 +36,9 @@ import (
 	"backend/internal/db"
 	"backend/internal/web"
 
-	httpSwagger "github.com/swaggo/http-swagger/v2"
+	"github.com/gin-gonic/gin"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
 // HealthResponse represents the health check status response.
@@ -69,20 +70,29 @@ func main() {
 		pool.SetMaxOpenConns(10)
 	}
 
-	mux := http.NewServeMux()
-	mux.HandleFunc("GET /health", health(pool, dsn))
-	mux.HandleFunc("GET /api/hello", hello)
+	r := gin.Default()
+	r.Use(cors())
+
+	r.GET("/health", health(pool, dsn))
+
+	api := r.Group("/api")
+	{
+		api.GET("/hello", hello)
+	}
 
 	// Swagger API documentation
-	mux.HandleFunc("GET /swagger", func(w http.ResponseWriter, r *http.Request) {
-		http.Redirect(w, r, "/swagger/index.html", http.StatusMovedPermanently)
+	r.GET("/swagger", func(c *gin.Context) {
+		c.Redirect(http.StatusMovedPermanently, "/swagger/index.html")
 	})
-	mux.HandleFunc("/swagger/", httpSwagger.Handler())
+	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
-	mux.Handle("/", web.Handler())
+	// Embedded Nuxt frontend fallback
+	frontend := gin.WrapH(web.Handler())
+	r.GET("/", frontend)
+	r.NoRoute(frontend)
 
 	slog.Info("server listening", "addr", addr)
-	if err := http.ListenAndServe(":"+addr, cors(mux)); err != nil {
+	if err := r.Run(":" + addr); err != nil {
 		slog.Error("server exited", "err", err)
 		os.Exit(1)
 	}
@@ -96,12 +106,11 @@ func main() {
 // @Produce json
 // @Success 200 {object} HealthResponse
 // @Router /health [get]
-func health(pool *sql.DB, _ string) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		code := http.StatusOK
+func health(pool *sql.DB, _ string) gin.HandlerFunc {
+	return func(c *gin.Context) {
 		out := HealthResponse{Status: "ok", DB: "down"}
 		if pool != nil {
-			ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
+			ctx, cancel := context.WithTimeout(c.Request.Context(), 2*time.Second)
 			defer cancel()
 			if err := db.Ping(ctx, pool); err == nil {
 				out.DB = "up"
@@ -109,7 +118,7 @@ func health(pool *sql.DB, _ string) http.HandlerFunc {
 				slog.Warn("db ping failed", "err", err)
 			}
 		}
-		writeJSON(w, code, out)
+		c.JSON(http.StatusOK, out)
 	}
 }
 
@@ -121,30 +130,24 @@ func health(pool *sql.DB, _ string) http.HandlerFunc {
 // @Produce json
 // @Success 200 {object} HelloResponse
 // @Router /api/hello [get]
-func hello(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, http.StatusOK, HelloResponse{Message: "hello from Go"})
-}
-
-func writeJSON(w http.ResponseWriter, code int, v any) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(code)
-	_ = json.NewEncoder(w).Encode(v)
+func hello(c *gin.Context) {
+	c.JSON(http.StatusOK, HelloResponse{Message: "hello from Go"})
 }
 
 // cors allows the Nuxt dev server (http://localhost:3000) to call /api and /health.
-func cors(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		origin := r.Header.Get("Origin")
+func cors() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		origin := c.GetHeader("Origin")
 		if origin == "http://localhost:3000" || origin == "http://localhost:8080" || origin == "http://localhost:3001" {
-			w.Header().Set("Access-Control-Allow-Origin", origin)
-			w.Header().Set("Vary", "Origin")
-			if r.Method == http.MethodOptions {
-				w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-				w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-				w.WriteHeader(http.StatusNoContent)
+			c.Header("Access-Control-Allow-Origin", origin)
+			c.Header("Vary", "Origin")
+			if c.Request.Method == http.MethodOptions {
+				c.Header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+				c.Header("Access-Control-Allow-Headers", "Content-Type")
+				c.AbortWithStatus(http.StatusNoContent)
 				return
 			}
 		}
-		next.ServeHTTP(w, r)
-	})
+		c.Next()
+	}
 }
