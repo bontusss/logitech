@@ -166,14 +166,17 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	// must match the outstanding one-time password, and a new PIN is required.
 	otpPending := !staff.FirstLoginDone || staff.OtpHash.Valid
 	if otpPending {
-		if req.NewPin == "" {
-			c.JSON(http.StatusBadRequest, ErrorResponse{Error: "your one-time password was accepted for a first login; provide new_pin (4-10 characters) to create your PIN"})
-			return
-		}
 		if !compareOtpHash(staff.OtpHash, req.Pin) {
 			c.JSON(h.handleFailedLogin(c, staff.ID), ErrorResponse{Error: "invalid staff_id or one-time password"})
 			return
 		}
+
+		// OTP verified. If no new_pin was supplied (sign-in page), ask for it.
+		if req.NewPin == "" {
+			c.JSON(http.StatusBadRequest, ErrorResponse{Error: "your one-time password was accepted for a first login; provide new_pin (4-10 characters) to create your PIN"})
+			return
+		}
+
 		if !generator.ValidatePin(req.NewPin) {
 			c.JSON(http.StatusBadRequest, ErrorResponse{Error: "new_pin must be between 4 and 10 characters"})
 			return
