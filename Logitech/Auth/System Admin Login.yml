@@ -1,0 +1,71 @@
+info:
+  name: System Admin Login
+  type: http
+  seq: 1
+
+http:
+  method: POST
+  url: "{{url}}/api/auth/admin/login"
+  body:
+    type: json
+    data: |-
+      { 
+        "password": "adminpassword123",
+        "username": "admin"
+      }
+  auth: inherit
+
+runtime:
+  scripts:
+    - type: tests
+      code: |-
+        const body = res.body;
+        bru.setEnvVar("token", body.token);
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false
+
+examples:
+  - name: example
+    request:
+      url: "{{url}}/api/auth/admin/login"
+      method: POST
+      body:
+        type: json
+        data: |-
+          { 
+            "password": "adminpassword123",
+            "username": "admin"
+          }
+    response:
+      status: 200
+      statusText: OK
+      headers:
+        - name: content-type
+          value: application/json; charset=utf-8
+        - name: date
+          value: Thu, 22 Oct 2026 21:20:53 GMT
+        - name: content-length
+          value: "556"
+      body:
+        type: json
+        data: |-
+          {
+            "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoiYWRtaW4iLCJzdGFmZl9pZCI6IlNZUy1BRE1JTiIsImZ1bGxfbmFtZSI6IlN5c3RlbSBBZG1pbmlzdHJhdG9yIiwicm9sZSI6InN5c3RlbV9hZG1pbiIsImlzcyI6ImxvZ2l0ZWNoLWJhY2tlbmQiLCJzdWIiOiJhZG1pbiIsImV4cCI6MTc5Mjc5MDQ1MywiaWF0IjoxNzkyNzA0MDUzfQ.kN25vBhvOS0e3PwYlGE8lf3HRt9r-Ew6H6ajHKd209E",
+            "token_type": "Bearer",
+            "expires_in": 86400,
+            "user": {
+              "id": "admin",
+              "staff_id": "SYS-ADMIN",
+              "full_name": "System Administrator",
+              "role": "system_admin",
+              "email": "admin@logitech.example",
+              "status": "active",
+              "first_login_done": true,
+              "locked": false
+            }
+          }

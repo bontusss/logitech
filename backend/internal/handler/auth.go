@@ -45,9 +45,9 @@ func NewAuthHandler(cfg *config.Config, queries *sqlc.Queries, store *redis.Stor
 // personal PIN (max 10 chars).
 type LoginRequest struct {
 	StaffID string `json:"staff_id" example:"GAL-001"`
-	Pin     string `json:"pin" example:"7Y3B9QK2"`
+	Pin     string `json:"pin"      example:"demo1234"`
 	// NewPin is required on first login (and after a PIN reset) to create the personal PIN.
-	NewPin   string `json:"new_pin,omitempty" example:"987654"`
+	NewPin   string `json:"new_pin,omitempty" example:"newpin99"`
 	Username string `json:"username,omitempty" example:"admin"`
 	Password string `json:"password,omitempty" example:"adminpassword123"`
 }
@@ -88,14 +88,20 @@ type ErrorResponse struct {
 }
 
 // newStaffProfile maps a staff row onto the public profile representation.
+// Owners are not attached to any single branch, so their BranchID is left empty
+// even when the underlying row carries one (e.g. from seed data).
 func newStaffProfile(s sqlc.Staff) StaffProfile {
+	branchID := s.BranchID.String()
+	if s.Role == sqlc.StaffRoleOwner {
+		branchID = ""
+	}
 	return StaffProfile{
 		ID:             s.ID.String(),
 		StaffID:        s.StaffID,
 		FullName:       s.FullName,
 		Role:           string(s.Role),
 		JobRole:        jobRoleString(s.JobRole),
-		BranchID:       s.BranchID.String(),
+		BranchID:       branchID,
 		Phone:          s.Phone.String,
 		Email:          s.Email.String,
 		Status:         string(s.Status),
@@ -106,11 +112,31 @@ func newStaffProfile(s sqlc.Staff) StaffProfile {
 }
 
 // Login godoc
-// @Summary Staff and Admin Login
-// @Description Authenticate staff using staff_id and a secret, or system admin using username and password.
-// @Description - First login / after a PIN reset: "pin" holds the one-time password and "new_pin" is required; the new PIN (4-10 chars) becomes the user's personal PIN.
-// @Description - Afterwards: "pin" holds the personal PIN.
-// @Description The account locks after 3 failed login attempts; a locked staff account can be reopened by the manager of its branch or by the owner.
+// @Summary Staff Login
+// @Description Authenticate a staff member using their `staff_id` and `pin`.
+// @Description
+// @Description ### Normal login (PIN already set)
+// @Description Send `staff_id` + `pin` only.
+// @Description
+// @Description ### First login / after a PIN reset
+// @Description 1. Call this endpoint with `staff_id` + `pin` (the one-time password).
+// @Description    The API responds 400 with `"provide new_pin"` in the error message.
+// @Description 2. Call again with `staff_id` + `pin` (OTP) + `new_pin` (4-10 chars).
+// @Description    The OTP is consumed; `new_pin` becomes the permanent PIN.
+// @Description
+// @Description Account locks after **3** failed attempts; a branch manager or owner must unlock it.
+// @Description
+// @Description ---
+// @Description ### Seed / demo credentials (PIN = `demo1234` for all)
+// @Description
+// @Description | staff_id | Full name      | Role    |
+// @Description |----------|----------------|---------|
+// @Description | GAL-001  | Chinedu Okafor | owner   |
+// @Description | GAL-002  | Ada Nwosu      | manager |
+// @Description | GAL-003  | Tunde Bello    | staff   |
+// @Description | GAL-004  | Mary James     | staff   |
+// @Description
+// @Description GAL-014 and GAL-015 have `first_login_done = false` (first-login flow required).
 // @Tags auth
 // @Accept json
 // @Produce json
@@ -271,6 +297,13 @@ func (h *AuthHandler) handleFailedLogin(c *gin.Context, staffID uuid.UUID) int {
 // AdminLogin godoc
 // @Summary System Admin Login
 // @Description Authenticate as system administrator using credentials configured in environment.
+// @Description
+// @Description ### Demo credentials
+// @Description
+// @Description | Field    | Value            |
+// @Description |----------|------------------|
+// @Description | username | admin            |
+// @Description | password | adminpassword123 |
 // @Tags auth
 // @Accept json
 // @Produce json

@@ -1,0 +1,68 @@
+info:
+  name: Create a manager
+  type: http
+  seq: 1
+
+http:
+  method: POST
+  url: "{{url}}/api/managers"
+  body:
+    type: json
+    data: |-
+      {
+        "branch_id": "11111111-1111-4111-8111-111111111111",
+        "email": "staff1@logitech.example",
+        "full_name": "Tunde Bello",
+        "phone": "08031110002"
+      }
+  auth:
+    type: bearer
+    token: "{{token}}"
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false
+
+examples:
+  - name: example
+    request:
+      url: "{{url}}/api/managers"
+      method: POST
+      body:
+        type: json
+        data: |-
+          {
+            "branch_id": "11111111-1111-4111-8111-111111111111",
+            "email": "staff1@logitech.example",
+            "full_name": "Tunde Bello",
+            "phone": "08031110002"
+          }
+    response:
+      status: 201
+      statusText: Created
+      headers:
+        - name: content-type
+          value: application/json; charset=utf-8
+        - name: date
+          value: Thu, 22 Oct 2026 21:53:55 GMT
+        - name: content-length
+          value: "326"
+      body:
+        type: json
+        data: |-
+          {
+            "id": "fd835577-72ea-4313-a62f-178cd0b71ffd",
+            "branch_id": "11111111-1111-4111-8111-111111111111",
+            "full_name": "Tunde Bello",
+            "phone": "08031110002",
+            "email": "staff1@logitech.example",
+            "staff_id": "GAL-014",
+            "one_time_password": "N0ZY45K1",
+            "role": "manager",
+            "status": "active",
+            "first_login_done": false,
+            "created_at": "2026-10-22T21:53:55Z"
+          }

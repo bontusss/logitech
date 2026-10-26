@@ -1,0 +1,33 @@
+info:
+  name: Login
+  type: http
+  seq: 4
+
+http:
+  method: POST
+  url: "{{url}}/api/auth/login"
+  body:
+    type: json
+    data: |-
+      {
+        "new_pin": "987654",
+        "password": "adminpassword123",
+        "pin": "7Y3B9QK2",
+        "staff_id": "GAL-001",
+        "username": "admin"
+      }
+  auth: inherit
+
+runtime:
+  scripts:
+    - type: tests
+      code: |-
+        const body = res.body;
+        bru.setEnvVar("token", body.token);
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

@@ -26,7 +26,7 @@ const docTemplate = `{
     "paths": {
         "/api/auth/admin/login": {
             "post": {
-                "description": "Authenticate as system administrator using credentials configured in environment.",
+                "description": "Authenticate as system administrator using credentials configured in environment.\n\n### Demo credentials\n\n| Field    | Value            |\n|----------|------------------|\n| username | admin            |\n| password | adminpassword123 |",
                 "consumes": [
                     "application/json"
                 ],
@@ -72,7 +72,7 @@ const docTemplate = `{
         },
         "/api/auth/login": {
             "post": {
-                "description": "Authenticate staff using staff_id and a secret, or system admin using username and password.\n- First login / after a PIN reset: \"pin\" holds the one-time password and \"new_pin\" is required; the new PIN (4-10 chars) becomes the user's personal PIN.\n- Afterwards: \"pin\" holds the personal PIN.\nThe account locks after 3 failed login attempts; a locked staff account can be reopened by the manager of its branch or by the owner.",
+                "description": "Authenticate a staff member using their ` + "`" + `staff_id` + "`" + ` and ` + "`" + `pin` + "`" + `.\n\n### Normal login (PIN already set)\nSend ` + "`" + `staff_id` + "`" + ` + ` + "`" + `pin` + "`" + ` only.\n\n### First login / after a PIN reset\n1. Call this endpoint with ` + "`" + `staff_id` + "`" + ` + ` + "`" + `pin` + "`" + ` (the one-time password).\nThe API responds 400 with ` + "`" + `\"provide new_pin\"` + "`" + ` in the error message.\n2. Call again with ` + "`" + `staff_id` + "`" + ` + ` + "`" + `pin` + "`" + ` (OTP) + ` + "`" + `new_pin` + "`" + ` (4-10 chars).\nThe OTP is consumed; ` + "`" + `new_pin` + "`" + ` becomes the permanent PIN.\n\nAccount locks after **3** failed attempts; a branch manager or owner must unlock it.\n\n---\n### Seed / demo credentials (PIN = ` + "`" + `demo1234` + "`" + ` for all)\n\n| staff_id | Full name      | Role    |\n|----------|----------------|---------|\n| GAL-001  | Chinedu Okafor | owner   |\n| GAL-002  | Ada Nwosu      | manager |\n| GAL-003  | Tunde Bello    | staff   |\n| GAL-004  | Mary James     | staff   |\n\nGAL-014 and GAL-015 have ` + "`" + `first_login_done = false` + "`" + ` (first-login flow required).",
                 "consumes": [
                     "application/json"
                 ],
@@ -82,7 +82,7 @@ const docTemplate = `{
                 "tags": [
                     "auth"
                 ],
-                "summary": "Staff and Admin Login",
+                "summary": "Staff Login",
                 "parameters": [
                     {
                         "description": "Login Credentials",
@@ -1344,7 +1344,7 @@ const docTemplate = `{
                 "new_pin": {
                     "description": "NewPin is required on first login (and after a PIN reset) to create the personal PIN.",
                     "type": "string",
-                    "example": "987654"
+                    "example": "newpin99"
                 },
                 "password": {
                     "type": "string",
@@ -1352,7 +1352,7 @@ const docTemplate = `{
                 },
                 "pin": {
                     "type": "string",
-                    "example": "7Y3B9QK2"
+                    "example": "demo1234"
                 },
                 "staff_id": {
                     "type": "string",
@@ -1521,7 +1521,7 @@ var SwaggerInfo = &swag.Spec{
 	BasePath:         "/",
 	Schemes:          []string{},
 	Title:            "Logitech API",
-	Description:      "Logistics and Manifest Management API for Logitech.",
+	Description:      "Logistics and Manifest Management API for Logitech.\n\n## Demo / Seed Credentials\n\nAll seeded staff accounts use PIN `demo1234`. Use `POST /api/auth/login` with `staff_id` + `pin`.\n\n| Staff ID | Full Name      | Role    | Job Role   | PIN      |\n|----------|----------------|---------|------------|----------|\n| GAL-001  | Chinedu Okafor | owner   | —          | demo1234 |\n| GAL-002  | Ada Nwosu      | manager | —          | demo1234 |\n| GAL-003  | Tunde Bello    | staff   | operations | demo1234 |\n| GAL-004  | Mary James     | staff   | receiving  | demo1234 |\n\n**GAL-014** and **GAL-015** have `first_login_done = false` — they still need an OTP + new PIN (use `POST /api/staff/:id/reset-pin` as an owner/admin to obtain a fresh OTP).\n\n### System Admin\nUse `POST /api/auth/admin/login` with:\n\n| Field    | Value             |\n|----------|-------------------|\n| username | admin             |\n| password | adminpassword123  |\n\nThe system admin can also log in via the unified `POST /api/auth/login` endpoint by sending `staff_id: \"admin\"` (or the admin username) together with `password` instead of `pin`.",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
 	LeftDelim:        "{{",

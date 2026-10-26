@@ -1,0 +1,79 @@
+@import 'tailwindcss';
+
+/*
+  Logitech design system — tokens.
+  Every colour, radius and shadow in the app resolves to one of these.
+  Values come from the style guide (figma images/style-guide).
+*/
+@theme {
+  /* Type */
+  --font-sans: 'Urbanist Variable', 'Urbanist', ui-sans-serif, system-ui, -apple-system,
+    'Segoe UI', sans-serif;
+  --text-h3: 40px;
+  --text-h3--line-height: 40px;
+  --text-h3--font-weight: 400;
+  --text-h5: 24px;
+  --text-h5--line-height: 32px;
+  --text-h5--font-weight: 400;
+  --text-p1: 16px;
+  --text-p1--line-height: 24px;
+  --text-label: 16px;
+  --text-label--line-height: 20px;
+  --text-button: 16px;
+  --text-button--line-height: 24px;
+  --text-button--font-weight: 500;
+  --text-meta: 13px;
+  --text-meta--line-height: 16px;
+
+  /* Colour */
+  --color-canvas: #f5f5f2; /* page canvas — white/100 + black/4 */
+  --color-surface: #ffffff; /* cards, light buttons */
+  --color-ink: #262323; /* main text — black/100 */
+  --color-ink-64: rgb(38 35 35 / 0.64); /* secondary text */
+  --color-ink-40: rgb(38 35 35 / 0.4); /* hints, counts */
+  --color-line: rgb(32 32 32 / 0.1); /* borders, dividers */
+  --color-muted: #eaeaea; /* disabled fill */
+  --color-chip: #b2e7ff; /* icon chip fill — blue/16 */
+  --color-blue: #2674da; /* primary action */
+  --color-danger: #dc3e42; /* attention */
+  --color-grad-start: #4f4f4f; /* dark CTA gradient */
+  --color-grad-end: #202020;
+
+  /* Shape */
+  --radius-tag: 4px;
+
+  /* Effects */
+  --shadow-raised:
+    0 1px 2px rgb(32 32 32 / 0.24), inset 0 1px 0 rgb(255 255 255 / 0.22),
+    inset 0 -1px 0 rgb(0 0 0 / 0.4);
+  --shadow-light:
+    0 1px 2px rgb(32 32 32 / 0.08), 0 0 0 1px rgb(32 32 32 / 0.1),
+    inset 0 1px 0 rgb(255 255 255 / 0.9);
+  --shadow-card:
+    0 1px 1px rgb(32 32 32 / 0.04), 0 12px 28px -12px rgb(38 35 35 / 0.18),
+    0 0 0 1px rgb(32 32 32 / 0.06);
+  --shadow-inset: inset 0 0 0 1px rgb(32 32 32 / 0.1);
+  --shadow-halo:
+    0 1px 1px rgb(32 32 32 / 0.04), 0 12px 28px -12px rgb(38 35 35 / 0.18),
+    0 0 0 1px rgb(32 32 32 / 0.06), 0 0 0 4px rgb(38 35 35 / 0.04);
+}
+
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    @apply bg-canvas font-sans text-p1 font-normal text-ink;
+  }
+
+  ::selection {
+    @apply bg-chip text-ink;
+  }
+
+  /* Fields keep the 8px corner and only change the ring on focus. */
+  input::placeholder {
+    @apply text-ink-40;
+  }
+}

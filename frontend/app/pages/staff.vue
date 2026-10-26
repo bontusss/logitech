@@ -7,7 +7,8 @@ definePageMeta({ layout: 'default' })
 
 useHead({ title: 'Staff' })
 
-const { user } = useAuth()
+const { user, token } = useAuth()
+const route = useRoute()
 
 // ---- data sources ----
 const staff = ref<StaffItem[]>([])
@@ -17,9 +18,9 @@ const loading = ref(false)
 
 // ---- search / filter query state ----
 const q = ref('')
-const branchFilter = ref<string | null>(null)
-const roleFilter = ref<string | null>(null)
-const statusFilter = ref<string | null>(null)
+const branchFilter = ref<string>('')
+const roleFilter = ref<string>('')
+const statusFilter = ref<string>('')
 
 // ---- add / edit modal state ----
 const editing = ref<StaffItem | null>(null)
@@ -87,12 +88,12 @@ async function refresh() {
 async function fetchStaff() {
   const params = new URLSearchParams()
   if (branchFilter.value) params.set('branch_id', branchFilter.value)
-  const rows = await apiRequest<StaffItem[]>('/api/staff?' + params.toString(), { token: user.value?.token })
+  const rows = await apiRequest<StaffItem[]>('/api/staff?' + params.toString(), { token: token.value })
   staff.value = rows.map(normalizeStaff)
 }
 
 async function fetchBranches() {
-  const rows = await apiRequest<BranchItem[]>('/api/branches', { token: user.value?.token })
+  const rows = await apiRequest<BranchItem[]>('/api/branches', { token: token.value })
   branches.value = rows.map((b) => ({ id: b.id, name: b.name }))
 }
 
@@ -116,10 +117,10 @@ function normalizeStaff(row: StaffItem) {
     return parts.join(' • ')
   })
 
-  const status: StatusBadge = {
+  const badge: StatusBadge = {
     active: { label: 'Active', tone: 'info' as const },
     inactive: { label: 'Off', tone: 'neutral' as const },
-  }[row.status]
+  }[row.status] ?? { label: row.status, tone: 'neutral' as const }
 
   if (row.locked) {
     badge.label = 'Locked'
@@ -147,6 +148,13 @@ function openSearch() {
   statusFilter.value = ''
 }
 
+function clearFilters() {
+  q.value = ''
+  branchFilter.value = ''
+  roleFilter.value = ''
+  statusFilter.value = ''
+}
+
 function closeSearch() {
   searchOpen.value = false
 }
@@ -154,13 +162,6 @@ function closeSearch() {
 async function applyFilters() {
   await fetchStaff()
   closeSearch()
-}
-
-function clearFilters() {
-  q.value = ''
-  branchFilter.value = ''
-  roleFilter.value = ''
-  statusFilter.value = ''
 }
 
 // ---- add staff ----
@@ -179,7 +180,7 @@ async function saveAdd() {
   try {
     await apiRequest('/api/staff', {
       method: 'POST',
-      token: user.value?.token,
+      token: token.value,
       body: {
         full_name: addName.value.trim(),
         phone: addPhone.value.trim(),
@@ -214,7 +215,7 @@ async function saveEdit() {
   try {
     await apiRequest(`/api/staff/${editing.value.id}`, {
       method: 'PUT',
-      token: user.value?.token,
+      token: token.value,
       body: {
         full_name: addName.value.trim(),
         phone: addPhone.value.trim(),
@@ -249,7 +250,7 @@ async function resetPassword(row: StaffItem) {
   try {
     const result = await apiRequest<ResetOtpResponse>(`/api/staff/${row.id}/reset-pin`, {
       method: 'POST',
-      token: user.value?.token,
+      token: token.value,
     })
     otpModal.value = { staffId: row.staff_id, oneTimePassword: result.one_time_password, name: row.full_name }
   } catch (err) {
@@ -296,19 +297,19 @@ async function confirmAction() {
     if (confirmModal.value.mode === 'off') {
       await apiRequest(`/api/staff/${confirmModal.value.staffId}`, {
         method: 'PUT',
-        token: user.value?.token,
+        token: token.value,
         body: { status: 'inactive' },
       })
     } else if (confirmModal.value.mode === 'on') {
       await apiRequest(`/api/staff/${confirmModal.value.staffId}`, {
         method: 'PUT',
-        token: user.value?.token,
+        token: token.value,
         body: { status: 'active' },
       })
     } else if (confirmModal.value.mode === 'remove') {
       await apiRequest(`/api/staff/${confirmModal.value.staffId}`, {
         method: 'DELETE',
-        token: user.value?.token,
+        token: token.value,
       })
     }
     confirmModal.value = null
@@ -461,7 +462,7 @@ const displayedStaff = computed(() => {
           <div
             v-for="row in displayedStaff"
             :key="row.id"
-            class="group flex items-start gap-3 py-3 first:pt-0 last:pb-0"
+            class="group relative flex items-start gap-3 py-3 first:pt-0 last:pb-0"
           >
             <div class="min-w-0 flex-1">
               <div class="flex items-start justify-between gap-2">
@@ -471,25 +472,28 @@ const displayedStaff = computed(() => {
                   @click="openMenu(row.id)"
                 >
                   <span class="truncate font-medium text-p1 text-ink">{{ row.full_name }}</span>
+                </button>
+                <div class="flex items-center gap-2 shrink-0">
                   <UiPill
+                    v-if="row.badge"
                     :tone="row.badge.tone"
-                    class="shrink-0 capitalize"
+                    class="capitalize"
                   >
                     {{ row.badge.label }}
                   </UiPill>
-                </button>
-                <button
-                  type="button"
-                  class="ml-auto flex size-8 items-center justify-center rounded text-ink-40 transition duration-150 group-hover:bg-canvas group-hover:text-ink menu-trigger"
-                  aria-label="Open menu"
-                  @click.stop="openMenu(row.id)"
-                >
-                  <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <circle cx="12" cy="5" r="1.5"/>
-                    <circle cx="12" cy="12" r="1.5"/>
-                    <circle cx="12" cy="19" r="1.5"/>
-                  </svg>
-                </button>
+                  <button
+                    type="button"
+                    class="flex size-8 items-center justify-center rounded text-ink-40 transition duration-150 group-hover:bg-canvas group-hover:text-ink menu-trigger"
+                    aria-label="Open menu"
+                    @click.stop="openMenu(row.id)"
+                  >
+                    <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <circle cx="12" cy="5" r="1.5"/>
+                      <circle cx="12" cy="12" r="1.5"/>
+                      <circle cx="12" cy="19" r="1.5"/>
+                    </svg>
+                  </button>
+                </div>
               </div>
               <p class="mt-1 truncate text-label text-ink-64">{{ row.subtext }}</p>
             </div>
@@ -497,7 +501,7 @@ const displayedStaff = computed(() => {
             <!-- floating menu -->
             <div
               v-if="menuFor === row.id"
-              class="absolute right-0 z-50 mt-2 w-48 rounded-lg bg-surface shadow-card border border-line py-1"
+              class="absolute right-0 z-50 mt-2 w-48 rounded-lg bg-surface shadow-card border border-line py-1 fade-in"
               tabindex="-1"
             >
               <button
@@ -554,9 +558,8 @@ const displayedStaff = computed(() => {
         </div>
 
         <!-- add button -->
-        <button
+        <UiButton
           type="button"
-          class="flex items-center gap-2 rounded-lg bg-blue px-4 text-white shadow-raised transition duration-150 hover:brightness-105 active:brightness-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue disabled:opacity-60"
           :disabled="!user || user.role === 'staff'"
           @click="openAdd"
         >
@@ -565,7 +568,7 @@ const displayedStaff = computed(() => {
           </svg>
           Add staff
           <UiKbd>Enter</UiKbd>
-        </button>
+        </UiButton>
       </div>
     </main>
 
@@ -573,11 +576,11 @@ const displayedStaff = computed(() => {
     <Teleport to="body">
       <div
         v-if="searchOpen"
-        class="fixed inset-0 z-50 bg-ink/30 px-4 py-6 transition-opacity"
+        class="fixed inset-0 z-50 flex items-center justify-center bg-ink/30 px-4 py-6 transition-opacity"
         @click.self="closeSearch"
       >
         <div class="mx-auto max-w-sm rounded-lg bg-surface shadow-halo p-4">
-          <div class="flex items-center justify-between pb-3">
+          <div class="flex items-center justify-between pb-3 bg-canvas">
             <h2 class="text-h5 text-ink">Filter staff</h2>
             <div class="flex items-center gap-2">
               <span class="inline-flex items-center rounded bg-ink/5 px-1.5 text-meta font-normal text-ink-64 shadow-inset">Esc</span>
@@ -599,7 +602,6 @@ const displayedStaff = computed(() => {
               id="filter-branch"
               v-model="branchFilter"
               label="Branch"
-              :model-value="branchFilter ?? ''"
               :options="branchOptions"
               hint="All branches"
             />
@@ -607,7 +609,6 @@ const displayedStaff = computed(() => {
               id="filter-role"
               v-model="roleFilter"
               label="Role"
-              :model-value="roleFilter ?? ''"
               :options="roleOptions"
               hint="All roles"
             />
@@ -615,7 +616,6 @@ const displayedStaff = computed(() => {
               id="filter-status"
               v-model="statusFilter"
               label="Status"
-              :model-value="statusFilter ?? ''"
               :options="statusOptions"
               hint="All"
             />
@@ -639,11 +639,11 @@ const displayedStaff = computed(() => {
     <Teleport to="body">
       <div
         v-if="adding || editing"
-        class="fixed inset-0 z-50 bg-ink/30 px-4 py-6 transition-opacity"
+        class="fixed inset-0 z-50 flex items-center justify-center bg-ink/30 px-4 py-6 transition-opacity"
         @click.self="closeEditor"
       >
         <UiCard class="mx-auto max-w-sm">
-          <div class="flex items-center justify-between pb-3">
+          <div class="flex items-center justify-between pb-3 bg-canvas">
             <h2 class="text-h5 text-ink">{{ editing ? `Edit ${editing.full_name}` : 'Add staff' }}</h2>
             <div class="flex items-center gap-2">
               <span class="inline-flex items-center rounded bg-ink/5 px-1.5 text-meta font-normal text-ink-64 shadow-inset">Esc</span>
@@ -691,7 +691,6 @@ const displayedStaff = computed(() => {
                   id="add-role"
                   v-model="addRole"
                   label="Role"
-                  :model-value="addRole"
                   :options="roleOptions"
                 />
                 <p class="mt-1 text-label text-ink-64">Each branch has one manager.</p>
@@ -700,9 +699,8 @@ const displayedStaff = computed(() => {
                 id="add-branch"
                 v-model="addBranch"
                 label="Branch"
-                :model-value="addBranch"
                 :options="branchOptions"
-                :hint="branches.length ? '' : 'No branches available'"
+                hint="branches.length ? '' : 'No branches available'"
               />
             </div>
           </form>
@@ -731,7 +729,6 @@ const displayedStaff = computed(() => {
                   id="edit-role"
                   v-model="addRole"
                   label="Role"
-                  :model-value="addRole"
                   :options="roleOptions"
                 />
                 <p v-if="editing?.manager_name" class="mt-1 text-label text-ink-64">
@@ -742,7 +739,6 @@ const displayedStaff = computed(() => {
                 id="edit-branch"
                 v-model="addBranch"
                 label="Branch"
-                :model-value="addBranch"
                 :options="branchOptions"
               />
             </div>
@@ -775,11 +771,11 @@ const displayedStaff = computed(() => {
     <Teleport to="body">
       <div
         v-if="confirmModal"
-        class="fixed inset-0 z-50 bg-ink/30 px-4 py-6 transition-opacity"
+        class="fixed inset-0 z-50 flex items-center justify-center bg-ink/30 px-4 py-6 transition-opacity"
         @click.self="closeConfirm"
       >
         <UiCard class="mx-auto max-w-sm">
-          <div class="flex items-center justify-between pb-3">
+          <div class="flex items-center justify-between pb-3 bg-canvas">
             <h2 class="text-h5 text-ink">
               {{ confirmModal.mode === 'off' ? `Turn off ${confirmModal.staffName}'s access?` : '' }}
               {{ confirmModal.mode === 'on' ? `Turn on ${confirmModal.staffName}'s access?` : '' }}
@@ -828,11 +824,11 @@ const displayedStaff = computed(() => {
     <Teleport to="body">
       <div
         v-if="otpModal"
-        class="fixed inset-0 z-50 bg-ink/30 px-4 py-6 transition-opacity"
+        class="fixed inset-0 z-50 flex items-center justify-center bg-ink/30 px-4 py-6 transition-opacity"
         @click.self="closeOtp"
       >
         <UiCard class="mx-auto max-w-sm">
-          <div class="flex items-center justify-between pb-3">
+          <div class="flex items-center justify-between pb-3 bg-canvas">
             <h2 class="text-h5 text-ink">{{ otpModal.name }} can sign in now</h2>
             <div class="flex items-center gap-2">
               <span class="inline-flex items-center rounded bg-ink/5 px-1.5 text-meta font-normal text-ink-64 shadow-inset">Esc</span>

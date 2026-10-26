@@ -6,30 +6,34 @@ VALUES
 ('22222222-2222-4222-8222-222222222222', 'Abuja Branch', 'ABJ-01', '15 Garki Road', 'FCT', '08030000002'),
 ('33333333-3333-4333-8333-333333333333', 'Ibadan Branch', 'IBA-01', '8 Ring Road', 'Oyo', '08030000003');
 
+-- pin_hash is bcrypt("demo1234", cost=10).
+-- otp_hash is NULL because first_login_done = true — these users have already
+-- completed their first sign-in. Leaving otp_hash non-NULL would cause the
+-- backend to force every login through the OTP path (otpPending = !first_login_done || otp_hash IS NOT NULL).
 INSERT INTO staff (
     id, branch_id, full_name, phone, email, staff_id,
-    otp_hash, role, job_role, status, first_login_done
+    pin_hash, otp_hash, role, job_role, status, first_login_done
 )
 VALUES
 ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1',
  '11111111-1111-4111-8111-111111111111',
  'Chinedu Okafor', '08031110001', 'owner@galopin.example',
- 'GAL-001', 'DEMO_HASH_NOT_FOR_LOGIN', 'owner', NULL, 'active', true),
+ 'GAL-001', '$2a$10$MsSIuOMf2c0nTzNGo3ZABOc7bGfU2JsI45.B.sXRdSH7NKyWAgB6W', NULL, 'owner', NULL, 'active', true),
 
 ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa2',
  '11111111-1111-4111-8111-111111111111',
  'Ada Nwosu', '08031110002', 'manager@galopin.example',
- 'GAL-002', 'DEMO_HASH_NOT_FOR_LOGIN', 'manager', NULL, 'active', true),
+ 'GAL-002', '$2a$10$MsSIuOMf2c0nTzNGo3ZABOc7bGfU2JsI45.B.sXRdSH7NKyWAgB6W', NULL, 'manager', NULL, 'active', true),
 
 ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa3',
  '11111111-1111-4111-8111-111111111111',
  'Tunde Bello', '08031110003', 'staff1@galopin.example',
- 'GAL-003', 'DEMO_HASH_NOT_FOR_LOGIN', 'staff', 'operations', 'active', true),
+ 'GAL-003', '$2a$10$MsSIuOMf2c0nTzNGo3ZABOc7bGfU2JsI45.B.sXRdSH7NKyWAgB6W', NULL, 'staff', 'operations', 'active', true),
 
 ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa4',
  '22222222-2222-4222-8222-222222222222',
  'Mary James', '08031110004', 'staff2@galopin.example',
- 'GAL-004', 'DEMO_HASH_NOT_FOR_LOGIN', 'staff', 'receiving', 'active', true);
+ 'GAL-004', '$2a$10$MsSIuOMf2c0nTzNGo3ZABOc7bGfU2JsI45.B.sXRdSH7NKyWAgB6W', NULL, 'staff', 'receiving', 'active', true);
 
 INSERT INTO customers (id, full_name, phone, email, customer_type)
 VALUES

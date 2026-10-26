@@ -17,7 +17,7 @@ export interface StaffItem {
   manager_name?: string | null
   branch_name?: string
   subtext?: string
-  status: StatusBadge
+  badge?: StatusBadge
   manager?: string | null
 }
 
@@ -47,4 +47,29 @@ export interface OtpModal {
   staffId: string
   oneTimePassword: string
   name: string
+}
+
+export interface BranchDetails {
+  id: string
+  name: string
+  code: string
+  address?: string
+  state?: string
+  phone?: string
+  status: string
+}
+
+export interface FleetVehicle {
+  id: string
+  branch_id: string
+  registration_number: string
+  vehicle_type: string
+  make_model?: string
+  capacity_kg?: string
+  status: string
+}
+
+export interface BranchOptions {
+  value: string
+  label: string
 }

@@ -56,20 +56,24 @@ async function save() {
     return
   }
 
+  if (!pending.value) return
+  const staffId = pending.value.staffId
+  const oneTimePassword = pending.value.oneTimePassword
+
   submitting.value = true
   try {
     await login({
-      staffId: pending.value.staffId,
-      pin: pending.value.oneTimePassword,
+      staffId,
+      pin: oneTimePassword,
       newPin: password.value,
     })
     pending.value = null
     await navigateTo('/')
   } catch (err) {
-    if (err instanceof ApiError && err.isLocked) {
+    if (err instanceof ApiError && err.isLocked && pending.value) {
       await navigateTo({
         path: '/locked',
-        query: { staff_id: pending.value.staffId, at: clockTime() },
+        query: { staff_id: staffId, at: clockTime() },
       })
       return
     }
