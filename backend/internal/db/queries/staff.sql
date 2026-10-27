@@ -92,6 +92,17 @@ SET pin_hash = $2,
 WHERE id = $1
 RETURNING *;
 
+-- name: ChangeOwnPin :one
+UPDATE staff
+SET pin_hash = $2,
+    otp_hash = NULL,
+    first_login_done = true,
+    first_login_at = COALESCE(first_login_at, now()),
+    failed_login_attempts = 0,
+    updated_at = now()
+WHERE id = $1
+RETURNING *;
+
 -- name: StartPinReset :one
 UPDATE staff
 SET otp_hash = $2,

@@ -72,6 +72,92 @@ definitions:
     - code
     - name
     type: object
+  handler.CreateDriverRequest:
+    properties:
+      branch_id:
+        example: 11111111-1111-4111-8111-111111111111
+        type: string
+      full_name:
+        example: Musa Ibrahim
+        type: string
+      license_expiry:
+        example: "2027-12-31"
+        type: string
+      license_number:
+        example: DEMO-LIC-001
+        type: string
+      phone:
+        example: "08033330001"
+        type: string
+      status:
+        example: available
+        type: string
+    required:
+    - branch_id
+    - full_name
+    - phone
+    type: object
+  handler.CreateFleetRequest:
+    properties:
+      branch_id:
+        example: 11111111-1111-4111-8111-111111111111
+        type: string
+      capacity_kg:
+        example: "3500"
+        type: string
+      make_model:
+        example: Mitsubishi Canter
+        type: string
+      registration_number:
+        example: LAG-123-XY
+        type: string
+      vehicle_type:
+        example: truck
+        type: string
+    required:
+    - branch_id
+    - registration_number
+    - vehicle_type
+    type: object
+  handler.CreateManifestPayload:
+    properties:
+      destination_branch_id:
+        example: 22222222-2222-4222-8222-222222222222
+        type: string
+      items:
+        items:
+          $ref: '#/definitions/handler.ManifestItemPayload'
+        type: array
+      manifest_date:
+        example: "2026-10-27"
+        type: string
+      manifest_number:
+        example: "10042"
+        type: string
+      origin_branch_id:
+        example: 11111111-1111-4111-8111-111111111111
+        type: string
+      status:
+        example: draft
+        type: string
+    type: object
+  handler.CreateManifestResponse:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: string
+      item_count:
+        type: integer
+      manifest_date:
+        type: string
+      manifest_number:
+        type: string
+      origin_branch_id:
+        type: string
+      status:
+        type: string
+    type: object
   handler.CreateStaffRequest:
     properties:
       branch_id:
@@ -189,6 +275,32 @@ definitions:
         example: active
         type: string
     type: object
+  handler.DriverResponse:
+    properties:
+      branch_id:
+        example: 11111111-1111-4111-8111-111111111111
+        type: string
+      created_at:
+        type: string
+      full_name:
+        example: Musa Ibrahim
+        type: string
+      id:
+        example: cccccccc-cccc-4ccc-8ccc-ccccccccccc1
+        type: string
+      license_expiry:
+        example: "2027-12-31"
+        type: string
+      license_number:
+        example: DEMO-LIC-001
+        type: string
+      phone:
+        example: "08033330001"
+        type: string
+      status:
+        example: on_trip
+        type: string
+    type: object
   handler.ErrorResponse:
     properties:
       error:
@@ -206,6 +318,32 @@ definitions:
         type: boolean
       staff_id:
         example: GAL-003
+        type: string
+    type: object
+  handler.FleetResponse:
+    properties:
+      branch_id:
+        example: 11111111-1111-4111-8111-111111111111
+        type: string
+      capacity_kg:
+        example: "3500"
+        type: string
+      created_at:
+        type: string
+      id:
+        example: dddddddd-dddd-4ddd-8ddd-ddddddddddd1
+        type: string
+      make_model:
+        example: Mitsubishi Canter
+        type: string
+      registration_number:
+        example: LAG-123-XY
+        type: string
+      status:
+        example: available
+        type: string
+      vehicle_type:
+        example: truck
         type: string
     type: object
   handler.LoginRequest:
@@ -227,6 +365,69 @@ definitions:
       username:
         example: admin
         type: string
+    type: object
+  handler.ManifestItemPayload:
+    properties:
+      amount:
+        example: 15000.5
+        type: number
+      currency:
+        example: NGN
+        type: string
+      description:
+        example: Bags of rice
+        type: string
+      destination_branch_id:
+        example: 11111111-1111-4111-8111-111111111111
+        type: string
+      quantity:
+        example: 5
+        type: integer
+      receiver:
+        $ref: '#/definitions/handler.PartyPayload'
+      sender:
+        $ref: '#/definitions/handler.PartyPayload'
+      serial_number:
+        example: PKG-001
+        type: string
+    type: object
+  handler.ManifestSummary:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: string
+      item_count:
+        type: integer
+      manifest_date:
+        type: string
+      manifest_number:
+        type: string
+      origin_branch_id:
+        type: string
+      status:
+        type: string
+    type: object
+  handler.PartyPayload:
+    properties:
+      full_name:
+        example: Chinedu Okafor
+        type: string
+      phone:
+        example: "08031110001"
+        type: string
+    type: object
+  handler.PhotoResponse:
+    properties:
+      filename:
+        example: photo-1730000000000000000.jpg
+        type: string
+      path:
+        example: photos/photo-1730000000000000000.jpg
+        type: string
+      size:
+        example: 183402
+        type: integer
     type: object
   handler.ResetStaffPinResponse:
     properties:
@@ -291,6 +492,45 @@ definitions:
         type: string
       status:
         example: active
+        type: string
+    type: object
+  handler.UpdateDriverRequest:
+    properties:
+      branch_id:
+        example: 11111111-1111-4111-8111-111111111111
+        type: string
+      full_name:
+        example: Musa Ibrahim
+        type: string
+      license_expiry:
+        example: "2027-12-31"
+        type: string
+      license_number:
+        example: DEMO-LIC-001
+        type: string
+      phone:
+        example: "08033330001"
+        type: string
+      status:
+        example: available
+        type: string
+    type: object
+  handler.UpdateFleetRequest:
+    properties:
+      branch_id:
+        example: 11111111-1111-4111-8111-111111111111
+        type: string
+      capacity_kg:
+        example: "3500"
+        type: string
+      make_model:
+        example: Mitsubishi Canter
+        type: string
+      status:
+        example: available
+        type: string
+      vehicle_type:
+        example: truck
         type: string
     type: object
   handler.UpdateStaffRequest:
@@ -645,6 +885,286 @@ paths:
       summary: Update a branch
       tags:
       - branches
+  /api/drivers:
+    get:
+      description: Retrieve a list of all drivers.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/handler.DriverResponse'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List All Drivers
+      tags:
+      - drivers
+    post:
+      consumes:
+      - application/json
+      description: Creates a new driver. Only the owner (or system admin) can manage
+        drivers.
+      parameters:
+      - description: Driver Details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.CreateDriverRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/handler.DriverResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create a Driver
+      tags:
+      - drivers
+  /api/drivers/{id}:
+    delete:
+      description: Marks a driver inactive (soft delete, its data is retained). Only
+        the owner (or system admin) can manage drivers.
+      parameters:
+      - description: Driver UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.DriverResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete a Driver
+      tags:
+      - drivers
+    put:
+      consumes:
+      - application/json
+      description: Updates driver details. Only the owner (or system admin) can manage
+        drivers.
+      parameters:
+      - description: Driver UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Fields to update
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.UpdateDriverRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.DriverResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update a Driver
+      tags:
+      - drivers
+  /api/fleet:
+    get:
+      description: Retrieve a list of all fleet vehicles.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/handler.FleetResponse'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List All Fleet Vehicles
+      tags:
+      - fleet
+    post:
+      consumes:
+      - application/json
+      description: Creates a new fleet vehicle. Only the owner (or system admin) can
+        manage fleet.
+      parameters:
+      - description: Fleet Vehicle Details
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.CreateFleetRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/handler.FleetResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create a Fleet Vehicle
+      tags:
+      - fleet
+  /api/fleet/{id}:
+    delete:
+      description: Marks a fleet vehicle inactive (soft delete, its data is retained).
+        Only the owner (or system admin) can manage fleet.
+      parameters:
+      - description: Fleet UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.FleetResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete a Fleet Vehicle
+      tags:
+      - fleet
+    put:
+      consumes:
+      - application/json
+      description: Updates fleet vehicle details. Only the owner (or system admin)
+        can manage fleet.
+      parameters:
+      - description: Fleet UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Fields to update
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.UpdateFleetRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.FleetResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update a Fleet Vehicle
+      tags:
+      - fleet
   /api/hello:
     get:
       description: Returns a simple greeting message from the Logitech API server.
@@ -730,6 +1250,86 @@ paths:
       summary: Create a manager account
       tags:
       - managers
+  /api/manifests:
+    get:
+      description: Returns recent manifests with their item counts, newest first.
+        Staff only ever see manifests they created; managers, owners and the system
+        admin see everyone's. Optionally filter by creator (a staff UUID, or "me")
+        and by statuses (comma-separated).
+      parameters:
+      - description: staff UUID, or me
+        in: query
+        name: created_by
+        type: string
+      - description: comma-separated manifest statuses, e.g. draft,review_required
+        in: query
+        name: statuses
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/handler.ManifestSummary'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List manifests
+      tags:
+      - manifests
+    post:
+      consumes:
+      - application/json
+      description: Creates a manifest and all of its items in one transaction. When
+        manifest_number is omitted the server generates a unique 5-digit number. When
+        destination_branch_id (the "to" branch) is given, every item is stored with
+        that destination; otherwise each item needs its own destination_branch_id.
+        Sender and receiver customers are matched by phone or created on the fly.
+      parameters:
+      - description: Manifest with items
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handler.CreateManifestPayload'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/handler.CreateManifestResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create a manifest with its items
+      tags:
+      - manifests
   /api/owners:
     post:
       consumes:
@@ -772,6 +1372,42 @@ paths:
       summary: Create an owner account
       tags:
       - owners
+  /api/photos:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Saves a captured image into the `photos` folder at the project
+        root.
+      parameters:
+      - description: Captured photo
+        in: formData
+        name: image
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.PhotoResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Upload a photo taken with the camera
+      tags:
+      - photos
   /api/staff:
     get:
       description: |-

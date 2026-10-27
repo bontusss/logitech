@@ -109,6 +109,8 @@ func main() {
 	branchHandler := handler.NewBranchHandler(queries)
 	fleetHandler := handler.NewFleetHandler(queries)
 	driverHandler := handler.NewDriverHandler(queries)
+	photoHandler := handler.NewPhotoHandler()
+	manifestHandler := handler.NewManifestHandler(cfg, queries, pool)
 
 	r := gin.Default()
 	r.Use(cors())
@@ -128,6 +130,19 @@ func main() {
 		{
 			protected.GET("/auth/me", authHandler.GetMe)
 			protected.POST("/auth/logout", authHandler.Logout)
+			protected.POST("/auth/change-pin", authHandler.ChangePin)
+
+			// Manifest photos taken with the camera (saved to <project-root>/photos)
+			protected.POST("/photos", photoHandler.SavePhoto)
+
+			// Manifests: created manually together with their items
+			protected.POST("/manifests", manifestHandler.CreateManifest)
+			protected.GET("/manifests", manifestHandler.ListManifests)
+			protected.GET("/manifests/attention", manifestHandler.ListAttentionManifests)
+			protected.GET("/manifests/:id", manifestHandler.GetManifest)
+			protected.PUT("/manifests/:id", manifestHandler.UpdateManifest)
+			protected.GET("/records", manifestHandler.SearchRecords)
+			protected.GET("/records/:id", manifestHandler.GetRecord)
 
 			// Staff CRUD (POST creates staff only: owner or manager; managers in own branch)
 			protected.POST("/staff", staffHandler.CreateStaff)
@@ -230,8 +245,8 @@ func cors() gin.HandlerFunc {
 			c.Header("Access-Control-Allow-Origin", origin)
 			c.Header("Vary", "Origin")
 			if c.Request.Method == http.MethodOptions {
-			c.Header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-			c.Header("Access-Control-Allow-Headers", "Content-Type, Authorization")
+				c.Header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+				c.Header("Access-Control-Allow-Headers", "Content-Type, Authorization")
 				c.AbortWithStatus(http.StatusNoContent)
 				return
 			}

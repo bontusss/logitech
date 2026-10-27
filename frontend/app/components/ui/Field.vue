@@ -10,7 +10,7 @@ const props = withDefaults(
     hint?: string
     error?: string
     autocomplete?: string
-    inputmode?: 'text' | 'numeric' | 'tel' | 'email'
+    inputmode?: 'text' | 'numeric' | 'decimal' | 'tel' | 'email'
     maxlength?: number
     autofocus?: boolean
     disabled?: boolean

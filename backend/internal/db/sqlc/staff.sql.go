@@ -12,6 +12,49 @@ import (
 	"github.com/google/uuid"
 )
 
+const changeOwnPin = `-- name: ChangeOwnPin :one
+UPDATE staff
+SET pin_hash = $2,
+    otp_hash = NULL,
+    first_login_done = true,
+    first_login_at = COALESCE(first_login_at, now()),
+    failed_login_attempts = 0,
+    updated_at = now()
+WHERE id = $1
+RETURNING id, branch_id, full_name, phone, email, staff_id, otp_hash, pin_hash, role, job_role, status, first_login_done, first_login_at, failed_login_attempts, locked_at, created_by, created_at, updated_at
+`
+
+type ChangeOwnPinParams struct {
+	ID      uuid.UUID      `json:"id"`
+	PinHash sql.NullString `json:"pin_hash"`
+}
+
+func (q *Queries) ChangeOwnPin(ctx context.Context, arg ChangeOwnPinParams) (Staff, error) {
+	row := q.db.QueryRowContext(ctx, changeOwnPin, arg.ID, arg.PinHash)
+	var i Staff
+	err := row.Scan(
+		&i.ID,
+		&i.BranchID,
+		&i.FullName,
+		&i.Phone,
+		&i.Email,
+		&i.StaffID,
+		&i.OtpHash,
+		&i.PinHash,
+		&i.Role,
+		&i.JobRole,
+		&i.Status,
+		&i.FirstLoginDone,
+		&i.FirstLoginAt,
+		&i.FailedLoginAttempts,
+		&i.LockedAt,
+		&i.CreatedBy,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const checkStaffIDExists = `-- name: CheckStaffIDExists :one
 SELECT EXISTS(SELECT 1 FROM staff WHERE staff_id = $1)
 `

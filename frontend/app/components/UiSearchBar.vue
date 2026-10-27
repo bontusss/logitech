@@ -1,4 +1,14 @@
 <script setup lang="ts">
+const props = withDefaults(defineProps<{ modelValue?: string; placeholder?: string }>(), {
+  modelValue: '',
+  placeholder: 'Waybill, phone, or manifest number',
+})
+
+const emit = defineEmits<{ 'update:modelValue': [value: string] }>()
+
+function onInput(event: Event) {
+  emit('update:modelValue', (event.target as HTMLInputElement).value)
+}
 </script>
 
 <template>
@@ -11,8 +21,11 @@
     </span>
     <input
       type="search"
-      placeholder="Search waybill number, manifest and phone numbers"
+      :value="props.modelValue"
+      :placeholder="props.placeholder"
+      aria-label="Search records by waybill number, phone number, or manifest number"
       class="w-full border-b border-ink bg-transparent py-3 pl-10 pr-4 text-p1 text-ink placeholder:text-ink-40 outline-none"
+      @input="onInput"
     >
   </div>
 </template>

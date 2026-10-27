@@ -396,6 +396,436 @@
                 }
             }
         },
+        "/api/drivers": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieve a list of all drivers.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "drivers"
+                ],
+                "summary": "List All Drivers",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/handler.DriverResponse"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Creates a new driver. Only the owner (or system admin) can manage drivers.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "drivers"
+                ],
+                "summary": "Create a Driver",
+                "parameters": [
+                    {
+                        "description": "Driver Details",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.CreateDriverRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/handler.DriverResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/drivers/{id}": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Updates driver details. Only the owner (or system admin) can manage drivers.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "drivers"
+                ],
+                "summary": "Update a Driver",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Driver UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Fields to update",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.UpdateDriverRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handler.DriverResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Marks a driver inactive (soft delete, its data is retained). Only the owner (or system admin) can manage drivers.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "drivers"
+                ],
+                "summary": "Delete a Driver",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Driver UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handler.DriverResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/fleet": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieve a list of all fleet vehicles.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "fleet"
+                ],
+                "summary": "List All Fleet Vehicles",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/handler.FleetResponse"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Creates a new fleet vehicle. Only the owner (or system admin) can manage fleet.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "fleet"
+                ],
+                "summary": "Create a Fleet Vehicle",
+                "parameters": [
+                    {
+                        "description": "Fleet Vehicle Details",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.CreateFleetRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/handler.FleetResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/fleet/{id}": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Updates fleet vehicle details. Only the owner (or system admin) can manage fleet.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "fleet"
+                ],
+                "summary": "Update a Fleet Vehicle",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Fleet UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Fields to update",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.UpdateFleetRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handler.FleetResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Marks a fleet vehicle inactive (soft delete, its data is retained). Only the owner (or system admin) can manage fleet.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "fleet"
+                ],
+                "summary": "Delete a Fleet Vehicle",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Fleet UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handler.FleetResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/hello": {
             "get": {
                 "description": "Returns a simple greeting message from the Logitech API server.",
@@ -525,6 +955,121 @@
                 }
             }
         },
+        "/api/manifests": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns recent manifests with their item counts, newest first. Staff only ever see manifests they created; managers, owners and the system admin see everyone's. Optionally filter by creator (a staff UUID, or \"me\") and by statuses (comma-separated).",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "manifests"
+                ],
+                "summary": "List manifests",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "staff UUID, or me",
+                        "name": "created_by",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "comma-separated manifest statuses, e.g. draft,review_required",
+                        "name": "statuses",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/handler.ManifestSummary"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Creates a manifest and all of its items in one transaction. When manifest_number is omitted the server generates a unique 5-digit number. When destination_branch_id (the \"to\" branch) is given, every item is stored with that destination; otherwise each item needs its own destination_branch_id. Sender and receiver customers are matched by phone or created on the fly.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "manifests"
+                ],
+                "summary": "Create a manifest with its items",
+                "parameters": [
+                    {
+                        "description": "Manifest with items",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.CreateManifestPayload"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/handler.CreateManifestResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/owners": {
             "post": {
                 "security": [
@@ -575,6 +1120,61 @@
                     },
                     "403": {
                         "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/photos": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Saves a captured image into the `photos` folder at the project root.",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "photos"
+                ],
+                "summary": "Upload a photo taken with the camera",
+                "parameters": [
+                    {
+                        "type": "file",
+                        "description": "Captured photo",
+                        "name": "image",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handler.PhotoResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
                         "schema": {
                             "$ref": "#/definitions/handler.ErrorResponse"
                         }
@@ -1146,6 +1746,127 @@
                 }
             }
         },
+        "handler.CreateDriverRequest": {
+            "type": "object",
+            "required": [
+                "branch_id",
+                "full_name",
+                "phone"
+            ],
+            "properties": {
+                "branch_id": {
+                    "type": "string",
+                    "example": "11111111-1111-4111-8111-111111111111"
+                },
+                "full_name": {
+                    "type": "string",
+                    "example": "Musa Ibrahim"
+                },
+                "license_expiry": {
+                    "type": "string",
+                    "example": "2027-12-31"
+                },
+                "license_number": {
+                    "type": "string",
+                    "example": "DEMO-LIC-001"
+                },
+                "phone": {
+                    "type": "string",
+                    "example": "08033330001"
+                },
+                "status": {
+                    "type": "string",
+                    "example": "available"
+                }
+            }
+        },
+        "handler.CreateFleetRequest": {
+            "type": "object",
+            "required": [
+                "branch_id",
+                "registration_number",
+                "vehicle_type"
+            ],
+            "properties": {
+                "branch_id": {
+                    "type": "string",
+                    "example": "11111111-1111-4111-8111-111111111111"
+                },
+                "capacity_kg": {
+                    "type": "string",
+                    "example": "3500"
+                },
+                "make_model": {
+                    "type": "string",
+                    "example": "Mitsubishi Canter"
+                },
+                "registration_number": {
+                    "type": "string",
+                    "example": "LAG-123-XY"
+                },
+                "vehicle_type": {
+                    "type": "string",
+                    "example": "truck"
+                }
+            }
+        },
+        "handler.CreateManifestPayload": {
+            "type": "object",
+            "properties": {
+                "destination_branch_id": {
+                    "type": "string",
+                    "example": "22222222-2222-4222-8222-222222222222"
+                },
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/handler.ManifestItemPayload"
+                    }
+                },
+                "manifest_date": {
+                    "type": "string",
+                    "example": "2026-10-27"
+                },
+                "manifest_number": {
+                    "type": "string",
+                    "example": "10042"
+                },
+                "origin_branch_id": {
+                    "type": "string",
+                    "example": "11111111-1111-4111-8111-111111111111"
+                },
+                "status": {
+                    "type": "string",
+                    "example": "draft"
+                }
+            }
+        },
+        "handler.CreateManifestResponse": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "item_count": {
+                    "type": "integer"
+                },
+                "manifest_date": {
+                    "type": "string"
+                },
+                "manifest_number": {
+                    "type": "string"
+                },
+                "origin_branch_id": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
         "handler.CreateStaffRequest": {
             "type": "object",
             "required": [
@@ -1305,6 +2026,42 @@
                 }
             }
         },
+        "handler.DriverResponse": {
+            "type": "object",
+            "properties": {
+                "branch_id": {
+                    "type": "string",
+                    "example": "11111111-1111-4111-8111-111111111111"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "full_name": {
+                    "type": "string",
+                    "example": "Musa Ibrahim"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "cccccccc-cccc-4ccc-8ccc-ccccccccccc1"
+                },
+                "license_expiry": {
+                    "type": "string",
+                    "example": "2027-12-31"
+                },
+                "license_number": {
+                    "type": "string",
+                    "example": "DEMO-LIC-001"
+                },
+                "phone": {
+                    "type": "string",
+                    "example": "08033330001"
+                },
+                "status": {
+                    "type": "string",
+                    "example": "on_trip"
+                }
+            }
+        },
         "handler.ErrorResponse": {
             "type": "object",
             "properties": {
@@ -1332,6 +2089,42 @@
                 }
             }
         },
+        "handler.FleetResponse": {
+            "type": "object",
+            "properties": {
+                "branch_id": {
+                    "type": "string",
+                    "example": "11111111-1111-4111-8111-111111111111"
+                },
+                "capacity_kg": {
+                    "type": "string",
+                    "example": "3500"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "dddddddd-dddd-4ddd-8ddd-ddddddddddd1"
+                },
+                "make_model": {
+                    "type": "string",
+                    "example": "Mitsubishi Canter"
+                },
+                "registration_number": {
+                    "type": "string",
+                    "example": "LAG-123-XY"
+                },
+                "status": {
+                    "type": "string",
+                    "example": "available"
+                },
+                "vehicle_type": {
+                    "type": "string",
+                    "example": "truck"
+                }
+            }
+        },
         "handler.LoginRequest": {
             "type": "object",
             "properties": {
@@ -1355,6 +2148,97 @@
                 "username": {
                     "type": "string",
                     "example": "admin"
+                }
+            }
+        },
+        "handler.ManifestItemPayload": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "number",
+                    "example": 15000.5
+                },
+                "currency": {
+                    "type": "string",
+                    "example": "NGN"
+                },
+                "description": {
+                    "type": "string",
+                    "example": "Bags of rice"
+                },
+                "destination_branch_id": {
+                    "type": "string",
+                    "example": "11111111-1111-4111-8111-111111111111"
+                },
+                "quantity": {
+                    "type": "integer",
+                    "example": 5
+                },
+                "receiver": {
+                    "$ref": "#/definitions/handler.PartyPayload"
+                },
+                "sender": {
+                    "$ref": "#/definitions/handler.PartyPayload"
+                },
+                "serial_number": {
+                    "type": "string",
+                    "example": "PKG-001"
+                }
+            }
+        },
+        "handler.ManifestSummary": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "item_count": {
+                    "type": "integer"
+                },
+                "manifest_date": {
+                    "type": "string"
+                },
+                "manifest_number": {
+                    "type": "string"
+                },
+                "origin_branch_id": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
+        "handler.PartyPayload": {
+            "type": "object",
+            "properties": {
+                "full_name": {
+                    "type": "string",
+                    "example": "Chinedu Okafor"
+                },
+                "phone": {
+                    "type": "string",
+                    "example": "08031110001"
+                }
+            }
+        },
+        "handler.PhotoResponse": {
+            "type": "object",
+            "properties": {
+                "filename": {
+                    "type": "string",
+                    "example": "photo-1730000000000000000.jpg"
+                },
+                "path": {
+                    "type": "string",
+                    "example": "photos/photo-1730000000000000000.jpg"
+                },
+                "size": {
+                    "type": "integer",
+                    "example": 183402
                 }
             }
         },
@@ -1445,6 +2329,60 @@
                 "status": {
                     "type": "string",
                     "example": "active"
+                }
+            }
+        },
+        "handler.UpdateDriverRequest": {
+            "type": "object",
+            "properties": {
+                "branch_id": {
+                    "type": "string",
+                    "example": "11111111-1111-4111-8111-111111111111"
+                },
+                "full_name": {
+                    "type": "string",
+                    "example": "Musa Ibrahim"
+                },
+                "license_expiry": {
+                    "type": "string",
+                    "example": "2027-12-31"
+                },
+                "license_number": {
+                    "type": "string",
+                    "example": "DEMO-LIC-001"
+                },
+                "phone": {
+                    "type": "string",
+                    "example": "08033330001"
+                },
+                "status": {
+                    "type": "string",
+                    "example": "available"
+                }
+            }
+        },
+        "handler.UpdateFleetRequest": {
+            "type": "object",
+            "properties": {
+                "branch_id": {
+                    "type": "string",
+                    "example": "11111111-1111-4111-8111-111111111111"
+                },
+                "capacity_kg": {
+                    "type": "string",
+                    "example": "3500"
+                },
+                "make_model": {
+                    "type": "string",
+                    "example": "Mitsubishi Canter"
+                },
+                "status": {
+                    "type": "string",
+                    "example": "available"
+                },
+                "vehicle_type": {
+                    "type": "string",
+                    "example": "truck"
                 }
             }
         },

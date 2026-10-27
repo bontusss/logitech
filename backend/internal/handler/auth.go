@@ -52,6 +52,11 @@ type LoginRequest struct {
 	Password string `json:"password,omitempty" example:"adminpassword123"`
 }
 
+type ChangePinRequest struct {
+	CurrentPin string `json:"current_pin" binding:"required"`
+	NewPin     string `json:"new_pin" binding:"required"`
+}
+
 // AdminLoginRequest defines credentials specifically for system admin login.
 type AdminLoginRequest struct {
 	Username string `json:"username" binding:"required" example:"admin"`
@@ -60,18 +65,18 @@ type AdminLoginRequest struct {
 
 // StaffProfile represents the public user info returned in auth responses.
 type StaffProfile struct {
-	ID            string `json:"id" example:"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1"`
-	StaffID       string `json:"staff_id" example:"GAL-001"`
-	FullName      string `json:"full_name" example:"Chinedu Okafor"`
-	Role          string `json:"role" example:"staff"`
-	JobRole       string `json:"job_role,omitempty" example:"operations"`
-	BranchID      string `json:"branch_id,omitempty" example:"11111111-1111-4111-8111-111111111111"`
-	Phone         string `json:"phone,omitempty" example:"08031110001"`
-	Email         string `json:"email,omitempty" example:"staff@logitech.example"`
-	Status        string `json:"status" example:"active"`
-	FirstLoginDone bool  `json:"first_login_done" example:"true"`
-	Locked        bool   `json:"locked" example:"false"`
-	CreatedAt     string `json:"created_at,omitempty"`
+	ID             string `json:"id" example:"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaa1"`
+	StaffID        string `json:"staff_id" example:"GAL-001"`
+	FullName       string `json:"full_name" example:"Chinedu Okafor"`
+	Role           string `json:"role" example:"staff"`
+	JobRole        string `json:"job_role,omitempty" example:"operations"`
+	BranchID       string `json:"branch_id,omitempty" example:"11111111-1111-4111-8111-111111111111"`
+	Phone          string `json:"phone,omitempty" example:"08031110001"`
+	Email          string `json:"email,omitempty" example:"staff@logitech.example"`
+	Status         string `json:"status" example:"active"`
+	FirstLoginDone bool   `json:"first_login_done" example:"true"`
+	Locked         bool   `json:"locked" example:"false"`
+	CreatedAt      string `json:"created_at,omitempty"`
 }
 
 // AuthResponse represents the response with the generated JWT token and user info.
@@ -281,10 +286,11 @@ func compareOtpHash(hash sql.NullString, secret string) bool {
 
 // handleFailedLogin records a failed attempt and locks the account after 3
 // failures. It returns the HTTP status to respond with.
-func (h *AuthHandler) handleFailedLogin(c *gin.Context, staffID uuid.UUID) int {		row, err := h.queries.RecordFailedLogin(c.Request.Context(), sqlc.RecordFailedLoginParams{
-			ID:                  staffID,
-			FailedLoginAttempts: maxFailedLoginAttempts,
-		})
+func (h *AuthHandler) handleFailedLogin(c *gin.Context, staffID uuid.UUID) int {
+	row, err := h.queries.RecordFailedLogin(c.Request.Context(), sqlc.RecordFailedLoginParams{
+		ID:                  staffID,
+		FailedLoginAttempts: maxFailedLoginAttempts,
+	})
 	if err != nil {
 		return http.StatusUnauthorized
 	}
@@ -402,6 +408,73 @@ func (h *AuthHandler) GetMe(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, newStaffProfile(staff))
+}
+
+// ChangePin godoc
+// @Summary Change the authenticated user's PIN
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param request body ChangePinRequest true "Current and new PIN"
+// @Success 200 {object} map[string]string
+// @Router /api/auth/change-pin [post]
+func (h *AuthHandler) ChangePin(c *gin.Context) {
+	claims, ok := auth.GetClaims(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, ErrorResponse{Error: "unauthenticated"})
+		return
+	}
+	userID, err := uuid.Parse(claims.UserID)
+	if err != nil {
+		c.JSON(http.StatusForbidden, ErrorResponse{Error: "system administrator credentials cannot be changed here"})
+		return
+	}
+	var req ChangePinRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, ErrorResponse{Error: "current_pin and new_pin are required"})
+		return
+	}
+	if !generator.ValidatePin(req.NewPin) {
+		c.JSON(http.StatusBadRequest, ErrorResponse{Error: "new_pin must be between 4 and 10 characters"})
+		return
+	}
+	if req.CurrentPin == req.NewPin {
+		c.JSON(http.StatusBadRequest, ErrorResponse{Error: "new_pin must be different from current_pin"})
+		return
+	}
+
+	staff, err := h.queries.GetStaffByID(c.Request.Context(), userID)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, ErrorResponse{Error: "account not found"})
+		return
+	}
+	if staff.Status != sqlc.RecordStatusActive || staff.LockedAt.Valid {
+		c.JSON(http.StatusForbidden, ErrorResponse{Error: "inactive or locked accounts cannot change their PIN"})
+		return
+	}
+	if !staff.FirstLoginDone || !staff.PinHash.Valid || staff.OtpHash.Valid {
+		c.JSON(http.StatusConflict, ErrorResponse{Error: "complete the one-time password sign-in flow before changing your PIN"})
+		return
+	}
+	if bcrypt.CompareHashAndPassword([]byte(staff.PinHash.String), []byte(req.CurrentPin)) != nil {
+		c.JSON(h.handleFailedLogin(c, staff.ID), ErrorResponse{Error: "current PIN is incorrect"})
+		return
+	}
+
+	hash, err := bcrypt.GenerateFromPassword([]byte(req.NewPin), bcrypt.DefaultCost)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "failed to hash new PIN"})
+		return
+	}
+	if _, err := h.queries.ChangeOwnPin(c.Request.Context(), sqlc.ChangeOwnPinParams{
+		ID:      staff.ID,
+		PinHash: sql.NullString{String: string(hash), Valid: true},
+	}); err != nil {
+		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "failed to change PIN: " + err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"message": "PIN updated"})
 }
 
 // Logout godoc
