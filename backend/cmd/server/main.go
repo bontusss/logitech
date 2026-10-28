@@ -9,20 +9,21 @@
 // (or `cd backend && go run ./cmd/server`).
 // @title Logitech API
 // @version 1.0
-// @description Logistics and Manifest Management API for Logitech.
+// @description Shipment management API for Logitech: staff record the items a customer brings in with the payment taken and any balance, the destination branch receives them or raises an exception, and the owner sees shipments, revenue, daily collections and outstanding balances.
 // @description
 // @description ## Demo / Seed Credentials
 // @description
-// @description All seeded staff accounts use PIN `demo1234`. Use `POST /api/auth/login` with `staff_id` + `pin`.
+// @description Every seeded staff account uses PIN `demo1234`. Use `POST /api/auth/login` with `staff_id` + `pin`.
 // @description
-// @description | Staff ID | Full Name      | Role    | Job Role   | PIN      |
-// @description |----------|----------------|---------|------------|----------|
-// @description | GAL-001  | Chinedu Okafor | owner   | —          | demo1234 |
-// @description | GAL-002  | Ada Nwosu      | manager | —          | demo1234 |
-// @description | GAL-003  | Tunde Bello    | staff   | operations | demo1234 |
-// @description | GAL-004  | Mary James     | staff   | receiving  | demo1234 |
-// @description
-// @description **GAL-014** and **GAL-015** have `first_login_done = false` — they still need an OTP + new PIN (use `POST /api/staff/:id/reset-pin` as an owner/admin to obtain a fresh OTP).
+// @description | Staff ID | Full Name       | Role    | Job Role   | Branch | PIN      |
+// @description |----------|-----------------|---------|------------|--------|----------|
+// @description | GAL-001  | Chinedu Okafor  | owner   | —          | Lagos  | demo1234 |
+// @description | GAL-002  | Ada Nwosu       | manager | —          | Lagos  | demo1234 |
+// @description | GAL-003  | Tunde Bello     | staff   | operations | Lagos  | demo1234 |
+// @description | GAL-004  | Mary James      | staff   | receiving  | Abuja  | demo1234 |
+// @description | GAL-005  | Halima Bello    | manager | —          | Abuja  | demo1234 |
+// @description | GAL-006  | Ifeoma Nnaji    | staff   | receiving  | Ibadan | demo1234 |
+// @description | GAL-007  | Suleiman Audu   | staff   | operations | Abuja  | demo1234 |
 // @description
 // @description ### System Admin
 // @description Use `POST /api/auth/admin/login` with:
@@ -110,7 +111,9 @@ func main() {
 	fleetHandler := handler.NewFleetHandler(queries)
 	driverHandler := handler.NewDriverHandler(queries)
 	photoHandler := handler.NewPhotoHandler()
-	manifestHandler := handler.NewManifestHandler(cfg, queries, pool)
+	recordHandler := handler.NewRecordHandler(cfg, queries, pool)
+	exceptionHandler := handler.NewExceptionHandler(queries, pool)
+	reportHandler := handler.NewReportHandler(queries, pool)
 
 	r := gin.Default()
 	r.Use(cors())
@@ -132,17 +135,32 @@ func main() {
 			protected.POST("/auth/logout", authHandler.Logout)
 			protected.POST("/auth/change-pin", authHandler.ChangePin)
 
-			// Manifest photos taken with the camera (saved to <project-root>/photos)
+			// Shipment photos taken with the camera (saved to <project-root>/photos)
 			protected.POST("/photos", photoHandler.SavePhoto)
 
-			// Manifests: created manually together with their items
-			protected.POST("/manifests", manifestHandler.CreateManifest)
-			protected.GET("/manifests", manifestHandler.ListManifests)
-			protected.GET("/manifests/attention", manifestHandler.ListAttentionManifests)
-			protected.GET("/manifests/:id", manifestHandler.GetManifest)
-			protected.PUT("/manifests/:id", manifestHandler.UpdateManifest)
-			protected.GET("/records", manifestHandler.SearchRecords)
-			protected.GET("/records/:id", manifestHandler.GetRecord)
+			// Records (shipments): a customer's items, their payments and balance,
+			// and the receipt at the destination branch.
+			protected.POST("/records", recordHandler.CreateRecord)
+			protected.GET("/records", recordHandler.ListRecords)
+			protected.GET("/records/:id", recordHandler.GetRecord)
+			protected.PUT("/records/:id", recordHandler.UpdateRecord)
+			protected.POST("/records/:id/dispatch", recordHandler.DispatchRecord)
+			protected.POST("/records/:id/receive", recordHandler.ReceiveRecord)
+			protected.POST("/records/:id/cancel", recordHandler.CancelRecord)
+			protected.GET("/records/:id/payments", recordHandler.ListRecordPayments)
+			protected.POST("/records/:id/payments", recordHandler.RecordPayment)
+			protected.GET("/records/:id/exceptions", exceptionHandler.ListRecordExceptions)
+			protected.POST("/records/:id/exceptions", exceptionHandler.CreateException)
+
+			// Exceptions raised on records
+			protected.GET("/exceptions", exceptionHandler.ListExceptions)
+			protected.GET("/exceptions/:id", exceptionHandler.GetException)
+			protected.POST("/exceptions/:id/updates", exceptionHandler.UpdateException)
+
+			// Owner / manager reports
+			protected.GET("/reports/overview", reportHandler.Overview)
+			protected.GET("/reports/daily", reportHandler.Daily)
+			protected.GET("/reports/branches", reportHandler.Branches)
 
 			// Staff CRUD (POST creates staff only: owner or manager; managers in own branch)
 			protected.POST("/staff", staffHandler.CreateStaff)

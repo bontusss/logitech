@@ -70,6 +70,47 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/auth/change-pin": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Change the authenticated user's PIN",
+                "parameters": [
+                    {
+                        "description": "Current and new PIN",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.ChangePinRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/api/auth/login": {
             "post": {
                 "description": "Authenticate a staff member using their ` + "`" + `staff_id` + "`" + ` and ` + "`" + `pin` + "`" + `.\n\n### Normal login (PIN already set)\nSend ` + "`" + `staff_id` + "`" + ` + ` + "`" + `pin` + "`" + ` only.\n\n### First login / after a PIN reset\n1. Call this endpoint with ` + "`" + `staff_id` + "`" + ` + ` + "`" + `pin` + "`" + ` (the one-time password).\nThe API responds 400 with ` + "`" + `\"provide new_pin\"` + "`" + ` in the error message.\n2. Call again with ` + "`" + `staff_id` + "`" + ` + ` + "`" + `pin` + "`" + ` (OTP) + ` + "`" + `new_pin` + "`" + ` (4-10 chars).\nThe OTP is consumed; ` + "`" + `new_pin` + "`" + ` becomes the permanent PIN.\n\nAccount locks after **3** failed attempts; a branch manager or owner must unlock it.\n\n---\n### Seed / demo credentials (PIN = ` + "`" + `demo1234` + "`" + ` for all)\n\n| staff_id | Full name      | Role    |\n|----------|----------------|---------|\n| GAL-001  | Chinedu Okafor | owner   |\n| GAL-002  | Ada Nwosu      | manager |\n| GAL-003  | Tunde Bello    | staff   |\n| GAL-004  | Mary James     | staff   |\n\nGAL-014 and GAL-015 have ` + "`" + `first_login_done = false` + "`" + ` (first-login flow required).",
@@ -617,6 +658,181 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/exceptions": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Lists exceptions newest first. Owners and the system admin see all branches; managers and staff see exceptions touching their own branch. Filters: status, severity, type, branch_id, from/to (created_at), limit.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "exceptions"
+                ],
+                "summary": "List exceptions",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "open, investigating, resolved or closed",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "low, medium, high or critical",
+                        "name": "severity",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Exception type",
+                        "name": "type",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Branch UUID",
+                        "name": "branch_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Created on or after (YYYY-MM-DD)",
+                        "name": "from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Created on or before (YYYY-MM-DD)",
+                        "name": "to",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page size (default 50, max 200)",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/handler.ExceptionResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/exceptions/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "exceptions"
+                ],
+                "summary": "Get an exception with its history",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Exception UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ExceptionResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/exceptions/{id}/updates": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Adds a comment to the exception history and optionally moves it to another status or reassigns it. Resolving or closing the last open exception on a record returns the record to its delivery status (received, or in transit when it never arrived).",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "exceptions"
+                ],
+                "summary": "Comment on, reassign or resolve an exception",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Exception UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Update",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.UpdateExceptionRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ExceptionResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/fleet": {
             "get": {
                 "security": [
@@ -961,121 +1177,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/api/manifests": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Returns recent manifests with their item counts, newest first. Staff only ever see manifests they created; managers, owners and the system admin see everyone's. Optionally filter by creator (a staff UUID, or \"me\") and by statuses (comma-separated).",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "manifests"
-                ],
-                "summary": "List manifests",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "staff UUID, or me",
-                        "name": "created_by",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "comma-separated manifest statuses, e.g. draft,review_required",
-                        "name": "statuses",
-                        "in": "query"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/handler.ManifestSummary"
-                            }
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/handler.ErrorResponse"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/handler.ErrorResponse"
-                        }
-                    },
-                    "503": {
-                        "description": "Service Unavailable",
-                        "schema": {
-                            "$ref": "#/definitions/handler.ErrorResponse"
-                        }
-                    }
-                }
-            },
-            "post": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Creates a manifest and all of its items in one transaction. When manifest_number is omitted the server generates a unique 5-digit number. When destination_branch_id (the \"to\" branch) is given, every item is stored with that destination; otherwise each item needs its own destination_branch_id. Sender and receiver customers are matched by phone or created on the fly.",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "manifests"
-                ],
-                "summary": "Create a manifest with its items",
-                "parameters": [
-                    {
-                        "description": "Manifest with items",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/handler.CreateManifestPayload"
-                        }
-                    }
-                ],
-                "responses": {
-                    "201": {
-                        "description": "Created",
-                        "schema": {
-                            "$ref": "#/definitions/handler.CreateManifestResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/handler.ErrorResponse"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/handler.ErrorResponse"
-                        }
-                    },
-                    "503": {
-                        "description": "Service Unavailable",
-                        "schema": {
-                            "$ref": "#/definitions/handler.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
         "/api/owners": {
             "post": {
                 "security": [
@@ -1146,7 +1247,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Saves a captured image into the ` + "`" + `photos` + "`" + ` folder at the project root.",
+                "description": "Saves a captured image into the ` + "`" + `photos` + "`" + ` folder at the project root. The returned path can be stored on a record as photo_url.",
                 "consumes": [
                     "multipart/form-data"
                 ],
@@ -1156,7 +1257,7 @@ const docTemplate = `{
                 "tags": [
                     "photos"
                 ],
-                "summary": "Upload a photo taken with the camera",
+                "summary": "Upload a photo of a shipment taken with the camera",
                 "parameters": [
                     {
                         "type": "file",
@@ -1187,6 +1288,851 @@ const docTemplate = `{
                     },
                     "500": {
                         "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/records": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Lists shipment records newest first with the amount billed, the amount paid and the remaining balance. Owners and the system admin see every branch; managers and staff see records that originate from or are destined to their own branch. Optional filters: free text (tracking number, serial number, description, sender/receiver name or phone), status, payment_status, branch_id (origin or destination), origin_branch_id, destination_branch_id, from/to dates (created_at), and outstanding=true for records with a balance.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "records"
+                ],
+                "summary": "List shipment records",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Tracking number, serial number, description, party name or phone",
+                        "name": "q",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "comma-separated: pending,in_transit,received,exception,cancelled",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "pending, partial or paid",
+                        "name": "payment_status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Branch UUID (origin or destination)",
+                        "name": "branch_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Origin branch UUID",
+                        "name": "origin_branch_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Destination branch UUID",
+                        "name": "destination_branch_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Created on or after (YYYY-MM-DD)",
+                        "name": "from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Created on or before (YYYY-MM-DD)",
+                        "name": "to",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Only records with an unpaid balance",
+                        "name": "outstanding",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page size (default 50, max 200)",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Offset",
+                        "name": "offset",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/handler.Record"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "The sender-side flow: a staff member records the item(s) a customer brings in, the destination branch, the amount charged and the payment taken at the counter. Any unpaid remainder becomes the record's balance. Senders and receivers are matched on phone number, or created when they are new. When origin_branch_id is omitted the staff member's own branch is used.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "records"
+                ],
+                "summary": "Record one or more shipments",
+                "parameters": [
+                    {
+                        "description": "Shipment items",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.CreateRecordRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/handler.Record"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/records/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns one record with its payment history and any exceptions raised against it.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "records"
+                ],
+                "summary": "Get a shipment record",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Record UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handler.Record"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Updates the receiver, destination, description, quantity or amount of a pending record. The amount cannot be lowered below what has already been paid. The sender and the origin branch are immutable.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "records"
+                ],
+                "summary": "Edit a record that has not left the origin branch",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Record UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Fields to update",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.UpdateRecordRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handler.Record"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/records/{id}/cancel": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Cancels a shipment that has not been received yet. Managers and the owner only.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "records"
+                ],
+                "summary": "Cancel a record",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Record UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handler.Record"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/records/{id}/dispatch": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Marks a pending record as in_transit when it leaves the origin branch. Origin-branch staff, their manager and the owner can call this.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "records"
+                ],
+                "summary": "Mark a record as in transit",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Record UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Optional notes",
+                        "name": "request",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/handler.DispatchRecordRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handler.Record"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/records/{id}/exceptions": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "exceptions"
+                ],
+                "summary": "List the exceptions of a record",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Record UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/handler.ExceptionResponse"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "The receiver-specific alternative to receiving cleanly: records what went wrong (missing, damaged, quantity mismatch, wrong goods ...) and flags the shipment as \"exception\". Defaults to the destination branch, or the origin branch when the sender raises it before dispatch.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "exceptions"
+                ],
+                "summary": "Raise an exception on a record",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Record UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Exception details",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.CreateExceptionRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ExceptionResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/records/{id}/payments": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns every payment recorded against a shipment, oldest first.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "records"
+                ],
+                "summary": "List the payments of a record",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Record UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/handler.RecordPaymentResponse"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Adds a payment for a shipment (at the counter or when the balance is collected at the destination branch) and returns the record with the updated amount paid and remaining balance. A payment can never exceed the outstanding balance.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "records"
+                ],
+                "summary": "Record a payment against a record",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Record UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Payment",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.RecordPaymentRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handler.Record"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/records/{id}/receive": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "The receiver-side flow: staff at the destination branch confirm the quantity and condition actually received. Any remaining balance can be collected in the same call by sending a payment, which updates the balance and payment status. The record becomes \"received\"; use POST /api/records/:id/exceptions instead when goods are missing, damaged or wrong.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "records"
+                ],
+                "summary": "Receive a record at the destination branch",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Record UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Receipt details",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.ReceiveRecordRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handler.Record"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/reports/branches": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Shipments sent and received, amounts billed, payments collected, unpaid balances and open exceptions for every branch. The owner sees all branches; a manager sees only their own.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "reports"
+                ],
+                "summary": "Per-branch performance",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Start date (YYYY-MM-DD), default 29 days ago",
+                        "name": "from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "End date (YYYY-MM-DD), default today",
+                        "name": "to",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/handler.BranchReportRow"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/reports/daily": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "One row per day in the period: how many shipments were recorded, how much was billed, how many payments were taken and how much was collected. The owner sees all branches; a manager sees their own branch.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "reports"
+                ],
+                "summary": "Daily shipments and collections",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Start date (YYYY-MM-DD), default 29 days ago",
+                        "name": "from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "End date (YYYY-MM-DD), default today",
+                        "name": "to",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/handler.DailyReportRow"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/reports/overview": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Totals for the selected period (default: the last 30 days). The owner and system admin see every branch; a manager sees their own branch. \"billed\" is what was charged on records created in the period, \"collected\" is the payments taken in the period, and \"outstanding\" is the unpaid balance on all live records, plus today's collections and the exception backlog.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "reports"
+                ],
+                "summary": "Owner dashboard: shipments, revenue, collections, balances, exceptions",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Start date (YYYY-MM-DD), default 29 days ago",
+                        "name": "from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "End date (YYYY-MM-DD), default today",
+                        "name": "to",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ReportOverview"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
                         "schema": {
                             "$ref": "#/definitions/handler.ErrorResponse"
                         }
@@ -1687,6 +2633,38 @@ const docTemplate = `{
                 }
             }
         },
+        "handler.BranchReportRow": {
+            "type": "object",
+            "properties": {
+                "billed": {
+                    "type": "number"
+                },
+                "branch_code": {
+                    "type": "string"
+                },
+                "branch_id": {
+                    "type": "string"
+                },
+                "branch_name": {
+                    "type": "string"
+                },
+                "collected": {
+                    "type": "number"
+                },
+                "open_exceptions": {
+                    "type": "integer"
+                },
+                "outstanding": {
+                    "type": "number"
+                },
+                "shipments_received": {
+                    "type": "integer"
+                },
+                "shipments_sent": {
+                    "type": "integer"
+                }
+            }
+        },
         "handler.BranchResponse": {
             "type": "object",
             "properties": {
@@ -1720,6 +2698,21 @@ const docTemplate = `{
                 "status": {
                     "type": "string",
                     "example": "active"
+                }
+            }
+        },
+        "handler.ChangePinRequest": {
+            "type": "object",
+            "required": [
+                "current_pin",
+                "new_pin"
+            ],
+            "properties": {
+                "current_pin": {
+                    "type": "string"
+                },
+                "new_pin": {
+                    "type": "string"
                 }
             }
         },
@@ -1786,6 +2779,32 @@ const docTemplate = `{
                 }
             }
         },
+        "handler.CreateExceptionRequest": {
+            "type": "object",
+            "properties": {
+                "assigned_to": {
+                    "type": "string"
+                },
+                "comment": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "severity": {
+                    "type": "string",
+                    "example": "high"
+                },
+                "title": {
+                    "type": "string",
+                    "example": "Two packages missing"
+                },
+                "type": {
+                    "type": "string",
+                    "example": "quantity_mismatch"
+                }
+            }
+        },
         "handler.CreateFleetRequest": {
             "type": "object",
             "required": [
@@ -1816,59 +2835,75 @@ const docTemplate = `{
                 }
             }
         },
-        "handler.CreateManifestPayload": {
+        "handler.CreateRecordItem": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "number",
+                    "example": 45000
+                },
+                "amount_paid": {
+                    "description": "AmountPaid is the payment taken at the counter when the item is recorded.",
+                    "type": "number",
+                    "example": 20000
+                },
+                "currency": {
+                    "type": "string",
+                    "example": "NGN"
+                },
+                "description": {
+                    "type": "string",
+                    "example": "Cartons of engine parts"
+                },
+                "destination_branch_id": {
+                    "type": "string"
+                },
+                "notes": {
+                    "type": "string"
+                },
+                "payment_method": {
+                    "type": "string",
+                    "example": "cash"
+                },
+                "payment_reference": {
+                    "type": "string"
+                },
+                "photo_url": {
+                    "type": "string"
+                },
+                "quantity": {
+                    "type": "integer",
+                    "example": 10
+                },
+                "receiver": {
+                    "$ref": "#/definitions/handler.RecordParty"
+                },
+                "sender": {
+                    "$ref": "#/definitions/handler.RecordParty"
+                },
+                "serial_number": {
+                    "type": "string",
+                    "example": "001"
+                },
+                "tracking_number": {
+                    "type": "string",
+                    "example": "LAG-01-48213"
+                }
+            }
+        },
+        "handler.CreateRecordRequest": {
             "type": "object",
             "properties": {
                 "destination_branch_id": {
-                    "type": "string",
-                    "example": "22222222-2222-4222-8222-222222222222"
+                    "type": "string"
                 },
                 "items": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/handler.ManifestItemPayload"
+                        "$ref": "#/definitions/handler.CreateRecordItem"
                     }
                 },
-                "manifest_date": {
-                    "type": "string",
-                    "example": "2026-10-27"
-                },
-                "manifest_number": {
-                    "type": "string",
-                    "example": "10042"
-                },
                 "origin_branch_id": {
-                    "type": "string",
-                    "example": "11111111-1111-4111-8111-111111111111"
-                },
-                "status": {
-                    "type": "string",
-                    "example": "draft"
-                }
-            }
-        },
-        "handler.CreateManifestResponse": {
-            "type": "object",
-            "properties": {
-                "created_at": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "string"
-                },
-                "item_count": {
-                    "type": "integer"
-                },
-                "manifest_date": {
-                    "type": "string"
-                },
-                "manifest_number": {
-                    "type": "string"
-                },
-                "origin_branch_id": {
-                    "type": "string"
-                },
-                "status": {
                     "type": "string"
                 }
             }
@@ -2032,6 +3067,35 @@ const docTemplate = `{
                 }
             }
         },
+        "handler.DailyReportRow": {
+            "type": "object",
+            "properties": {
+                "billed": {
+                    "type": "number"
+                },
+                "collected": {
+                    "type": "number"
+                },
+                "date": {
+                    "type": "string",
+                    "example": "2026-10-28"
+                },
+                "payments": {
+                    "type": "integer"
+                },
+                "shipments": {
+                    "type": "integer"
+                }
+            }
+        },
+        "handler.DispatchRecordRequest": {
+            "type": "object",
+            "properties": {
+                "notes": {
+                    "type": "string"
+                }
+            }
+        },
         "handler.DriverResponse": {
             "type": "object",
             "properties": {
@@ -2074,6 +3138,106 @@ const docTemplate = `{
                 "error": {
                     "type": "string",
                     "example": "invalid credentials"
+                }
+            }
+        },
+        "handler.ExceptionResponse": {
+            "type": "object",
+            "properties": {
+                "assigned_to": {
+                    "type": "string"
+                },
+                "assigned_to_name": {
+                    "type": "string"
+                },
+                "branch_id": {
+                    "type": "string"
+                },
+                "branch_name": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "exception_number": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "manifest_item_id": {
+                    "type": "string"
+                },
+                "reported_by": {
+                    "type": "string"
+                },
+                "reported_by_name": {
+                    "type": "string"
+                },
+                "resolution_notes": {
+                    "type": "string"
+                },
+                "resolved_at": {
+                    "type": "string"
+                },
+                "resolved_by": {
+                    "type": "string"
+                },
+                "resolved_by_name": {
+                    "type": "string"
+                },
+                "severity": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "tracking_number": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "updates": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/handler.ExceptionUpdateResponse"
+                    }
+                }
+            }
+        },
+        "handler.ExceptionUpdateResponse": {
+            "type": "object",
+            "properties": {
+                "comment": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "new_status": {
+                    "type": "string"
+                },
+                "previous_status": {
+                    "type": "string"
+                },
+                "updated_by": {
+                    "type": "string"
+                },
+                "updated_by_name": {
+                    "type": "string"
                 }
             }
         },
@@ -2157,77 +3321,23 @@ const docTemplate = `{
                 }
             }
         },
-        "handler.ManifestItemPayload": {
+        "handler.PaymentPayload": {
             "type": "object",
             "properties": {
                 "amount": {
                     "type": "number",
-                    "example": 15000.5
+                    "example": 15000
                 },
-                "currency": {
+                "method": {
                     "type": "string",
-                    "example": "NGN"
+                    "example": "cash"
                 },
-                "description": {
-                    "type": "string",
-                    "example": "Bags of rice"
-                },
-                "destination_branch_id": {
-                    "type": "string",
-                    "example": "11111111-1111-4111-8111-111111111111"
-                },
-                "quantity": {
-                    "type": "integer",
-                    "example": 5
-                },
-                "receiver": {
-                    "$ref": "#/definitions/handler.PartyPayload"
-                },
-                "sender": {
-                    "$ref": "#/definitions/handler.PartyPayload"
-                },
-                "serial_number": {
-                    "type": "string",
-                    "example": "PKG-001"
-                }
-            }
-        },
-        "handler.ManifestSummary": {
-            "type": "object",
-            "properties": {
-                "created_at": {
+                "notes": {
                     "type": "string"
                 },
-                "id": {
-                    "type": "string"
-                },
-                "item_count": {
-                    "type": "integer"
-                },
-                "manifest_date": {
-                    "type": "string"
-                },
-                "manifest_number": {
-                    "type": "string"
-                },
-                "origin_branch_id": {
-                    "type": "string"
-                },
-                "status": {
-                    "type": "string"
-                }
-            }
-        },
-        "handler.PartyPayload": {
-            "type": "object",
-            "properties": {
-                "full_name": {
+                "reference": {
                     "type": "string",
-                    "example": "Chinedu Okafor"
-                },
-                "phone": {
-                    "type": "string",
-                    "example": "08031110001"
+                    "example": "POS-8891"
                 }
             }
         },
@@ -2245,6 +3355,314 @@ const docTemplate = `{
                 "size": {
                     "type": "integer",
                     "example": 183402
+                }
+            }
+        },
+        "handler.ReceiveRecordRequest": {
+            "type": "object",
+            "properties": {
+                "condition": {
+                    "type": "string",
+                    "example": "good"
+                },
+                "notes": {
+                    "type": "string"
+                },
+                "payment": {
+                    "$ref": "#/definitions/handler.PaymentPayload"
+                },
+                "received_quantity": {
+                    "type": "integer",
+                    "example": 10
+                }
+            }
+        },
+        "handler.Record": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "number"
+                },
+                "amount_paid": {
+                    "type": "number"
+                },
+                "balance": {
+                    "type": "number"
+                },
+                "condition": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "currency": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "destination_branch": {
+                    "type": "string"
+                },
+                "destination_branch_id": {
+                    "type": "string"
+                },
+                "dispatched_at": {
+                    "type": "string"
+                },
+                "exceptions": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/handler.ExceptionResponse"
+                    }
+                },
+                "id": {
+                    "type": "string"
+                },
+                "notes": {
+                    "type": "string"
+                },
+                "origin_branch": {
+                    "type": "string"
+                },
+                "origin_branch_id": {
+                    "type": "string"
+                },
+                "payment_status": {
+                    "type": "string"
+                },
+                "payments": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/handler.RecordPaymentResponse"
+                    }
+                },
+                "photo_url": {
+                    "type": "string"
+                },
+                "quantity": {
+                    "type": "integer"
+                },
+                "received_at": {
+                    "type": "string"
+                },
+                "received_by": {
+                    "type": "string"
+                },
+                "received_by_name": {
+                    "type": "string"
+                },
+                "received_quantity": {
+                    "type": "integer"
+                },
+                "receiver": {
+                    "$ref": "#/definitions/handler.RecordParty"
+                },
+                "recorded_by": {
+                    "type": "string"
+                },
+                "recorded_by_name": {
+                    "type": "string"
+                },
+                "sender": {
+                    "$ref": "#/definitions/handler.RecordParty"
+                },
+                "serial_number": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "tracking_number": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "handler.RecordParty": {
+            "type": "object",
+            "properties": {
+                "full_name": {
+                    "type": "string",
+                    "example": "Amina Yusuf"
+                },
+                "phone": {
+                    "type": "string",
+                    "example": "08032220002"
+                }
+            }
+        },
+        "handler.RecordPaymentRequest": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "number",
+                    "example": 15000
+                },
+                "method": {
+                    "type": "string",
+                    "example": "cash"
+                },
+                "notes": {
+                    "type": "string"
+                },
+                "reference": {
+                    "type": "string"
+                }
+            }
+        },
+        "handler.RecordPaymentResponse": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "number"
+                },
+                "currency": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "method": {
+                    "type": "string"
+                },
+                "notes": {
+                    "type": "string"
+                },
+                "paid_at": {
+                    "type": "string"
+                },
+                "recorded_by": {
+                    "type": "string"
+                },
+                "recorded_by_name": {
+                    "type": "string"
+                },
+                "reference": {
+                    "type": "string"
+                }
+            }
+        },
+        "handler.ReportExceptionStats": {
+            "type": "object",
+            "properties": {
+                "closed": {
+                    "type": "integer"
+                },
+                "investigating": {
+                    "type": "integer"
+                },
+                "open": {
+                    "type": "integer"
+                },
+                "resolved": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
+                }
+            }
+        },
+        "handler.ReportMethodTotal": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "number"
+                },
+                "count": {
+                    "type": "integer"
+                },
+                "method": {
+                    "type": "string"
+                }
+            }
+        },
+        "handler.ReportMoneyStats": {
+            "type": "object",
+            "properties": {
+                "billed": {
+                    "type": "number"
+                },
+                "collected": {
+                    "type": "number"
+                },
+                "collected_today": {
+                    "type": "number"
+                },
+                "collection_rate": {
+                    "type": "number"
+                },
+                "outstanding": {
+                    "type": "number"
+                },
+                "payments_count": {
+                    "type": "integer"
+                }
+            }
+        },
+        "handler.ReportOverview": {
+            "type": "object",
+            "properties": {
+                "exceptions": {
+                    "$ref": "#/definitions/handler.ReportExceptionStats"
+                },
+                "money": {
+                    "$ref": "#/definitions/handler.ReportMoneyStats"
+                },
+                "payments_by_method": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/handler.ReportMethodTotal"
+                    }
+                },
+                "period": {
+                    "$ref": "#/definitions/handler.ReportPeriod"
+                },
+                "shipments": {
+                    "$ref": "#/definitions/handler.ReportShipmentStats"
+                }
+            }
+        },
+        "handler.ReportPeriod": {
+            "type": "object",
+            "properties": {
+                "from": {
+                    "type": "string",
+                    "example": "2026-09-29"
+                },
+                "to": {
+                    "type": "string",
+                    "example": "2026-10-28"
+                }
+            }
+        },
+        "handler.ReportShipmentStats": {
+            "type": "object",
+            "properties": {
+                "by_payment_status": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "integer",
+                        "format": "int64"
+                    }
+                },
+                "by_status": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "integer",
+                        "format": "int64"
+                    }
+                },
+                "quantity": {
+                    "type": "integer"
+                },
+                "received": {
+                    "type": "integer"
+                },
+                "total": {
+                    "type": "integer"
                 }
             }
         },
@@ -2367,6 +3785,24 @@ const docTemplate = `{
                 }
             }
         },
+        "handler.UpdateExceptionRequest": {
+            "type": "object",
+            "properties": {
+                "assigned_to": {
+                    "type": "string"
+                },
+                "comment": {
+                    "type": "string"
+                },
+                "resolution_notes": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string",
+                    "example": "investigating"
+                }
+            }
+        },
         "handler.UpdateFleetRequest": {
             "type": "object",
             "properties": {
@@ -2389,6 +3825,32 @@ const docTemplate = `{
                 "vehicle_type": {
                     "type": "string",
                     "example": "truck"
+                }
+            }
+        },
+        "handler.UpdateRecordRequest": {
+            "type": "object",
+            "properties": {
+                "amount": {
+                    "type": "number"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "destination_branch_id": {
+                    "type": "string"
+                },
+                "notes": {
+                    "type": "string"
+                },
+                "quantity": {
+                    "type": "integer"
+                },
+                "receiver": {
+                    "$ref": "#/definitions/handler.RecordParty"
+                },
+                "serial_number": {
+                    "type": "string"
                 }
             }
         },
@@ -2459,7 +3921,7 @@ var SwaggerInfo = &swag.Spec{
 	BasePath:         "/",
 	Schemes:          []string{},
 	Title:            "Logitech API",
-	Description:      "Logistics and Manifest Management API for Logitech.\n\n## Demo / Seed Credentials\n\nAll seeded staff accounts use PIN `demo1234`. Use `POST /api/auth/login` with `staff_id` + `pin`.\n\n| Staff ID | Full Name      | Role    | Job Role   | PIN      |\n|----------|----------------|---------|------------|----------|\n| GAL-001  | Chinedu Okafor | owner   | —          | demo1234 |\n| GAL-002  | Ada Nwosu      | manager | —          | demo1234 |\n| GAL-003  | Tunde Bello    | staff   | operations | demo1234 |\n| GAL-004  | Mary James     | staff   | receiving  | demo1234 |\n\n**GAL-014** and **GAL-015** have `first_login_done = false` — they still need an OTP + new PIN (use `POST /api/staff/:id/reset-pin` as an owner/admin to obtain a fresh OTP).\n\n### System Admin\nUse `POST /api/auth/admin/login` with:\n\n| Field    | Value             |\n|----------|-------------------|\n| username | admin             |\n| password | adminpassword123  |\n\nThe system admin can also log in via the unified `POST /api/auth/login` endpoint by sending `staff_id: \"admin\"` (or the admin username) together with `password` instead of `pin`.",
+	Description:      "Shipment management API for Logitech: staff record the items a customer brings in with the payment taken and any balance, the destination branch receives them or raises an exception, and the owner sees shipments, revenue, daily collections and outstanding balances.\n\n## Demo / Seed Credentials\n\nEvery seeded staff account uses PIN `demo1234`. Use `POST /api/auth/login` with `staff_id` + `pin`.\n\n| Staff ID | Full Name       | Role    | Job Role   | Branch | PIN      |\n|----------|-----------------|---------|------------|--------|----------|\n| GAL-001  | Chinedu Okafor  | owner   | —          | Lagos  | demo1234 |\n| GAL-002  | Ada Nwosu       | manager | —          | Lagos  | demo1234 |\n| GAL-003  | Tunde Bello     | staff   | operations | Lagos  | demo1234 |\n| GAL-004  | Mary James      | staff   | receiving  | Abuja  | demo1234 |\n| GAL-005  | Halima Bello    | manager | —          | Abuja  | demo1234 |\n| GAL-006  | Ifeoma Nnaji    | staff   | receiving  | Ibadan | demo1234 |\n| GAL-007  | Suleiman Audu   | staff   | operations | Abuja  | demo1234 |\n\n### System Admin\nUse `POST /api/auth/admin/login` with:\n\n| Field    | Value             |\n|----------|-------------------|\n| username | admin             |\n| password | adminpassword123  |\n\nThe system admin can also log in via the unified `POST /api/auth/login` endpoint by sending `staff_id: \"admin\"` (or the admin username) together with `password` instead of `pin`.",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
 	LeftDelim:        "{{",

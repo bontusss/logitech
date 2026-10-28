@@ -12,7 +12,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// PhotoHandler handles manifest photo uploads captured from the camera.
+// PhotoHandler handles shipment photo uploads captured from the camera.
 type PhotoHandler struct{}
 
 // NewPhotoHandler constructs a PhotoHandler.
@@ -44,8 +44,8 @@ var extensionByMediaType = map[string]string{
 }
 
 // SavePhoto godoc
-// @Summary Upload a photo taken with the camera
-// @Description Saves a captured image into the `photos` folder at the project root.
+// @Summary Upload a photo of a shipment taken with the camera
+// @Description Saves a captured image into the `photos` folder at the project root. The returned path can be stored on a record as photo_url.
 // @Tags photos
 // @Accept multipart/form-data
 // @Produce json

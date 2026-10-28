@@ -56,50 +56,6 @@ func (ns NullCustomerType) Value() (driver.Value, error) {
 	return string(ns.CustomerType), nil
 }
 
-type DispatchStatus string
-
-const (
-	DispatchStatusPending    DispatchStatus = "pending"
-	DispatchStatusDispatched DispatchStatus = "dispatched"
-	DispatchStatusArrived    DispatchStatus = "arrived"
-	DispatchStatusCancelled  DispatchStatus = "cancelled"
-)
-
-func (e *DispatchStatus) Scan(src interface{}) error {
-	switch s := src.(type) {
-	case []byte:
-		*e = DispatchStatus(s)
-	case string:
-		*e = DispatchStatus(s)
-	default:
-		return fmt.Errorf("unsupported scan type for DispatchStatus: %T", src)
-	}
-	return nil
-}
-
-type NullDispatchStatus struct {
-	DispatchStatus DispatchStatus `json:"dispatch_status"`
-	Valid          bool           `json:"valid"` // Valid is true if DispatchStatus is not NULL
-}
-
-// Scan implements the Scanner interface.
-func (ns *NullDispatchStatus) Scan(value interface{}) error {
-	if value == nil {
-		ns.DispatchStatus, ns.Valid = "", false
-		return nil
-	}
-	ns.Valid = true
-	return ns.DispatchStatus.Scan(value)
-}
-
-// Value implements the driver Valuer interface.
-func (ns NullDispatchStatus) Value() (driver.Value, error) {
-	if !ns.Valid {
-		return nil, nil
-	}
-	return string(ns.DispatchStatus), nil
-}
-
 type DriverStatus string
 
 const (
@@ -280,50 +236,6 @@ func (ns NullExceptionType) Value() (driver.Value, error) {
 	return string(ns.ExceptionType), nil
 }
 
-type ExtractionStatus string
-
-const (
-	ExtractionStatusPending    ExtractionStatus = "pending"
-	ExtractionStatusProcessing ExtractionStatus = "processing"
-	ExtractionStatusCompleted  ExtractionStatus = "completed"
-	ExtractionStatusFailed     ExtractionStatus = "failed"
-)
-
-func (e *ExtractionStatus) Scan(src interface{}) error {
-	switch s := src.(type) {
-	case []byte:
-		*e = ExtractionStatus(s)
-	case string:
-		*e = ExtractionStatus(s)
-	default:
-		return fmt.Errorf("unsupported scan type for ExtractionStatus: %T", src)
-	}
-	return nil
-}
-
-type NullExtractionStatus struct {
-	ExtractionStatus ExtractionStatus `json:"extraction_status"`
-	Valid            bool             `json:"valid"` // Valid is true if ExtractionStatus is not NULL
-}
-
-// Scan implements the Scanner interface.
-func (ns *NullExtractionStatus) Scan(value interface{}) error {
-	if value == nil {
-		ns.ExtractionStatus, ns.Valid = "", false
-		return nil
-	}
-	ns.Valid = true
-	return ns.ExtractionStatus.Scan(value)
-}
-
-// Value implements the driver Valuer interface.
-func (ns NullExtractionStatus) Value() (driver.Value, error) {
-	if !ns.Valid {
-		return nil, nil
-	}
-	return string(ns.ExtractionStatus), nil
-}
-
 type ItemCondition string
 
 const (
@@ -367,53 +279,49 @@ func (ns NullItemCondition) Value() (driver.Value, error) {
 	return string(ns.ItemCondition), nil
 }
 
-type ManifestStatus string
+type ManifestItemStatus string
 
 const (
-	ManifestStatusDraft             ManifestStatus = "draft"
-	ManifestStatusExtractionPending ManifestStatus = "extraction_pending"
-	ManifestStatusReviewRequired    ManifestStatus = "review_required"
-	ManifestStatusConfirmed         ManifestStatus = "confirmed"
-	ManifestStatusAwaitingDispatch  ManifestStatus = "awaiting_dispatch"
-	ManifestStatusDispatched        ManifestStatus = "dispatched"
-	ManifestStatusPartiallyReceived ManifestStatus = "partially_received"
-	ManifestStatusReceived          ManifestStatus = "received"
-	ManifestStatusCancelled         ManifestStatus = "cancelled"
+	ManifestItemStatusPending   ManifestItemStatus = "pending"
+	ManifestItemStatusInTransit ManifestItemStatus = "in_transit"
+	ManifestItemStatusReceived  ManifestItemStatus = "received"
+	ManifestItemStatusException ManifestItemStatus = "exception"
+	ManifestItemStatusCancelled ManifestItemStatus = "cancelled"
 )
 
-func (e *ManifestStatus) Scan(src interface{}) error {
+func (e *ManifestItemStatus) Scan(src interface{}) error {
 	switch s := src.(type) {
 	case []byte:
-		*e = ManifestStatus(s)
+		*e = ManifestItemStatus(s)
 	case string:
-		*e = ManifestStatus(s)
+		*e = ManifestItemStatus(s)
 	default:
-		return fmt.Errorf("unsupported scan type for ManifestStatus: %T", src)
+		return fmt.Errorf("unsupported scan type for ManifestItemStatus: %T", src)
 	}
 	return nil
 }
 
-type NullManifestStatus struct {
-	ManifestStatus ManifestStatus `json:"manifest_status"`
-	Valid          bool           `json:"valid"` // Valid is true if ManifestStatus is not NULL
+type NullManifestItemStatus struct {
+	ManifestItemStatus ManifestItemStatus `json:"manifest_item_status"`
+	Valid              bool               `json:"valid"` // Valid is true if ManifestItemStatus is not NULL
 }
 
 // Scan implements the Scanner interface.
-func (ns *NullManifestStatus) Scan(value interface{}) error {
+func (ns *NullManifestItemStatus) Scan(value interface{}) error {
 	if value == nil {
-		ns.ManifestStatus, ns.Valid = "", false
+		ns.ManifestItemStatus, ns.Valid = "", false
 		return nil
 	}
 	ns.Valid = true
-	return ns.ManifestStatus.Scan(value)
+	return ns.ManifestItemStatus.Scan(value)
 }
 
 // Value implements the driver Valuer interface.
-func (ns NullManifestStatus) Value() (driver.Value, error) {
+func (ns NullManifestItemStatus) Value() (driver.Value, error) {
 	if !ns.Valid {
 		return nil, nil
 	}
-	return string(ns.ManifestStatus), nil
+	return string(ns.ManifestItemStatus), nil
 }
 
 type PaymentMethod string
@@ -463,11 +371,9 @@ func (ns NullPaymentMethod) Value() (driver.Value, error) {
 type PaymentStatus string
 
 const (
-	PaymentStatusPending  PaymentStatus = "pending"
-	PaymentStatusPartial  PaymentStatus = "partial"
-	PaymentStatusPaid     PaymentStatus = "paid"
-	PaymentStatusFailed   PaymentStatus = "failed"
-	PaymentStatusRefunded PaymentStatus = "refunded"
+	PaymentStatusPending PaymentStatus = "pending"
+	PaymentStatusPartial PaymentStatus = "partial"
+	PaymentStatusPaid    PaymentStatus = "paid"
 )
 
 func (e *PaymentStatus) Scan(src interface{}) error {
@@ -754,34 +660,6 @@ type Customer struct {
 	UpdatedAt    time.Time      `json:"updated_at"`
 }
 
-type Dispatch struct {
-	ID                  uuid.UUID      `json:"id"`
-	ManifestID          uuid.UUID      `json:"manifest_id"`
-	DriverID            uuid.UUID      `json:"driver_id"`
-	VehicleID           uuid.UUID      `json:"vehicle_id"`
-	OriginBranchID      uuid.UUID      `json:"origin_branch_id"`
-	DestinationBranchID uuid.UUID      `json:"destination_branch_id"`
-	DispatchedBy        uuid.UUID      `json:"dispatched_by"`
-	DispatchedAt        sql.NullTime   `json:"dispatched_at"`
-	ArrivedAt           sql.NullTime   `json:"arrived_at"`
-	Status              DispatchStatus `json:"status"`
-	Notes               sql.NullString `json:"notes"`
-	CreatedAt           time.Time      `json:"created_at"`
-	UpdatedAt           time.Time      `json:"updated_at"`
-}
-
-type DocumentExtraction struct {
-	ID            uuid.UUID             `json:"id"`
-	ManifestID    uuid.UUID             `json:"manifest_id"`
-	ImageUrl      string                `json:"image_url"`
-	Status        ExtractionStatus      `json:"status"`
-	ExtractedData pqtype.NullRawMessage `json:"extracted_data"`
-	ErrorMessage  sql.NullString        `json:"error_message"`
-	AttemptNumber int32                 `json:"attempt_number"`
-	CreatedAt     time.Time             `json:"created_at"`
-	CompletedAt   sql.NullTime          `json:"completed_at"`
-}
-
 type Driver struct {
 	ID            uuid.UUID      `json:"id"`
 	BranchID      uuid.UUID      `json:"branch_id"`
@@ -801,16 +679,13 @@ type Exception struct {
 	Severity        ExceptionSeverity `json:"severity"`
 	Title           string            `json:"title"`
 	Description     sql.NullString    `json:"description"`
-	ManifestID      uuid.UUID         `json:"manifest_id"`
 	ManifestItemID  uuid.UUID         `json:"manifest_item_id"`
-	DispatchID      uuid.UUID         `json:"dispatch_id"`
-	ReceiptID       uuid.NullUUID     `json:"receipt_id"`
 	ReportedBy      uuid.UUID         `json:"reported_by"`
 	AssignedTo      uuid.NullUUID     `json:"assigned_to"`
 	BranchID        uuid.UUID         `json:"branch_id"`
 	Status          ExceptionStatus   `json:"status"`
 	ResolutionNotes sql.NullString    `json:"resolution_notes"`
-	ResolvedBy      uuid.UUID         `json:"resolved_by"`
+	ResolvedBy      uuid.NullUUID     `json:"resolved_by"`
 	ResolvedAt      sql.NullTime      `json:"resolved_at"`
 	CreatedAt       time.Time         `json:"created_at"`
 	UpdatedAt       time.Time         `json:"updated_at"`
@@ -838,36 +713,36 @@ type Fleet struct {
 	UpdatedAt          time.Time      `json:"updated_at"`
 }
 
-type Manifest struct {
-	ID             uuid.UUID      `json:"id"`
-	ManifestNumber string         `json:"manifest_number"`
-	OriginBranchID uuid.UUID      `json:"origin_branch_id"`
-	CreatedBy      uuid.UUID      `json:"created_by"`
-	ManifestDate   time.Time      `json:"manifest_date"`
-	PaperImageUrl  sql.NullString `json:"paper_image_url"`
-	Status         ManifestStatus `json:"status"`
-	Version        int32          `json:"version"`
-	ConfirmedBy    uuid.UUID      `json:"confirmed_by"`
-	ConfirmedAt    sql.NullTime   `json:"confirmed_at"`
-	CreatedAt      time.Time      `json:"created_at"`
-	UpdatedAt      time.Time      `json:"updated_at"`
-}
-
 type ManifestItem struct {
-	ID                  uuid.UUID      `json:"id"`
-	ManifestID          uuid.UUID      `json:"manifest_id"`
+	ID uuid.UUID `json:"id"`
+	// Waybill number printed for the customer, unique across branches (e.g. LAG-01-48213)
+	TrackingNumber      string         `json:"tracking_number"`
 	SerialNumber        sql.NullString `json:"serial_number"`
 	Description         string         `json:"description"`
 	Quantity            int32          `json:"quantity"`
 	SenderCustomerID    uuid.UUID      `json:"sender_customer_id"`
 	ReceiverCustomerID  uuid.UUID      `json:"receiver_customer_id"`
+	OriginBranchID      uuid.UUID      `json:"origin_branch_id"`
 	DestinationBranchID uuid.UUID      `json:"destination_branch_id"`
-	Amount              sql.NullString `json:"amount"`
-	Currency            string         `json:"currency"`
-	PaymentStatus       PaymentStatus  `json:"payment_status"`
-	OcrConfidence       sql.NullString `json:"ocr_confidence"`
-	CreatedAt           time.Time      `json:"created_at"`
-	UpdatedAt           time.Time      `json:"updated_at"`
+	Amount              string         `json:"amount"`
+	AmountPaid          string         `json:"amount_paid"`
+	// Generated: amount - amount_paid
+	Balance       sql.NullString     `json:"balance"`
+	Currency      string             `json:"currency"`
+	PaymentStatus NullPaymentStatus  `json:"payment_status"`
+	Status        ManifestItemStatus `json:"status"`
+	// Staff (sender) who recorded the shipment at the origin branch
+	RecordedBy   uuid.UUID      `json:"recorded_by"`
+	PhotoUrl     sql.NullString `json:"photo_url"`
+	Notes        sql.NullString `json:"notes"`
+	DispatchedAt sql.NullTime   `json:"dispatched_at"`
+	// Staff (receiver) who confirmed the shipment at the destination branch
+	ReceivedBy       uuid.NullUUID     `json:"received_by"`
+	ReceivedAt       sql.NullTime      `json:"received_at"`
+	ReceivedQuantity sql.NullInt32     `json:"received_quantity"`
+	Condition        NullItemCondition `json:"condition"`
+	CreatedAt        time.Time         `json:"created_at"`
+	UpdatedAt        time.Time         `json:"updated_at"`
 }
 
 type Payment struct {
@@ -880,18 +755,7 @@ type Payment struct {
 	RecordedBy     uuid.UUID      `json:"recorded_by"`
 	PaidAt         time.Time      `json:"paid_at"`
 	Notes          sql.NullString `json:"notes"`
-}
-
-type Receipt struct {
-	ID               uuid.UUID      `json:"id"`
-	ManifestItemID   uuid.UUID      `json:"manifest_item_id"`
-	DispatchID       uuid.NullUUID  `json:"dispatch_id"`
-	ReceivedBy       uuid.UUID      `json:"received_by"`
-	ReceivedQuantity int32          `json:"received_quantity"`
-	Condition        ItemCondition  `json:"condition"`
-	ReceivedAt       time.Time      `json:"received_at"`
-	Notes            sql.NullString `json:"notes"`
-	CreatedAt        time.Time      `json:"created_at"`
+	CreatedAt      time.Time      `json:"created_at"`
 }
 
 type Staff struct {
