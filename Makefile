@@ -51,15 +51,11 @@ s_down: ## stop go server, nuxt dev, and postgres
 ## ---- database (db_up / db_down) -----------------------------------------
 
 db_up: ## start postgres via docker compose and wait until healthy
-	@echo "==> starting postgres (docker compose)"
-	@docker compose -f backend/docker-compose.yml up -d db
-	@echo -n "==> waiting for postgres ."
-	@until [ "$$(docker inspect --format='{{.State.Health.Status}}' app_postgres 2>/dev/null)" = "healthy" ]; do echo -n "."; sleep 1; done
-	@echo " healthy"
+	docker exec -it app_postgres createdb --username=app --owner=app appdb
 
-db_down: ## stop postgres container (data volume is kept)
-	@echo "==> stopping postgres"
-	@docker compose -f backend/docker-compose.yml stop db 2>/dev/null || true
+db_down: ## 
+	@echo "==> dropping postgres"
+	docker exec -it app_postgres dropdb --username=app appdb
 
 ## ---- migrations (m_up / m_down) ------------------------------------------
 

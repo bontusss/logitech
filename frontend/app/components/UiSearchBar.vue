@@ -1,31 +1,50 @@
 <script setup lang="ts">
-const props = withDefaults(defineProps<{ modelValue?: string; placeholder?: string }>(), {
-  modelValue: '',
-  placeholder: 'Waybill, phone, or manifest number',
-})
+/** Search field with a leading icon and a clear button. */
+const props = withDefaults(
+  defineProps<{ modelValue?: string; placeholder?: string; label?: string }>(),
+  {
+    modelValue: '',
+    placeholder: 'Search tracking number, name or phone',
+    label: 'Search',
+  },
+)
 
 const emit = defineEmits<{ 'update:modelValue': [value: string] }>()
+
+const input = ref<HTMLInputElement | null>(null)
 
 function onInput(event: Event) {
   emit('update:modelValue', (event.target as HTMLInputElement).value)
 }
+
+function clear() {
+  emit('update:modelValue', '')
+  input.value?.focus()
+}
 </script>
 
 <template>
-  <div class="relative mb-8">
-    <span class="absolute left-3 top-1/2 -translate-y-1/2 text-ink-64">
-      <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <circle cx="11" cy="11" r="7" />
-        <path d="m20 20-3.5-3.5" />
-      </svg>
+  <div class="relative">
+    <span class="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-ink-40">
+      <UiIcon name="search" :size="17" />
     </span>
     <input
+      ref="input"
       type="search"
       :value="props.modelValue"
       :placeholder="props.placeholder"
-      aria-label="Search records by waybill number, phone number, or manifest number"
-      class="w-full border-b border-ink bg-transparent py-3 pl-10 pr-4 text-p1 text-ink placeholder:text-ink-40 outline-none"
+      :aria-label="props.label"
+      class="h-10 w-full rounded-lg border border-line bg-surface pr-9 pl-9 text-p1 text-ink transition focus:border-blue focus:ring-2 focus:ring-blue/20 focus:outline-none [&::-webkit-search-cancel-button]:appearance-none"
       @input="onInput"
     >
+    <button
+      v-if="props.modelValue"
+      type="button"
+      class="absolute top-1/2 right-2 flex size-6 -translate-y-1/2 items-center justify-center rounded-md text-ink-40 transition hover:bg-canvas hover:text-ink"
+      aria-label="Clear search"
+      @click="clear"
+    >
+      <UiIcon name="close" :size="14" />
+    </button>
   </div>
 </template>

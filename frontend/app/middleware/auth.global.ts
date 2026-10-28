@@ -27,7 +27,9 @@ export default defineNuxtRouteMiddleware(async (to) => {
     }
   }
 
-  if (isPublic) {
-    return navigateTo('/')
-  }
+  if (isPublic) return navigateTo('/')
+
+  // Pages can limit themselves to certain roles (e.g. owner-only management).
+  const roles = to.meta.roles
+  if (roles?.length && !roles.includes(user.value?.role ?? '')) return navigateTo('/')
 })

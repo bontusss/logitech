@@ -5,7 +5,7 @@ const props = withDefaults(
     id: string
     label: string
     modelValue: string
-    type?: 'text' | 'password' | 'tel' | 'email'
+    type?: 'text' | 'password' | 'tel' | 'email' | 'date'
     name?: string
     hint?: string
     error?: string

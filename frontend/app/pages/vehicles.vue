@@ -1,511 +1,305 @@
 <script setup lang="ts">
+import type { Branch, Vehicle } from '~/types/api'
 import { ApiError } from '~/utils/api'
-import type { FleetVehicle, BranchOptions } from '~/types/staff'
-import UiSelect from '~/components/ui/Select.vue'
-
-definePageMeta({ layout: 'default' })
 
 useHead({ title: 'Vehicles' })
+definePageMeta({ layout: 'default', roles: ['owner', 'system_admin'] })
 
-const { user, token } = useAuth()
-const route = useRoute()
+const { token } = useAuth()
+const { branches, options: branchOptions, name: branchName, load: loadBranches } = useBranches()
 
-// ---- data sources ----
-const vehicles = ref<FleetVehicle[]>([])
-const branches = ref<Array<{ id: string; name: string }>>([])
-const loading = ref(false)
+const vehicles = ref<Vehicle[]>([])
+const loading = ref(true)
+const error = ref('')
+const notice = ref('')
+const branchFilter = ref('')
+const statusFilter = ref('')
 
-// ---- add / edit modal state ----
-const editing = ref<FleetVehicle | null>(null)
-const adding = ref(false)
+const formOpen = ref(false)
+const editingId = ref('')
+const form = reactive({
+  branch: '',
+  registration: '',
+  type: 'truck',
+  makeModel: '',
+  capacity: '',
+  status: 'available',
+})
 const saving = ref(false)
+const formError = ref('')
 
-const addRegNumber = ref('')
-const addVehicleType = ref('')
-const addMakeModel = ref('')
-const addCapacity = ref('')
-const addBranch = ref('')
+const deleteTarget = ref<Vehicle | null>(null)
+const deleting = ref(false)
 
-// ---- menu state ----
-const menuFor = ref<string | null>(null)
-
-// ---- confirm modal ----
-const confirmModal = ref<{ mode: 'delete'; vehicleId: string; vehicleReg: string } | null>(null)
-
-// ---- vehicle type options ----
-const vehicleTypeOptions = [
-  { value: '', label: 'Select type' },
-  { value: 'truck', label: 'Truck' },
-  { value: 'van', label: 'Van' },
-  { value: 'trailer', label: 'Trailer' },
-  { value: 'pickup', label: 'Pickup' },
-  { value: 'motorcycle', label: 'Motorcycle' },
-  { value: 'other', label: 'Other' },
-]
-
-// ---- status options ----
 const statusOptions = [
-  { value: '', label: 'Select status' },
   { value: 'available', label: 'Available' },
   { value: 'on_trip', label: 'On trip' },
   { value: 'maintenance', label: 'Maintenance' },
   { value: 'inactive', label: 'Inactive' },
 ]
 
-// ---- branch options (for select) ----
-const branchOptions = computed<BranchOptions[]>(() => [
-  { value: '', label: 'Select branch' },
-  ...branches.value.map((b) => ({ value: b.id, label: b.name })),
-])
+const filtered = computed(() =>
+  vehicles.value.filter((vehicle) => {
+    if (branchFilter.value && vehicle.branch_id !== branchFilter.value) return false
+    if (statusFilter.value && vehicle.status !== statusFilter.value) return false
+    return true
+  }),
+)
 
-// ---- refresh loop ----
-onMounted(refresh)
-watch(user, () => { if (user.value) refresh() })
-watch(token, () => { if (token.value) refresh() })
+function statusTone(status: string) {
+  if (status === 'available') return 'info' as const
+  if (status === 'on_trip') return 'neutral' as const
+  if (status === 'maintenance') return 'danger' as const
+  return 'neutral' as const
+}
 
-async function refresh() {
+async function load() {
   if (!token.value) return
   loading.value = true
+  error.value = ''
   try {
-    const [v, b] = await Promise.all([fetchVehicles(), fetchBranchOptions()])
-    vehicles.value = v
-    branches.value = b
+    vehicles.value = await apiRequest<Vehicle[]>('/api/fleet', { token: token.value })
+  } catch (err) {
+    error.value = err instanceof ApiError ? err.message : 'Could not load vehicles.'
   } finally {
     loading.value = false
   }
 }
 
-async function fetchVehicles(): Promise<FleetVehicle[]> {
-  const rows = await apiRequest<FleetVehicle[]>('/api/fleet', { token: token.value })
-  return rows.map(normalizeVehicle)
+function openCreate() {
+  editingId.value = ''
+  form.branch = branchFilter.value || branches.value[0]?.id || ''
+  form.registration = ''
+  form.type = 'truck'
+  form.makeModel = ''
+  form.capacity = ''
+  form.status = 'available'
+  formError.value = ''
+  formOpen.value = true
 }
 
-async function fetchBranchOptions(): Promise<Array<{ id: string; name: string }>> {
-  const rows = await apiRequest<Array<{ id: string; name: string; code: string }>>('/api/branches', { token: token.value })
-  return rows.map((b) => ({ id: b.id, name: `${b.name} (${b.code})` }))
+function openEdit(vehicle: Vehicle) {
+  editingId.value = vehicle.id
+  form.branch = vehicle.branch_id
+  form.registration = vehicle.registration_number
+  form.type = vehicle.vehicle_type
+  form.makeModel = vehicle.make_model ?? ''
+  form.capacity = vehicle.capacity_kg ?? ''
+  form.status = vehicle.status
+  formError.value = ''
+  formOpen.value = true
 }
 
-function normalizeVehicle(row: FleetVehicle): FleetVehicle {
-  return {
-    ...row,
-    capacity_kg: row.capacity_kg ?? undefined,
-    make_model: row.make_model ?? undefined,
+async function save() {
+  if (!token.value) return
+  formError.value = ''
+  if (!form.branch) {
+    formError.value = 'Choose the branch this vehicle belongs to.'
+    return
   }
-}
+  if (!editingId.value && !form.registration.trim()) {
+    formError.value = 'Enter the registration number.'
+    return
+  }
+  if (!form.type.trim()) {
+    formError.value = 'Enter the vehicle type.'
+    return
+  }
 
-// ---- add vehicle ----
-function openAdd() {
-  editing.value = null
-  adding.value = true
-  addRegNumber.value = ''
-  addVehicleType.value = ''
-  addMakeModel.value = ''
-  addCapacity.value = ''
-  addBranch.value = branches.value[0]?.id ?? ''
-}
-
-async function saveAdd() {
-  if (!addRegNumber.value.trim() || !addVehicleType.value || !addBranch.value) return
   saving.value = true
   try {
-    await apiRequest('/api/fleet', {
-      method: 'POST',
-      token: token.value,
-      body: {
-        registration_number: addRegNumber.value.trim().toUpperCase(),
-        vehicle_type: addVehicleType.value,
-        make_model: addMakeModel.value.trim(),
-        capacity_kg: addCapacity.value.trim(),
-        branch_id: addBranch.value,
-      },
-    })
-    adding.value = false
-    await refresh()
-  } catch (err) {
-    if (err instanceof ApiError) {
-      console.error(err.message)
+    if (editingId.value) {
+      await apiRequest(`/api/fleet/${editingId.value}`, {
+        method: 'PUT',
+        token: token.value,
+        body: {
+          branch_id: form.branch,
+          vehicle_type: form.type.trim(),
+          make_model: form.makeModel.trim(),
+          capacity_kg: form.capacity.trim(),
+          status: form.status,
+        },
+      })
+      notice.value = 'Vehicle updated.'
+    } else {
+      await apiRequest('/api/fleet', {
+        method: 'POST',
+        token: token.value,
+        body: {
+          branch_id: form.branch,
+          registration_number: form.registration.trim().toUpperCase(),
+          vehicle_type: form.type.trim(),
+          make_model: form.makeModel.trim() || undefined,
+          capacity_kg: form.capacity.trim() || undefined,
+        },
+      })
+      notice.value = 'Vehicle added.'
     }
+    formOpen.value = false
+    await load()
+  } catch (err) {
+    formError.value = err instanceof ApiError ? err.message : 'Could not save the vehicle.'
   } finally {
     saving.value = false
   }
 }
 
-// ---- edit vehicle ----
-function openEdit(row: FleetVehicle) {
-  editing.value = row
-  addRegNumber.value = row.registration_number
-  addVehicleType.value = row.vehicle_type
-  addMakeModel.value = row.make_model ?? ''
-  addCapacity.value = row.capacity_kg ?? ''
-  addBranch.value = row.branch_id
-  adding.value = false
-}
-
-async function saveEdit() {
-  if (!editing.value) return
-  saving.value = true
+async function remove() {
+  if (!token.value || !deleteTarget.value) return
+  deleting.value = true
   try {
-    await apiRequest(`/api/fleet/${editing.value.id}`, {
-      method: 'PUT',
-      token: token.value,
-      body: {
-        registration_number: addRegNumber.value.trim().toUpperCase(),
-        vehicle_type: addVehicleType.value,
-        make_model: addMakeModel.value.trim(),
-        capacity_kg: addCapacity.value.trim(),
-        branch_id: addBranch.value,
-        status: editing.value.status,
-      },
-    })
-    editing.value = null
-    await refresh()
+    await apiRequest(`/api/fleet/${deleteTarget.value.id}`, { method: 'DELETE', token: token.value })
+    notice.value = `${deleteTarget.value.registration_number} was removed.`
+    deleteTarget.value = null
+    await load()
   } catch (err) {
-    if (err instanceof ApiError) {
-      console.error(err.message)
-    }
+    error.value = err instanceof ApiError ? err.message : 'Could not delete the vehicle.'
   } finally {
-    saving.value = false
+    deleting.value = false
   }
 }
 
-function closeEditor() {
-  editing.value = null
-  adding.value = false
-}
-
-// ---- row menu ----
-function openMenu(id: string) {
-  menuFor.value = menuFor.value === id ? null : id
-}
-
-// ---- delete action ----
-async function confirmDelete(row: FleetVehicle) {
-  menuFor.value = null
-  confirmModal.value = {
-    mode: 'delete',
-    vehicleId: row.id,
-    vehicleReg: row.registration_number,
-  }
-}
-
-async function executeDelete() {
-  if (!confirmModal.value) return
-  saving.value = true
-  try {
-    await apiRequest(`/api/fleet/${confirmModal.value.vehicleId}`, {
-      method: 'DELETE',
-      token: token.value,
-    })
-    confirmModal.value = null
-    await refresh()
-  } catch (err) {
-    if (err instanceof ApiError) {
-      console.error(err.message)
-    }
-  } finally {
-    saving.value = false
-  }
-}
-
-function closeConfirm() {
-  confirmModal.value = null
-}
-
-// ---- status badge ----
-function statusBadge(status: string): { label: string; tone: 'danger' | 'info' | 'neutral' } {
-  return {
-    available: { label: 'Available', tone: 'info' as const },
-    on_trip: { label: 'On trip', tone: 'neutral' as const },
-    maintenance: { label: 'Maintenance', tone: 'neutral' as const },
-    inactive: { label: 'Inactive', tone: 'neutral' as const },
-  }[status] ?? { label: status, tone: 'neutral' as const }
-}
-
-// ---- escape handler ----
-function onEscape() {
-  if (menuFor.value) menuFor.value = null
-  else if (editing.value || adding.value) closeEditor()
-  else if (confirmModal.value) closeConfirm()
-}
+onMounted(async () => {
+  await loadBranches()
+  await load()
+})
 </script>
 
 <template>
-  <div class="min-h-dvh" @keydown.esc="onEscape">
-    <!-- top tabs -->
-    <div class="border-b border-line bg-canvas">
-      <div class="mx-auto flex max-w-[720px] border-b border-line px-4">
-        <nav class="flex gap-1">
-          <NuxtLink
-            to="/staff"
-            class="-(m-1) flex h-11 flex-1 items-center justify-center rounded-lg px-3 text-button font-medium transition duration-150 hover:bg-canvas/60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue"
-            :class="$route.path === '/staff' ? 'bg-surface shadow-raised text-ink' : 'text-ink-64'"
-          >
-            Staff
-          </NuxtLink>
-          <NuxtLink
-            to="/drivers"
-            class="-(m-1) flex h-11 flex-1 items-center justify-center rounded-lg px-3 text-button font-medium transition duration-150 hover:bg-canvas/60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue"
-            :class="$route.path === '/drivers' ? 'bg-surface shadow-raised text-ink' : 'text-ink-64'"
-          >
-            Drivers
-          </NuxtLink>
-          <NuxtLink
-            to="/vehicles"
-            class="-(m-1) flex h-11 flex-1 items-center justify-center rounded-lg px-3 text-button font-medium transition duration-150 last:rounded-tr-lg hover:bg-canvas/60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue"
-            :class="$route.path === '/vehicles' ? 'bg-surface shadow-raised text-ink' : 'text-ink-64'"
-          >
-            Vehicles
-          </NuxtLink>
-          <NuxtLink
-            to="/branches"
-            class="-(m-1) flex h-11 flex-1 items-center justify-center rounded-lg px-3 text-button font-medium transition duration-150 hover:bg-canvas/60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue"
-            :class="$route.path === '/branches' ? 'bg-surface shadow-raised text-ink' : 'text-ink-64'"
-          >
-            Branches
-          </NuxtLink>
-        </nav>
+  <div class="space-y-4">
+    <header class="flex flex-wrap items-end justify-between gap-3">
+      <div>
+        <h1 class="text-h5 font-medium tracking-tight text-ink">Vehicles</h1>
+        <p class="mt-1 text-label text-ink-64">The trucks and vans that move parcels between branches.</p>
       </div>
+      <UiButton @click="openCreate">
+        <UiIcon name="plus" :size="17" />
+        Add vehicle
+      </UiButton>
+    </header>
+
+    <div v-if="notice" class="rounded-lg border border-blue/25 bg-blue/5 px-4 py-3 text-label text-ink" role="status">{{ notice }}</div>
+    <div v-if="error" class="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-danger/25 bg-danger/5 px-4 py-3">
+      <p class="text-label text-danger">{{ error }}</p>
+      <UiButton variant="tertiary" :loading="loading" @click="load">Try again</UiButton>
     </div>
 
-    <!-- main content -->
-    <main class="mx-auto max-w-[720px] px-4 pb-14 pt-6">
+    <div class="flex flex-wrap gap-2">
+      <UiSelect
+        id="vehicle-branch"
+        v-model="branchFilter"
+        label="Branch filter"
+        hide-label
+        :options="[{ value: '', label: 'All branches' }, ...branchOptions]"
+        class="w-[210px]"
+      />
+      <UiSelect
+        id="vehicle-status"
+        v-model="statusFilter"
+        label="Status filter"
+        hide-label
+        :options="[{ value: '', label: 'Any status' }, ...statusOptions]"
+        class="w-[170px]"
+      />
+    </div>
+
+    <div v-if="loading" class="grid gap-3 sm:grid-cols-2" aria-hidden="true">
+      <div v-for="index in 4" :key="index" class="h-[124px] animate-pulse rounded-lg bg-surface shadow-card" />
+    </div>
+
+    <template v-else>
+      <div v-if="filtered.length" class="grid gap-3 sm:grid-cols-2">
+        <article v-for="vehicle in filtered" :key="vehicle.id" class="rounded-lg bg-surface p-4 shadow-card">
+          <div class="flex items-start justify-between gap-3">
+            <div class="min-w-0">
+              <p class="text-meta tracking-wide text-ink-40">{{ humanise(vehicle.vehicle_type) }}</p>
+              <h2 class="mt-0.5 truncate text-p1 font-medium text-ink">{{ vehicle.registration_number }}</h2>
+            </div>
+            <UiPill :tone="statusTone(vehicle.status)">{{ humanise(vehicle.status) }}</UiPill>
+          </div>
+
+          <dl class="mt-3 space-y-1 text-label">
+            <div class="flex gap-2">
+              <dt class="w-20 shrink-0 text-ink-40">Model</dt>
+              <dd class="min-w-0 text-ink">{{ vehicle.make_model || '—' }}</dd>
+            </div>
+            <div class="flex gap-2">
+              <dt class="w-20 shrink-0 text-ink-40">Capacity</dt>
+              <dd class="min-w-0 text-ink">{{ vehicle.capacity_kg ? `${vehicle.capacity_kg} kg` : '—' }}</dd>
+            </div>
+            <div class="flex gap-2">
+              <dt class="w-20 shrink-0 text-ink-40">Branch</dt>
+              <dd class="min-w-0 text-ink">{{ branchName(vehicle.branch_id) || '—' }}</dd>
+            </div>
+          </dl>
+
+          <div class="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-line pt-3">
+            <UiButton variant="link" @click="openEdit(vehicle)">Edit</UiButton>
+            <UiButton variant="link" class="text-danger" @click="deleteTarget = vehicle">Delete</UiButton>
+          </div>
+        </article>
+      </div>
+
+      <UiEmptyState v-else icon="truck" title="No vehicles" description="Add the vehicles this business uses to move parcels.">
+        <UiButton @click="openCreate">Add vehicle</UiButton>
+      </UiEmptyState>
+    </template>
+
+    <!-- Create / edit -->
+    <UiModal
+      :open="formOpen"
+      :title="editingId ? 'Edit vehicle' : 'Add vehicle'"
+      :description="editingId ? 'The registration number cannot change.' : 'Registration numbers are unique across the business.'"
+      size="md"
+      :dismissible="!saving"
+      @close="formOpen = false"
+    >
+      <div v-if="formError" class="mb-3 rounded-lg border border-danger/25 bg-danger/5 px-3 py-2 text-label text-danger" role="alert">
+        {{ formError }}
+      </div>
       <div class="space-y-4">
-        <!-- header -->
-        <div class="flex items-start justify-between gap-4">
-          <div>
-            <h1 class="text-h3 text-ink">Vehicles</h1>
-            <p class="mt-1 text-label text-ink-64">
-              Manage the fleet of trucks, vans, and other vehicles.
-            </p>
-          </div>
-          <UiButton
-            type="button"
-            :disabled="!token"
-            @click="openAdd"
-          >
-            <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
-              <path d="M12 5v14M5 12h14"/>
-            </svg>
-            Add vehicle
-            <UiKbd>Enter</UiKbd>
-          </UiButton>
+        <UiSelect id="vehicle-branch-form" v-model="form.branch" label="Branch" :options="branchOptions" />
+        <div class="grid gap-4 sm:grid-cols-2">
+          <UiField
+            id="vehicle-registration"
+            v-model="form.registration"
+            label="Registration number"
+            :disabled="Boolean(editingId)"
+            autocomplete="off"
+          />
+          <UiField id="vehicle-type" v-model="form.type" label="Type" hint="Truck, van, pickup…" autocomplete="off" />
         </div>
-
-        <!-- vehicles list -->
-        <div class="divide-y divide-line">
-          <div
-            v-for="row in vehicles"
-            :key="row.id"
-            class="group relative flex items-start gap-3 py-3 first:pt-0 last:pb-0"
-          >
-            <div class="min-w-0 flex-1">
-              <div class="flex items-start justify-between gap-2">
-                <button
-                  type="button"
-                  class="flex min-w-0 flex-1 items-center gap-2 text-left"
-                  @click="openMenu(row.id)"
-                >
-                  <span class="truncate font-medium text-p1 text-ink">{{ row.registration_number }}</span>
-                  <UiPill v-if="row.vehicle_type" class="shrink-0 capitalize">
-                    {{ row.vehicle_type.replace('_', ' ') }}
-                  </UiPill>
-                </button>
-                <div class="flex items-center gap-2 shrink-0">
-                  <UiPill
-                    v-if="row.status"
-                    :tone="statusBadge(row.status).tone"
-                    class="capitalize"
-                  >
-                    {{ statusBadge(row.status).label }}
-                  </UiPill>
-                  <button
-                    type="button"
-                    class="flex size-8 items-center justify-center rounded text-ink-40 transition duration-150 group-hover:bg-canvas group-hover:text-ink menu-trigger"
-                    aria-label="Open menu"
-                    @click.stop="openMenu(row.id)"
-                  >
-                    <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                      <circle cx="12" cy="5" r="1.5"/>
-                      <circle cx="12" cy="12" r="1.5"/>
-                      <circle cx="12" cy="19" r="1.5"/>
-                    </svg>
-                  </button>
-                </div>
-              </div>
-              <p class="mt-1 truncate text-label text-ink-64">
-                {{ row.make_model ?? 'No model specified' }}
-                <span v-if="row.capacity_kg" class="text-ink-64"> — {{ row.capacity_kg }}kg capacity</span>
-              </p>
-            </div>
-
-            <!-- floating menu -->
-            <div
-              v-if="menuFor === row.id"
-              class="absolute right-0 left-full -translate-x-1/2 top-full mt-1 z-50 w-48 rounded-lg bg-surface shadow-card border border-line py-1 fade-in"
-              tabindex="-1"
-            >
-              <button
-                type="button"
-                class="flex w-full items-center gap-2 px-3 py-2 text-p1 text-ink transition duration-150 hover:bg-canvas"
-                @click="openEdit(row); menuFor = null"
-              >
-                <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                  <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
-                </svg>
-                Edit
-              </button>
-              <div class="my-1 border-t border-line"/>
-              <button
-                type="button"
-                class="flex w-full items-center gap-2 px-3 py-2 text-p1 text-danger transition duration-150 hover:bg-red/5"
-                @click="confirmDelete(row)"
-              >
-                <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                  <path d="m3 6 4 14h10L19 6"/>
-                  <path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2"/>
-                </svg>
-                Delete vehicle
-              </button>
-            </div>
-          </div>
-
-          <div v-if="vehicles.length === 0 && !loading" class="py-8 text-center text-label text-ink-64">
-            No vehicles found.
-          </div>
+        <div class="grid gap-4 sm:grid-cols-2">
+          <UiField id="vehicle-model" v-model="form.makeModel" label="Make and model (optional)" autocomplete="off" />
+          <UiField id="vehicle-capacity" v-model="form.capacity" label="Capacity in kg (optional)" inputmode="numeric" autocomplete="off" />
         </div>
+        <UiSelect v-if="editingId" id="vehicle-status-form" v-model="form.status" label="Status" :options="statusOptions" />
       </div>
-    </main>
+      <template #footer>
+        <div class="flex flex-col gap-2 sm:flex-row-reverse">
+          <UiButton block :loading="saving" @click="save">{{ editingId ? 'Save changes' : 'Add vehicle' }}</UiButton>
+          <UiButton variant="tertiary" block :disabled="saving" @click="formOpen = false">Cancel</UiButton>
+        </div>
+      </template>
+    </UiModal>
 
-    <!-- add / edit modal -->
-    <Teleport to="body">
-      <div
-        v-if="adding || editing"
-        class="fixed inset-0 z-50 flex items-center justify-center bg-ink/30 px-4 py-6 transition-opacity"
-        @click.self="closeEditor"
-      >
-        <UiCard class="mx-auto max-w-sm">
-          <div class="flex items-center justify-between pb-3 bg-canvas">
-            <h2 class="text-h5 text-ink">{{ editing ? `Edit ${editing.registration_number}` : 'Add vehicle' }}</h2>
-            <div class="flex items-center gap-2">
-              <span class="inline-flex items-center rounded bg-ink/5 px-1.5 text-meta font-normal text-ink-64 shadow-inset">Esc</span>
-              <button
-                type="button"
-                class="flex size-8 items-center justify-center rounded-full text-ink-64 transition hover:bg-red/10 hover:text-danger focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue"
-                aria-label="Close"
-                @click="closeEditor"
-              >
-                <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
-                  <path d="M18 6 6 18M6 6l12 12"/>
-                </svg>
-              </button>
-            </div>
-          </div>
-
-          <form class="space-y-4" @submit.prevent="editing ? saveEdit() : saveAdd()">
-            <UiField
-              id="vehicle-reg"
-              v-model="addRegNumber"
-              label="Registration number"
-              type="text"
-              :error="''"
-              placeholder="e.g. LAG-123-XY"
-              autofocus
-            />
-            <UiSelect
-              id="vehicle-type"
-              v-model="addVehicleType"
-              label="Vehicle type"
-              :options="vehicleTypeOptions"
-            />
-            <UiField
-              id="vehicle-model"
-              v-model="addMakeModel"
-              label="Make / model"
-              type="text"
-              :error="''"
-              placeholder="e.g. Toyota Hiace"
-            />
-            <UiField
-              id="vehicle-capacity"
-              v-model="addCapacity"
-              label="Capacity (kg)"
-              type="text"
-              :error="''"
-              placeholder="e.g. 3500"
-            />
-            <UiSelect
-              id="vehicle-branch"
-              v-model="addBranch"
-              label="Branch"
-              :options="branchOptions"
-              hint="branches.length ? '' : 'No branches available'"
-            />
-
-            <div class="mt-5 flex items-center gap-2">
-              <UiButton
-                type="button"
-                :loading="saving"
-                @click="editing ? saveEdit() : saveAdd()"
-              >
-                {{ editing ? 'Save' : 'Add vehicle' }}
-                <UiKbd>Enter</UiKbd>
-              </UiButton>
-              <UiButton
-                v-if="editing"
-                variant="link"
-                type="button"
-                @click="closeEditor"
-              >
-                Cancel
-              </UiButton>
-            </div>
-          </form>
-        </UiCard>
-      </div>
-    </Teleport>
-
-    <!-- confirm delete modal -->
-    <Teleport to="body">
-      <div
-        v-if="confirmModal"
-        class="fixed inset-0 z-50 flex items-center justify-center bg-ink/30 px-4 py-6 transition-opacity"
-        @click.self="closeConfirm"
-      >
-        <UiCard class="mx-auto max-w-sm">
-          <div class="flex items-center justify-between pb-3 bg-canvas">
-            <h2 class="text-h5 text-ink">Delete {{ confirmModal.vehicleReg }}?</h2>
-            <div class="flex items-center gap-2">
-              <span class="inline-flex items-center rounded bg-ink/5 px-1.5 text-meta font-normal text-ink-64 shadow-inset">Esc</span>
-              <button
-                type="button"
-                class="flex size-8 items-center justify-center rounded-full text-ink-64 transition hover:bg-red/10 hover:text-danger focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue"
-                aria-label="Close"
-                @click="closeConfirm"
-              >
-                <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
-                  <path d="M18 6 6 18M6 6l12 12"/>
-                </svg>
-              </button>
-            </div>
-          </div>
-
-          <p class="text-p1 text-ink">
-            This vehicle will be marked inactive. Its data stays in the records.
-          </p>
-
-          <div class="mt-5 flex items-center gap-2">
-            <UiButton
-              type="button"
-              :loading="saving"
-              variant="danger"
-              @click="executeDelete"
-            >
-              Delete vehicle
-              <UiKbd>Enter</UiKbd>
-            </UiButton>
-          </div>
-        </UiCard>
-      </div>
-    </Teleport>
+    <!-- Delete -->
+    <UiModal
+      :open="Boolean(deleteTarget)"
+      title="Delete vehicle"
+      description="This removes the vehicle from the fleet."
+      :dismissible="!deleting"
+      @close="deleteTarget = null"
+    >
+      <p class="text-label text-ink-64">
+        Delete <span class="font-medium text-ink">{{ deleteTarget?.registration_number }}</span>?
+      </p>
+      <template #footer>
+        <div class="flex flex-col gap-2 sm:flex-row-reverse">
+          <UiButton variant="danger" block :loading="deleting" @click="remove">Delete vehicle</UiButton>
+          <UiButton variant="tertiary" block :disabled="deleting" @click="deleteTarget = null">Keep it</UiButton>
+        </div>
+      </template>
+    </UiModal>
   </div>
 </template>

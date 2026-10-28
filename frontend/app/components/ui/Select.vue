@@ -9,8 +9,9 @@ const props = withDefaults(
     hint?: string
     error?: string
     disabled?: boolean
+    hideLabel?: boolean
   }>(),
-  { hint: '', error: '', disabled: false },
+  { hint: '', error: '', disabled: false, hideLabel: false },
 )
 
 const emit = defineEmits<{ 'update:modelValue': [value: string] }>()
@@ -24,7 +25,7 @@ function onInput(event: Event) {
   <div class="space-y-2">
     <label
       :for="props.id"
-      :class="['block text-label', props.error ? 'text-danger' : 'text-ink-64']"
+      :class="['block text-label', props.error ? 'text-danger' : 'text-ink-64', props.hideLabel && 'sr-only']"
     >
       {{ props.label }}
     </label>

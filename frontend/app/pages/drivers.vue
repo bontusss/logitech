@@ -1,505 +1,310 @@
 <script setup lang="ts">
+import type { Driver } from '~/types/api'
 import { ApiError } from '~/utils/api'
-import type { BranchOptions } from '~/types/staff'
-import UiSelect from '~/components/ui/Select.vue'
-
-definePageMeta({ layout: 'default' })
 
 useHead({ title: 'Drivers' })
+definePageMeta({ layout: 'default', roles: ['owner', 'system_admin'] })
 
-const { user, token } = useAuth()
-const route = useRoute()
+const { token } = useAuth()
+const { branches, options: branchOptions, name: branchName, load: loadBranches } = useBranches()
 
-// ---- data sources ----
-const drivers = ref<Array<{
-  id: string
-  branch_id: string
-  full_name: string
-  phone: string
-  license_number?: string
-  license_expiry?: string
-  status: string
-}>>([])
-const branches = ref<Array<{ id: string; name: string }>>([])
-const loading = ref(false)
+const drivers = ref<Driver[]>([])
+const loading = ref(true)
+const error = ref('')
+const notice = ref('')
+const branchFilter = ref('')
+const search = ref('')
 
-// ---- add / edit modal state ----
-const editing = ref<typeof drivers.value[0] | null>(null)
-const adding = ref(false)
+const formOpen = ref(false)
+const editingId = ref('')
+const form = reactive({
+  branch: '',
+  fullName: '',
+  phone: '',
+  licenseNumber: '',
+  licenseExpiry: '',
+  status: 'available',
+})
 const saving = ref(false)
+const formError = ref('')
 
-const addFullName = ref('')
-const addPhone = ref('')
-const addLicenseNumber = ref('')
-const addLicenseExpiry = ref('')
-const addBranch = ref('')
+const confirmTarget = ref<Driver | null>(null)
+const busy = ref(false)
 
-// ---- menu state ----
-const menuFor = ref<string | null>(null)
-
-// ---- confirm modal ----
-const confirmModal = ref<{ mode: 'delete'; driverId: string; driverName: string } | null>(null)
-
-// ---- driver type options ----
-const driverStatusOptions = [
-  { value: '', label: 'Select status' },
+const statusOptions = [
   { value: 'available', label: 'Available' },
   { value: 'on_trip', label: 'On trip' },
   { value: 'inactive', label: 'Inactive' },
 ]
 
-const branchOptions = computed<BranchOptions[]>(() => [
-  { value: '', label: 'Select branch' },
-  ...branches.value.map((b) => ({ value: b.id, label: b.name })),
-])
+const filtered = computed(() => {
+  const term = search.value.trim().toLowerCase()
+  return drivers.value.filter((driver) => {
+    if (branchFilter.value && driver.branch_id !== branchFilter.value) return false
+    if (!term) return true
+    return [driver.full_name, driver.phone, driver.license_number]
+      .filter(Boolean)
+      .some((value) => String(value).toLowerCase().includes(term))
+  })
+})
 
-// ---- refresh loop ----
-onMounted(refresh)
-watch(user, () => { if (user.value) refresh() })
-watch(token, () => { if (token.value) refresh() })
+function statusTone(status: string) {
+  if (status === 'available') return 'info' as const
+  if (status === 'on_trip') return 'neutral' as const
+  return 'neutral' as const
+}
 
-async function refresh() {
+function expiryTone(driver: Driver): string {
+  if (!driver.license_expiry) return 'text-ink-64'
+  const expiry = new Date(`${driver.license_expiry.slice(0, 10)}T00:00:00`)
+  if (Number.isNaN(expiry.getTime())) return 'text-ink-64'
+  return expiry.getTime() < Date.now() ? 'text-danger' : 'text-ink-64'
+}
+
+async function load() {
   if (!token.value) return
   loading.value = true
+  error.value = ''
   try {
-    const [d, b] = await Promise.all([fetchDrivers(), fetchBranchOptions()])
-    drivers.value = d
-    branches.value = b
+    drivers.value = await apiRequest<Driver[]>('/api/drivers', { token: token.value })
+  } catch (err) {
+    error.value = err instanceof ApiError ? err.message : 'Could not load drivers.'
   } finally {
     loading.value = false
   }
 }
 
-async function fetchDrivers(): Promise<typeof drivers.value> {
-  const rows = await apiRequest<typeof drivers.value>('/api/drivers', { token: token.value })
-  return rows.map(normalizeDriver)
+function openCreate() {
+  editingId.value = ''
+  form.branch = branchFilter.value || branches.value[0]?.id || ''
+  form.fullName = ''
+  form.phone = ''
+  form.licenseNumber = ''
+  form.licenseExpiry = ''
+  form.status = 'available'
+  formError.value = ''
+  formOpen.value = true
 }
 
-async function fetchBranchOptions(): Promise<Array<{ id: string; name: string }>> {
-  const rows = await apiRequest<Array<{ id: string; name: string; code: string }>>('/api/branches', { token: token.value })
-  return rows.map((b) => ({ id: b.id, name: `${b.name} (${b.code})` }))
+function openEdit(driver: Driver) {
+  editingId.value = driver.id
+  form.branch = driver.branch_id
+  form.fullName = driver.full_name
+  form.phone = driver.phone
+  form.licenseNumber = driver.license_number ?? ''
+  form.licenseExpiry = driver.license_expiry ? driver.license_expiry.slice(0, 10) : ''
+  form.status = driver.status
+  formError.value = ''
+  formOpen.value = true
 }
 
-function normalizeDriver(row: typeof drivers.value[0]): typeof drivers.value[0] {
-  return {
-    ...row,
-    license_number: row.license_number ?? undefined,
-    license_expiry: row.license_expiry ?? undefined,
+async function save() {
+  if (!token.value) return
+  formError.value = ''
+  if (!form.branch) {
+    formError.value = 'Choose the branch this driver belongs to.'
+    return
   }
-}
+  if (!form.fullName.trim()) {
+    formError.value = 'Enter the driver name.'
+    return
+  }
+  if (!editingId.value && !form.phone.trim()) {
+    formError.value = 'A phone number is required.'
+    return
+  }
 
-// ---- add driver ----
-function openAdd() {
-  editing.value = null
-  adding.value = true
-  addFullName.value = ''
-  addPhone.value = ''
-  addLicenseNumber.value = ''
-  addLicenseExpiry.value = ''
-  addBranch.value = branches.value[0]?.id ?? ''
-}
-
-async function saveAdd() {
-  if (!addFullName.value.trim() || !addPhone.value.trim() || !addBranch.value) return
   saving.value = true
   try {
-    await apiRequest('/api/drivers', {
-      method: 'POST',
-      token: token.value,
-      body: {
-        full_name: addFullName.value.trim(),
-        phone: addPhone.value.trim(),
-        license_number: addLicenseNumber.value.trim(),
-        license_expiry: addLicenseExpiry.value.trim(),
-        branch_id: addBranch.value,
-      },
-    })
-    adding.value = false
-    await refresh()
-  } catch (err) {
-    if (err instanceof ApiError) {
-      console.error(err.message)
+    if (editingId.value) {
+      await apiRequest(`/api/drivers/${editingId.value}`, {
+        method: 'PUT',
+        token: token.value,
+        body: {
+          branch_id: form.branch,
+          full_name: form.fullName.trim(),
+          phone: form.phone.trim(),
+          license_number: form.licenseNumber.trim(),
+          license_expiry: form.licenseExpiry || undefined,
+          status: form.status,
+        },
+      })
+      notice.value = 'Driver updated.'
+    } else {
+      await apiRequest('/api/drivers', {
+        method: 'POST',
+        token: token.value,
+        body: {
+          branch_id: form.branch,
+          full_name: form.fullName.trim(),
+          phone: form.phone.trim(),
+          license_number: form.licenseNumber.trim() || undefined,
+          license_expiry: form.licenseExpiry || undefined,
+          status: form.status,
+        },
+      })
+      notice.value = 'Driver added.'
     }
+    formOpen.value = false
+    await load()
+  } catch (err) {
+    formError.value = err instanceof ApiError ? err.message : 'Could not save the driver.'
   } finally {
     saving.value = false
   }
 }
 
-// ---- edit driver ----
-function openEdit(row: typeof drivers.value[0]) {
-  editing.value = row
-  addFullName.value = row.full_name
-  addPhone.value = row.phone
-  addLicenseNumber.value = row.license_number ?? ''
-  addLicenseExpiry.value = row.license_expiry ?? ''
-  addBranch.value = row.branch_id
-  adding.value = false
-}
-
-async function saveEdit() {
-  if (!editing.value) return
-  saving.value = true
+async function deactivate() {
+  if (!token.value || !confirmTarget.value) return
+  busy.value = true
   try {
-    await apiRequest(`/api/drivers/${editing.value.id}`, {
-      method: 'PUT',
-      token: token.value,
-      body: {
-        full_name: addFullName.value.trim(),
-        phone: addPhone.value.trim(),
-        license_number: addLicenseNumber.value.trim(),
-        license_expiry: addLicenseExpiry.value.trim(),
-        branch_id: addBranch.value,
-        status: editing.value.status,
-      },
-    })
-    editing.value = null
-    await refresh()
+    await apiRequest(`/api/drivers/${confirmTarget.value.id}`, { method: 'DELETE', token: token.value })
+    notice.value = `${confirmTarget.value.full_name} is now inactive.`
+    confirmTarget.value = null
+    await load()
   } catch (err) {
-    if (err instanceof ApiError) {
-      console.error(err.message)
-    }
+    error.value = err instanceof ApiError ? err.message : 'Could not deactivate the driver.'
   } finally {
-    saving.value = false
+    busy.value = false
   }
 }
 
-function closeEditor() {
-  editing.value = null
-  adding.value = false
-}
-
-// ---- row menu ----
-function openMenu(id: string) {
-  menuFor.value = menuFor.value === id ? null : id
-}
-
-// ---- delete action ----
-async function confirmDelete(row: typeof drivers.value[0]) {
-  menuFor.value = null
-  confirmModal.value = {
-    mode: 'delete',
-    driverId: row.id,
-    driverName: row.full_name,
-  }
-}
-
-async function executeDelete() {
-  if (!confirmModal.value) return
-  saving.value = true
-  try {
-    await apiRequest(`/api/drivers/${confirmModal.value.driverId}`, {
-      method: 'DELETE',
-      token: token.value,
-    })
-    confirmModal.value = null
-    await refresh()
-  } catch (err) {
-    if (err instanceof ApiError) {
-      console.error(err.message)
-    }
-  } finally {
-    saving.value = false
-  }
-}
-
-function closeConfirm() {
-  confirmModal.value = null
-}
-
-// ---- status badge ----
-function statusBadge(status: string): { label: string; tone: 'danger' | 'info' | 'neutral' } {
-  return {
-    available: { label: 'Available', tone: 'info' as const },
-    on_trip: { label: 'On trip', tone: 'neutral' as const },
-    inactive: { label: 'Inactive', tone: 'neutral' as const },
-  }[status] ?? { label: status, tone: 'neutral' as const }
-}
-
-// ---- escape handler ----
-function onEscape() {
-  if (menuFor.value) menuFor.value = null
-  else if (editing.value || adding.value) closeEditor()
-  else if (confirmModal.value) closeConfirm()
-}
+onMounted(async () => {
+  await loadBranches()
+  await load()
+})
 </script>
 
 <template>
-  <div class="min-h-dvh" @keydown.esc="onEscape">
-    <!-- top tabs -->
-    <div class="border-b border-line bg-canvas">
-      <div class="mx-auto flex max-w-[720px] border-b border-line px-4">
-        <nav class="flex gap-1">
-          <NuxtLink
-            to="/staff"
-            class="-(m-1) flex h-11 flex-1 items-center justify-center rounded-lg px-3 text-button font-medium transition duration-150 hover:bg-canvas/60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue"
-            :class="$route.path === '/staff' ? 'bg-surface shadow-raised text-ink' : 'text-ink-64'"
-          >
-            Staff
-          </NuxtLink>
-          <NuxtLink
-            to="/drivers"
-            class="-(m-1) flex h-11 flex-1 items-center justify-center rounded-lg px-3 text-button font-medium transition duration-150 last:rounded-tr-lg hover:bg-canvas/60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue"
-            :class="$route.path === '/drivers' ? 'bg-surface shadow-raised text-ink' : 'text-ink-64'"
-          >
-            Drivers
-          </NuxtLink>
-          <NuxtLink
-            to="/vehicles"
-            class="-(m-1) flex h-11 flex-1 items-center justify-center rounded-lg px-3 text-button font-medium transition duration-150 hover:bg-canvas/60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue"
-            :class="$route.path === '/vehicles' ? 'bg-surface shadow-raised text-ink' : 'text-ink-64'"
-          >
-            Vehicles
-          </NuxtLink>
-          <NuxtLink
-            to="/branches"
-            class="-(m-1) flex h-11 flex-1 items-center justify-center rounded-lg px-3 text-button font-medium transition duration-150 hover:bg-canvas/60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue"
-            :class="$route.path === '/branches' ? 'bg-surface shadow-raised text-ink' : 'text-ink-64'"
-          >
-            Branches
-          </NuxtLink>
-        </nav>
+  <div class="space-y-4">
+    <header class="flex flex-wrap items-end justify-between gap-3">
+      <div>
+        <h1 class="text-h5 font-medium tracking-tight text-ink">Drivers</h1>
+        <p class="mt-1 text-label text-ink-64">Who drives between branches, and their licences.</p>
       </div>
+      <UiButton @click="openCreate">
+        <UiIcon name="plus" :size="17" />
+        Add driver
+      </UiButton>
+    </header>
+
+    <div v-if="notice" class="rounded-lg border border-blue/25 bg-blue/5 px-4 py-3 text-label text-ink" role="status">{{ notice }}</div>
+    <div v-if="error" class="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-danger/25 bg-danger/5 px-4 py-3">
+      <p class="text-label text-danger">{{ error }}</p>
+      <UiButton variant="tertiary" :loading="loading" @click="load">Try again</UiButton>
     </div>
 
-    <!-- main content -->
-    <main class="mx-auto max-w-[720px] px-4 pb-14 pt-6">
-      <div class="space-y-4">
-        <!-- header -->
-        <div class="flex items-start justify-between gap-4">
-          <div>
-            <h1 class="text-h3 text-ink">Drivers</h1>
-            <p class="mt-1 text-label text-ink-64">
-              Manage drivers and their license information.
-            </p>
-          </div>
-          <UiButton
-            type="button"
-            :disabled="!token"
-            @click="openAdd"
-          >
-            <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
-              <path d="M12 5v14M5 12h14"/>
-            </svg>
-            Add driver
-            <UiKbd>Enter</UiKbd>
-          </UiButton>
-        </div>
+    <div class="flex flex-wrap gap-2">
+      <div class="min-w-[200px] flex-1">
+        <UiSearchBar v-model="search" placeholder="Name, phone or licence" />
+      </div>
+      <UiSelect
+        id="driver-branch"
+        v-model="branchFilter"
+        label="Branch filter"
+        hide-label
+        :options="[{ value: '', label: 'All branches' }, ...branchOptions]"
+        class="w-[210px]"
+      />
+    </div>
 
-        <!-- drivers list -->
-        <div class="divide-y divide-line">
-          <div
-            v-for="row in drivers"
-            :key="row.id"
-            class="group relative flex items-start gap-3 py-3 first:pt-0 last:pb-0"
-          >
-            <div class="min-w-0 flex-1">
-              <div class="flex items-start justify-between gap-2">
-                <button
-                  type="button"
-                  class="flex min-w-0 flex-1 items-center gap-2 text-left"
-                  @click="openMenu(row.id)"
-                >
-                  <span class="truncate font-medium text-p1 text-ink">{{ row.full_name }}</span>
-                  <UiPill
-                    v-if="row.status"
-                    :tone="statusBadge(row.status).tone"
-                    class="capitalize shrink-0"
-                  >
-                    {{ statusBadge(row.status).label }}
-                  </UiPill>
-                </button>
-                <button
-                  type="button"
-                  class="ml-auto flex size-8 items-center justify-center rounded text-ink-40 transition duration-150 group-hover:bg-canvas group-hover:text-ink menu-trigger"
-                  aria-label="Open menu"
-                  @click.stop="openMenu(row.id)"
-                >
-                  <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <circle cx="12" cy="5" r="1.5"/>
-                    <circle cx="12" cy="12" r="1.5"/>
-                    <circle cx="12" cy="19" r="1.5"/>
-                  </svg>
-                </button>
+    <div v-if="loading" class="grid gap-3 sm:grid-cols-2" aria-hidden="true">
+      <div v-for="index in 4" :key="index" class="h-[124px] animate-pulse rounded-lg bg-surface shadow-card" />
+    </div>
+
+    <template v-else>
+      <div v-if="filtered.length" class="grid gap-3 sm:grid-cols-2">
+        <article v-for="driver in filtered" :key="driver.id" class="rounded-lg bg-surface p-4 shadow-card">
+          <div class="flex items-start justify-between gap-3">
+            <div class="flex min-w-0 items-center gap-3">
+              <span class="flex size-9 shrink-0 items-center justify-center rounded-full bg-canvas text-label font-medium text-ink">
+                {{ driver.full_name.split(' ').slice(0, 2).map((part) => part[0]).join('').toUpperCase() }}
+              </span>
+              <div class="min-w-0">
+                <h2 class="truncate text-p1 font-medium text-ink">{{ driver.full_name }}</h2>
+                <p class="truncate text-meta text-ink-40">{{ branchName(driver.branch_id) || '—' }}</p>
               </div>
-              <p class="mt-1 truncate text-label text-ink-64">
-                {{ row.phone }}
-                <span v-if="row.license_number" class="text-ink-64"> — {{ row.license_number }}</span>
-              </p>
-              <p v-if="row.license_expiry" class="mt-0.5 truncate text-label text-ink-64">
-                License expires: {{ row.license_expiry }}
-              </p>
             </div>
-
-            <!-- floating menu -->
-            <div
-              v-if="menuFor === row.id"
-              class="absolute right-0 left-full -translate-x-1/2 top-full mt-1 z-50 w-48 rounded-lg bg-surface shadow-card border border-line py-1 fade-in"
-              tabindex="-1"
-            >
-              <button
-                type="button"
-                class="flex w-full items-center gap-2 px-3 py-2 text-p1 text-ink transition duration-150 hover:bg-canvas"
-                @click="openEdit(row); menuFor = null"
-              >
-                <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                  <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
-                </svg>
-                Edit
-              </button>
-              <div class="my-1 border-t border-line"/>
-              <button
-                type="button"
-                class="flex w-full items-center gap-2 px-3 py-2 text-p1 text-danger transition duration-150 hover:bg-red/5"
-                @click="confirmDelete(row)"
-              >
-                <svg class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                  <path d="m3 6 4 14h10L19 6"/>
-                  <path d="M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2"/>
-                </svg>
-                Delete driver
-              </button>
-            </div>
+            <UiPill :tone="statusTone(driver.status)">{{ humanise(driver.status) }}</UiPill>
           </div>
 
-          <div v-if="drivers.length === 0 && !loading" class="py-8 text-center text-label text-ink-64">
-            No drivers found.
-          </div>
-        </div>
-      </div>
-    </main>
-
-    <!-- add / edit modal -->
-    <Teleport to="body">
-      <div
-        v-if="adding || editing"
-        class="fixed inset-0 z-50 flex items-center justify-center bg-ink/30 px-4 py-6 transition-opacity"
-        @click.self="closeEditor"
-      >
-        <UiCard class="mx-auto max-w-sm">
-          <div class="flex items-center justify-between pb-3 bg-canvas">
-            <h2 class="text-h5 text-ink">{{ editing ? `Edit ${editing.full_name}` : 'Add driver' }}</h2>
-            <div class="flex items-center gap-2">
-              <span class="inline-flex items-center rounded bg-ink/5 px-1.5 text-meta font-normal text-ink-64 shadow-inset">Esc</span>
-              <button
-                type="button"
-                class="flex size-8 items-center justify-center rounded-full text-ink-64 transition hover:bg-red/10 hover:text-danger focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue"
-                aria-label="Close"
-                @click="closeEditor"
-              >
-                <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
-                  <path d="M18 6 6 18M6 6l12 12"/>
-                </svg>
-              </button>
+          <dl class="mt-3 space-y-1 text-label">
+            <div class="flex gap-2">
+              <dt class="w-20 shrink-0 text-ink-40">Phone</dt>
+              <dd class="min-w-0 text-ink">{{ driver.phone }}</dd>
             </div>
-          </div>
-
-          <form class="space-y-4" @submit.prevent="editing ? saveEdit() : saveAdd()">
-            <UiField
-              id="driver-name"
-              v-model="addFullName"
-              label="Full name"
-              type="text"
-              :error="''"
-              autofocus
-            />
-            <UiField
-              id="driver-phone"
-              v-model="addPhone"
-              label="Phone number"
-              type="tel"
-              :error="''"
-            />
-            <UiField
-              id="driver-license"
-              v-model="addLicenseNumber"
-              label="License number"
-              type="text"
-              :error="''"
-              placeholder="e.g. DL-12345"
-            />
-            <UiField
-              id="driver-license-expiry"
-              v-model="addLicenseExpiry"
-              label="License expiry"
-              type="text"
-              :error="''"
-              placeholder="YYYY-MM-DD"
-            />
-            <div>
-              <UiSelect
-                id="driver-branch"
-                v-model="addBranch"
-                label="Branch"
-                :options="branchOptions"
-                hint="branches.length ? '' : 'No branches available'"
-              />
+            <div class="flex gap-2">
+              <dt class="w-20 shrink-0 text-ink-40">Licence</dt>
+              <dd class="min-w-0 text-ink">{{ driver.license_number || '—' }}</dd>
             </div>
-
-            <div class="mt-5 flex items-center gap-2">
-              <UiButton
-                type="button"
-                :loading="saving"
-                @click="editing ? saveEdit() : saveAdd()"
-              >
-                {{ editing ? 'Save' : 'Add driver' }}
-                <UiKbd>Enter</UiKbd>
-              </UiButton>
-              <UiButton
-                v-if="editing"
-                variant="link"
-                type="button"
-                @click="closeEditor"
-              >
-                Cancel
-              </UiButton>
+            <div class="flex gap-2">
+              <dt class="w-20 shrink-0 text-ink-40">Expires</dt>
+              <dd class="min-w-0" :class="expiryTone(driver)">{{ shortDate(driver.license_expiry) }}</dd>
             </div>
-          </form>
-        </UiCard>
-      </div>
-    </Teleport>
+          </dl>
 
-    <!-- confirm delete modal -->
-    <Teleport to="body">
-      <div
-        v-if="confirmModal"
-        class="fixed inset-0 z-50 flex items-center justify-center bg-ink/30 px-4 py-6 transition-opacity"
-        @click.self="closeConfirm"
-      >
-        <UiCard class="mx-auto max-w-sm">
-          <div class="flex items-center justify-between pb-3 bg-canvas">
-            <h2 class="text-h5 text-ink">Delete {{ confirmModal.driverName }}?</h2>
-            <div class="flex items-center gap-2">
-              <span class="inline-flex items-center rounded bg-ink/5 px-1.5 text-meta font-normal text-ink-64 shadow-inset">Esc</span>
-              <button
-                type="button"
-                class="flex size-8 items-center justify-center rounded-full text-ink-64 transition hover:bg-red/10 hover:text-danger focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue"
-                aria-label="Close"
-                @click="closeConfirm"
-              >
-                <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
-                  <path d="M18 6 6 18M6 6l12 12"/>
-                </svg>
-              </button>
-            </div>
-          </div>
-
-          <p class="text-p1 text-ink">
-            This driver will be marked inactive. Their data stays in the records.
-          </p>
-
-          <div class="mt-5 flex items-center gap-2">
-            <UiButton
-              type="button"
-              :loading="saving"
-              variant="danger"
-              @click="executeDelete"
-            >
-              Delete driver
-              <UiKbd>Enter</UiKbd>
+          <div class="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-line pt-3">
+            <UiButton variant="link" @click="openEdit(driver)">Edit</UiButton>
+            <UiButton v-if="driver.status !== 'inactive'" variant="link" class="text-danger" @click="confirmTarget = driver">
+              Deactivate
             </UiButton>
           </div>
-        </UiCard>
+        </article>
       </div>
-    </Teleport>
+
+      <UiEmptyState v-else icon="user" title="No drivers" description="Add the drivers who move parcels between branches.">
+        <UiButton @click="openCreate">Add driver</UiButton>
+      </UiEmptyState>
+    </template>
+
+    <!-- Create / edit -->
+    <UiModal
+      :open="formOpen"
+      :title="editingId ? 'Edit driver' : 'Add driver'"
+      size="md"
+      :dismissible="!saving"
+      @close="formOpen = false"
+    >
+      <div v-if="formError" class="mb-3 rounded-lg border border-danger/25 bg-danger/5 px-3 py-2 text-label text-danger" role="alert">
+        {{ formError }}
+      </div>
+      <div class="space-y-4">
+        <UiSelect id="driver-branch-form" v-model="form.branch" label="Branch" :options="branchOptions" />
+        <div class="grid gap-4 sm:grid-cols-2">
+          <UiField id="driver-name" v-model="form.fullName" label="Full name" autocomplete="off" />
+          <UiField id="driver-phone" v-model="form.phone" label="Phone" type="tel" autocomplete="off" />
+        </div>
+        <div class="grid gap-4 sm:grid-cols-2">
+          <UiField id="driver-licence" v-model="form.licenseNumber" label="Licence number (optional)" autocomplete="off" />
+          <UiField id="driver-expiry" v-model="form.licenseExpiry" label="Licence expiry (optional)" type="date" />
+        </div>
+        <UiSelect v-if="editingId" id="driver-status-form" v-model="form.status" label="Status" :options="statusOptions" />
+      </div>
+      <template #footer>
+        <div class="flex flex-col gap-2 sm:flex-row-reverse">
+          <UiButton block :loading="saving" @click="save">{{ editingId ? 'Save changes' : 'Add driver' }}</UiButton>
+          <UiButton variant="tertiary" block :disabled="saving" @click="formOpen = false">Cancel</UiButton>
+        </div>
+      </template>
+    </UiModal>
+
+    <!-- Deactivate -->
+    <UiModal
+      :open="Boolean(confirmTarget)"
+      title="Deactivate driver"
+      description="Their history stays; they just cannot be assigned new trips."
+      :dismissible="!busy"
+      @close="confirmTarget = null"
+    >
+      <p class="text-label text-ink-64">
+        Deactivate <span class="font-medium text-ink">{{ confirmTarget?.full_name }}</span>?
+      </p>
+      <template #footer>
+        <div class="flex flex-col gap-2 sm:flex-row-reverse">
+          <UiButton variant="danger" block :loading="busy" @click="deactivate">Deactivate</UiButton>
+          <UiButton variant="tertiary" block :disabled="busy" @click="confirmTarget = null">Keep active</UiButton>
+        </div>
+      </template>
+    </UiModal>
   </div>
 </template>

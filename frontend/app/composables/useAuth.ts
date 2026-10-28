@@ -1,26 +1,7 @@
+import type { AuthResponse, AuthUser } from '~/types/api'
 import { ApiError, apiRequest } from '~/utils/api'
 
-export interface AuthUser {
-  id: string
-  staff_id: string
-  full_name: string
-  role: string
-  job_role?: string
-  branch_id?: string
-  phone?: string
-  email?: string
-  status: string
-  first_login_done: boolean
-  locked: boolean
-  created_at?: string
-}
-
-export interface AuthResponse {
-  token: string
-  token_type: string
-  expires_in: number
-  user: AuthUser
-}
+export type { AuthResponse, AuthUser }
 
 export interface LoginPayload {
   staffId: string
