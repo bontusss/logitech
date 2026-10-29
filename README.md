@@ -77,6 +77,65 @@ URL.
 There is also `STAFF_ID_PREFIX` (default `GAL`), the prefix used for
 auto-generated staff IDs, e.g. `GAL-001`, `GAL-002`.
 
+## Progressive Web App (PWA)
+
+The frontend is installable: it ships a web app manifest, app icons and a
+service worker that precaches the app shell, so an installed copy opens even
+without a network connection (API calls still need the network).
+
+Everything is wired through the [`@vite-pwa/nuxt`](https://vite-pwa-org.netlify.app/frameworks/nuxt)
+module:
+
+- `frontend/nuxt.config.ts` — the `pwa` block: manifest (name, colours, icons),
+  Workbox precache settings and `registerType: 'autoUpdate'`, so a new build is
+  picked up automatically.
+- `frontend/public/` — `pwa-192x192.png`, `pwa-512x512.png`,
+  `maskable-512x512.png`, `apple-touch-icon.png` and `favicon.svg`. Replace
+  these files to change the installed icon; keep the same names and sizes
+  (192×192, 512×512, 512×512 maskable, 180×180) or update the `pwa.manifest.icons`
+  entries to match.
+
+### Enable / test it
+
+The service worker and manifest are generated at build time only — `nuxt dev`
+serves no service worker by design. To test locally:
+
+```sh
+make build          # nuxt generate + go:embed + go build
+backend/bin/server  # serve the built app
+```
+
+Then open http://localhost:8080 and check Chrome DevTools → **Application** →
+**Manifest** and **Service workers**. The install icon appears in the address
+bar when the manifest is valid; install from there (or the browser's
+“Install app” menu) to run it in a standalone window.
+
+To iterate on the service worker without a full Go build, generate the static
+output and serve it:
+
+```sh
+cd frontend && npx nuxt generate
+npx serve .output/public
+```
+
+To exercise the PWA in the dev server instead, set
+`pwa.devOptions.enabled: true` in `frontend/nuxt.config.ts`. Turn it back off
+for normal development: a dev service worker caches assets and can mask HMR
+updates.
+
+### Notes
+
+- Service workers only register over HTTPS, or on `http://localhost` for local
+testing. Deploy the built app behind TLS.
+- The service worker must be reachable at `/sw.js` and the manifest at
+  `/manifest.webmanifest`. The embedded Go server sets the manifest's
+  `application/manifest+json` content type explicitly; browsers ignore a
+  manifest served as a generic binary type.
+- Pages and static assets are precached; API responses are never cached, so
+  screens show their normal error states when offline.
+- Update the app by deploying a new build: `autoUpdate` activates the new
+  service worker on the next load without asking the user.
+
 ## API Documentation (Swagger)
 
 Interactive Swagger UI documentation is available at:

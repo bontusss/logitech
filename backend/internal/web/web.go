@@ -26,6 +26,12 @@ func Handler() http.Handler {
 	fileServer := http.FileServer(http.FS(sub))
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		p := strings.TrimPrefix(r.URL.Path, "/")
+		if strings.HasSuffix(p, ".webmanifest") {
+			// Go's built-in MIME table has no entry for .webmanifest, and a
+			// manifest served as octet-stream is ignored, making the app
+			// non-installable. Serve the PWA manifest with its real type.
+			w.Header().Set("Content-Type", "application/manifest+json")
+		}
 		if p != "" {
 			if _, err := fs.Stat(sub, p); err != nil {
 				// Not a real file: serve index.html for SPA routes.
