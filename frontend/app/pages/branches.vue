@@ -192,7 +192,7 @@ onMounted(load)
         </article>
       </div>
 
-      <UiEmptyState v-else icon="building" title="No branches yet" description="Create the first branch to start recording shipments.">
+      <UiEmptyState v-else icon="building" title="No branches yet" description="Create the first branch to start recording waybills.">
         <UiButton @click="openCreate">New branch</UiButton>
       </UiEmptyState>
     </template>
@@ -201,7 +201,7 @@ onMounted(load)
     <UiModal
       :open="formOpen"
       :title="editingId ? 'Edit branch' : 'New branch'"
-      :description="editingId ? 'The code is permanent; the rest can change.' : 'The code prefixes tracking numbers, e.g. LAG-01.'"
+      :description="editingId ? 'The code is permanent; the rest can change.' : 'The code prefixes waybill numbers, e.g. LAG-01.'"
       size="md"
       :dismissible="!saving"
       @close="formOpen = false"

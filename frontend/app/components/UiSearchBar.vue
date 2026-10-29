@@ -4,7 +4,7 @@ const props = withDefaults(
   defineProps<{ modelValue?: string; placeholder?: string; label?: string }>(),
   {
     modelValue: '',
-    placeholder: 'Search tracking number, name or phone',
+    placeholder: 'Search waybill number, name or phone',
     label: 'Search',
   },
 )

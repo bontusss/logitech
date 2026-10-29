@@ -170,6 +170,14 @@ export interface Shipment {
   exceptions?: ShipmentException[]
 }
 
+/** The signed-in account's own waybill counts (dashboard). */
+export interface RecordSummary {
+  /** Waybills they recorded that have already been dispatched. */
+  sent: number
+  /** Waybills they recorded that are still waiting to be dispatched. */
+  pending: number
+}
+
 export interface RecordItemPayload {
   tracking_number?: string
   serial_number?: string
@@ -199,6 +207,13 @@ export interface ReportPeriod {
 
 export interface ReportOverview {
   period: ReportPeriod
+  waybills?: {
+    total: number
+    quantity: number
+    received: number
+    by_status: Record<string, number>
+    by_payment_status: Record<string, number>
+  }
   shipments: {
     total: number
     quantity: number

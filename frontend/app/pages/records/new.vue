@@ -6,7 +6,12 @@ useHead({ title: 'Send parcel' })
 definePageMeta({ layout: 'default' })
 
 const { token, user } = useAuth()
-const { isOwner, branchId } = usePermissions()
+const { canSend, isOwner, branchId } = usePermissions()
+
+if (!canSend.value) {
+  await navigateTo('/records')
+}
+
 const { options: branchOptions, name: branchName, load: loadBranches } = useBranches()
 
 interface DraftItem {

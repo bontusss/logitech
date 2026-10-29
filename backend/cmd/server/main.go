@@ -142,6 +142,7 @@ func main() {
 			// and the receipt at the destination branch.
 			protected.POST("/records", recordHandler.CreateRecord)
 			protected.GET("/records", recordHandler.ListRecords)
+			protected.GET("/records/summary", recordHandler.Summary)
 			protected.GET("/records/:id", recordHandler.GetRecord)
 			protected.PUT("/records/:id", recordHandler.UpdateRecord)
 			protected.POST("/records/:id/dispatch", recordHandler.DispatchRecord)

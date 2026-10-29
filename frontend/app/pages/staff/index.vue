@@ -402,7 +402,7 @@ onMounted(async () => {
         v-else
         icon="users"
         title="No staff yet"
-        description="Add the people who record and receive shipments."
+        description="Add the people who record and receive waybills."
       >
         <UiButton @click="openAdd('staff')">Add staff</UiButton>
       </UiEmptyState>

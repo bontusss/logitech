@@ -7,7 +7,7 @@ definePageMeta({ layout: 'default' })
 
 const route = useRoute()
 const { token } = useAuth()
-const { canSend, canViewAllBranches, branchId } = usePermissions()
+const { canSend, canViewAllBranches, isOwner, branchId } = usePermissions()
 const { options: branchOptions, name: branchName, load: loadBranches } = useBranches()
 
 const pageSize = 24
@@ -27,15 +27,15 @@ const destination = ref(
 )
 const outstanding = ref(route.query.outstanding === 'true')
 
-const statusOptions = [
+const statusOptions = computed(() => [
   { value: '', label: 'All' },
   { value: 'pending', label: 'Pending' },
   { value: 'in_transit', label: 'In transit' },
   { value: 'pending,in_transit', label: 'In motion' },
   { value: 'received', label: 'Received' },
-  { value: 'exception', label: 'Exception' },
+  { value: 'exception', label: isOwner.value ? 'Unresolved problems' : 'Exception' },
   { value: 'cancelled', label: 'Cancelled' },
-]
+])
 
 const paymentOptions = [
   { value: '', label: 'Any payment' },
@@ -105,6 +105,18 @@ function clearFilters() {
   destination.value = ''
   outstanding.value = false
 }
+
+watch(
+  () => route.query,
+  (query) => {
+    search.value = typeof query.q === 'string' ? query.q : ''
+    status.value = typeof query.status === 'string' ? query.status : ''
+    paymentStatus.value = typeof query.payment_status === 'string' ? query.payment_status : ''
+    branchFilter.value = typeof query.branch_id === 'string' ? query.branch_id : ''
+    destination.value = typeof query.destination_branch_id === 'string' ? query.destination_branch_id : ''
+    outstanding.value = query.outstanding === 'true'
+  },
+)
 
 let searchTimer: ReturnType<typeof setTimeout> | undefined
 watch(search, () => {

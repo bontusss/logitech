@@ -1,14 +1,14 @@
 <script setup lang="ts">
 import type { Shipment } from '~/types/api'
 
-/** One record: tracking number, route, parties, money and state. */
+/** One record: waybill number, route, parties, money and state. */
 withDefaults(defineProps<{ record: Shipment; showMoney?: boolean }>(), { showMoney: true })
 </script>
 
 <template>
   <NuxtLink
     :to="`/records/${record.id}`"
-    class="group block rounded-lg bg-surface p-4 shadow-card transition hover:shadow-halo focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue"
+    class="group block min-w-0 rounded-lg bg-surface p-4 shadow-card transition hover:shadow-halo focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue"
   >
     <div class="flex items-start justify-between gap-3">
       <div class="min-w-0">

@@ -216,6 +216,10 @@ func (h *RecordHandler) CreateRecord(c *gin.Context) {
 	if !ok {
 		return
 	}
+	if claims.Role == auth.RoleOwner {
+		c.JSON(http.StatusForbidden, ErrorResponse{Error: "owners cannot send parcels"})
+		return
+	}
 
 	var req CreateRecordRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -375,6 +379,45 @@ func (h *RecordHandler) CreateRecord(c *gin.Context) {
 	c.JSON(http.StatusCreated, records)
 }
 
+// RecordSummary is the signed-in account's own waybill counts (dashboard).
+type RecordSummary struct {
+	Sent    int64 `json:"sent" example:"12"`
+	Pending int64 `json:"pending"`
+}
+
+// Summary godoc
+// @Summary My waybill counts
+// @Description Counts the waybills the signed-in account recorded: those that have already been dispatched from the origin branch ("sent") and those still waiting to leave it ("pending"). Cancelled records count as neither.
+// @Tags records
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} RecordSummary
+// @Failure 401 {object} ErrorResponse
+// @Failure 403 {object} ErrorResponse
+// @Failure 503 {object} ErrorResponse
+// @Router /api/records/summary [get]
+func (h *RecordHandler) Summary(c *gin.Context) {
+	if h.queries == nil || h.db == nil {
+		c.JSON(http.StatusServiceUnavailable, ErrorResponse{Error: "database is unavailable"})
+		return
+	}
+	staffID, _, ok := claimsStaffID(c)
+	if !ok {
+		return
+	}
+
+	var summary RecordSummary
+	if err := h.db.QueryRowContext(c.Request.Context(), `
+		SELECT COUNT(*) FILTER (WHERE status NOT IN ('pending', 'cancelled')),
+		       COUNT(*) FILTER (WHERE status = 'pending')
+		FROM manifest_items
+		WHERE recorded_by = $1`, staffID).Scan(&summary.Sent, &summary.Pending); err != nil {
+		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "failed to load your waybill counts: " + err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, summary)
+}
+
 // ListRecords godoc
 // @Summary List shipment records
 // @Description Lists shipment records newest first with the amount billed, the amount paid and the remaining balance. Owners and the system admin see every branch; managers and staff see records that originate from or are destined to their own branch. Optional filters: free text (tracking number, serial number, description, sender/receiver name or phone), status, payment_status, branch_id (origin or destination), origin_branch_id, destination_branch_id, from/to dates (created_at), and outstanding=true for records with a balance.
@@ -388,8 +431,8 @@ func (h *RecordHandler) CreateRecord(c *gin.Context) {
 // @Param origin_branch_id query string false "Origin branch UUID"
 // @Param destination_branch_id query string false "Destination branch UUID"
 // @Param from query string false "Created on or after (YYYY-MM-DD)"
-// @Param to query string false "Created on or before (YYYY-MM-DD)"
-// @Param outstanding query bool false "Only records with an unpaid balance"
+// @Param to query string false "Created on or before (YYYY-MM-DD)"	// @Param outstanding query bool false "Only records with an unpaid balance"
+// @Param mine query bool false "Only records the signed-in account recorded"
 // @Param limit query int false "Page size (default 50, max 200)"
 // @Param offset query int false "Offset"
 // @Success 200 {array} Record
@@ -613,6 +656,10 @@ func (h *RecordHandler) DispatchRecord(c *gin.Context) {
 	if !ok {
 		return
 	}
+	if claims.Role == auth.RoleOwner {
+		c.JSON(http.StatusForbidden, ErrorResponse{Error: "owners cannot dispatch parcels"})
+		return
+	}
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, ErrorResponse{Error: "record id must be a valid UUID"})
@@ -703,6 +750,10 @@ func (h *RecordHandler) ReceiveRecord(c *gin.Context) {
 	}
 	staffID, claims, ok := claimsStaffID(c)
 	if !ok {
+		return
+	}
+	if claims.Role == auth.RoleOwner {
+		c.JSON(http.StatusForbidden, ErrorResponse{Error: "owners cannot receive parcels"})
 		return
 	}
 	id, err := uuid.Parse(c.Param("id"))
@@ -870,7 +921,7 @@ func (h *RecordHandler) CancelRecord(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "failed to load the record: " + err.Error()})
 		return
 	}
-	if !h.canDispatch(claims, record) {
+	if !canSeeAllBranches(claims.Role) && !h.canDispatch(claims, record) {
 		c.JSON(http.StatusNotFound, ErrorResponse{Error: "record not found"})
 		return
 	}
@@ -1003,8 +1054,11 @@ func (h *RecordHandler) canEditRecord(claims *auth.Claims, record sqlc.ManifestI
 	return claims.Role == auth.RoleStaff && record.RecordedBy.String() == claims.UserID
 }
 
-// canDispatch reports whether claims may dispatch or cancel a record.
+// canDispatch reports whether claims may dispatch a record.
 func (h *RecordHandler) canDispatch(claims *auth.Claims, record sqlc.ManifestItem) bool {
+	if claims.Role == auth.RoleOwner {
+		return false
+	}
 	if canSeeAllBranches(claims.Role) {
 		return true
 	}
@@ -1013,6 +1067,9 @@ func (h *RecordHandler) canDispatch(claims *auth.Claims, record sqlc.ManifestIte
 
 // canReceive reports whether claims may receive a record at its destination.
 func (h *RecordHandler) canReceive(claims *auth.Claims, record sqlc.ManifestItem) bool {
+	if claims.Role == auth.RoleOwner {
+		return false
+	}
 	if canSeeAllBranches(claims.Role) {
 		return true
 	}
@@ -1031,6 +1088,7 @@ type recordFilter struct {
 	From                *time.Time
 	To                  *time.Time
 	Outstanding         bool
+	Mine                bool
 	Limit               int
 	Offset              int
 }
@@ -1092,6 +1150,9 @@ func parseRecordFilter(c *gin.Context) (recordFilter, error) {
 	}
 	if raw := strings.TrimSpace(c.Query("outstanding")); raw != "" {
 		filter.Outstanding = raw == "true" || raw == "1"
+	}
+	if raw := strings.TrimSpace(c.Query("mine")); raw != "" {
+		filter.Mine = raw == "true" || raw == "1"
 	}
 	if raw := strings.TrimSpace(c.Query("limit")); raw != "" {
 		limit, err := strconv.Atoi(raw)
@@ -1351,6 +1412,15 @@ func (h *RecordHandler) recordWhere(claims *auth.Claims, filter recordFilter) (s
 	}
 	if filter.Outstanding {
 		where.WriteString(" AND mi.status <> 'cancelled' AND COALESCE(mi.balance, 0) > 0")
+	}
+	if filter.Mine {
+		// Counter staff only ever care about the waybills they keyed in.
+		if id, err := uuid.Parse(claims.UserID); err == nil {
+			n := arg(id.String())
+			fmt.Fprintf(&where, " AND mi.recorded_by = $%d::uuid", n)
+		} else {
+			where.WriteString(" AND FALSE")
+		}
 	}
 
 	if !canSeeAllBranches(claims.Role) {

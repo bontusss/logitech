@@ -1361,8 +1361,8 @@ const docTemplate = `{
                     },
                     {
                         "type": "boolean",
-                        "description": "Only records with an unpaid balance",
-                        "name": "outstanding",
+                        "description": "Only records the signed-in account recorded",
+                        "name": "mine",
                         "in": "query"
                     },
                     {
@@ -1450,6 +1450,49 @@ const docTemplate = `{
                         "description": "Bad Request",
                         "schema": {
                             "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/records/summary": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Counts the waybills the signed-in account recorded: those that have already been dispatched from the origin branch (\"sent\") and those still waiting to leave it (\"pending\"). Cancelled records count as neither.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "records"
+                ],
+                "summary": "My waybill counts",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handler.RecordSummary"
                         }
                     },
                     "401": {
@@ -2008,6 +2051,12 @@ const docTemplate = `{
                         "description": "End date (YYYY-MM-DD), default today",
                         "name": "to",
                         "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Branch UUID (owner / system admin only)",
+                        "name": "branch_id",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -2062,6 +2111,12 @@ const docTemplate = `{
                         "description": "End date (YYYY-MM-DD), default today",
                         "name": "to",
                         "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Branch UUID (owner / system admin only)",
+                        "name": "branch_id",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -2115,6 +2170,12 @@ const docTemplate = `{
                         "type": "string",
                         "description": "End date (YYYY-MM-DD), default today",
                         "name": "to",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Branch UUID (owner / system admin only)",
+                        "name": "branch_id",
                         "in": "query"
                     }
                 ],
@@ -3545,6 +3606,18 @@ const docTemplate = `{
                 }
             }
         },
+        "handler.RecordSummary": {
+            "type": "object",
+            "properties": {
+                "pending": {
+                    "type": "integer"
+                },
+                "sent": {
+                    "type": "integer",
+                    "example": 12
+                }
+            }
+        },
         "handler.ReportExceptionStats": {
             "type": "object",
             "properties": {
@@ -3621,6 +3694,9 @@ const docTemplate = `{
                     "$ref": "#/definitions/handler.ReportPeriod"
                 },
                 "shipments": {
+                    "$ref": "#/definitions/handler.ReportShipmentStats"
+                },
+                "waybills": {
                     "$ref": "#/definitions/handler.ReportShipmentStats"
                 }
             }

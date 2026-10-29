@@ -41,7 +41,7 @@ const branch = computed(() => {
 const links = computed(() => {
   const items: Array<{ to: string; label: string; description: string; icon: string }> = []
   if (canViewReports.value) {
-    items.push({ to: '/reports', label: 'Reports', description: 'Shipments, revenue and collections.', icon: 'chart' })
+    items.push({ to: '/reports', label: 'Reports', description: 'Waybills, revenue and collections.', icon: 'chart' })
   }
   if (canManageStaff.value) {
     items.push({ to: '/staff', label: 'Staff', description: 'Accounts, PIN resets and access.', icon: 'users' })

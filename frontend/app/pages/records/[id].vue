@@ -256,6 +256,10 @@ watch(recordId, load)
             <h2 class="text-h5 font-medium text-ink">Details</h2>
             <dl class="mt-2 divide-y divide-line">
               <div class="flex items-start justify-between gap-3 py-2">
+                <dt class="text-label text-ink-64">Waybill number</dt>
+                <dd class="text-right text-label font-medium text-ink">{{ record.tracking_number }}</dd>
+              </div>
+              <div class="flex items-start justify-between gap-3 py-2">
                 <dt class="text-label text-ink-64">Serial number</dt>
                 <dd class="text-right text-label font-medium text-ink">{{ record.serial_number || '—' }}</dd>
               </div>

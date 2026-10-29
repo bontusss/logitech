@@ -664,6 +664,14 @@ definitions:
       reference:
         type: string
     type: object
+  handler.RecordSummary:
+    properties:
+      pending:
+        type: integer
+      sent:
+        example: 12
+        type: integer
+    type: object
   handler.ReportExceptionStats:
     properties:
       closed:
@@ -714,6 +722,8 @@ definitions:
       period:
         $ref: '#/definitions/handler.ReportPeriod'
       shipments:
+        $ref: '#/definitions/handler.ReportShipmentStats'
+      waybills:
         $ref: '#/definitions/handler.ReportShipmentStats'
     type: object
   handler.ReportPeriod:
@@ -1856,9 +1866,9 @@ paths:
         in: query
         name: to
         type: string
-      - description: Only records with an unpaid balance
+      - description: Only records the signed-in account recorded
         in: query
-        name: outstanding
+        name: mine
         type: boolean
       - description: Page size (default 50, max 200)
         in: query
@@ -2278,6 +2288,35 @@ paths:
       summary: Receive a record at the destination branch
       tags:
       - records
+  /api/records/summary:
+    get:
+      description: 'Counts the waybills the signed-in account recorded: those that
+        have already been dispatched from the origin branch ("sent") and those still
+        waiting to leave it ("pending"). Cancelled records count as neither.'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.RecordSummary'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: My waybill counts
+      tags:
+      - records
   /api/reports/branches:
     get:
       description: Shipments sent and received, amounts billed, payments collected,
@@ -2291,6 +2330,10 @@ paths:
       - description: End date (YYYY-MM-DD), default today
         in: query
         name: to
+        type: string
+      - description: Branch UUID (owner / system admin only)
+        in: query
+        name: branch_id
         type: string
       produces:
       - application/json
@@ -2327,6 +2370,10 @@ paths:
       - description: End date (YYYY-MM-DD), default today
         in: query
         name: to
+        type: string
+      - description: Branch UUID (owner / system admin only)
+        in: query
+        name: branch_id
         type: string
       produces:
       - application/json
@@ -2365,6 +2412,10 @@ paths:
       - description: End date (YYYY-MM-DD), default today
         in: query
         name: to
+        type: string
+      - description: Branch UUID (owner / system admin only)
+        in: query
+        name: branch_id
         type: string
       produces:
       - application/json

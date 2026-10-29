@@ -25,29 +25,11 @@ RUN_DIR           := backend/.run
 
 ## ---- stack (s_up / s_down) ---------------------------------------------
 
-s_up: db_up m_up ## postgres + migrations + go server (bg) + nuxt dev (bg)
-	@mkdir -p $(RUN_DIR)
-	@echo "==> starting go server on :$(BE_PORT) (logs: $(RUN_DIR)/be.log)"
-	@(cd backend && PORT=$(BE_PORT) DATABASE_URL=$(DATABASE_URL) go run ./cmd/server > .run/be.log 2>&1 & echo $$! > .run/be.pid)
-	@echo "==> starting nuxt dev on :$(FE_PORT) (logs: $(RUN_DIR)/fe.log)"
-	@(cd frontend && FE_PORT=$(FE_PORT) npm run dev > ../$(RUN_DIR)/fe.log 2>&1 & echo $$! > ../$(RUN_DIR)/fe.pid)
-	@$(MAKE) --no-print-directory wait-health
-	@echo "   go server: $(RUN_DIR)/be.log   pid: $$(cat $(RUN_DIR)/be.pid)"
-	@echo "   nuxt dev : $(RUN_DIR)/fe.log   pid: $$(cat $(RUN_DIR)/fe.pid)"
-	@echo "==> stack up: Go http://localhost:$(BE_PORT) (serves /health) — Nuxt http://localhost:$(FE_PORT)"
+s_up:
+	cd backend && docker compose -f docker-compose.yml up -d
 
-s_down: ## stop go server, nuxt dev, and postgres
-	@echo "==> stopping processes"
-	@for pid_file in $(RUN_DIR)/be.pid $(RUN_DIR)/fe.pid; do \
-	  if [ -f $$pid_file ]; then \
-	    pkill -TERM -P $$(cat $$pid_file) >/dev/null 2>&1; kill -TERM $$(cat $$pid_file) >/dev/null 2>&1 || true; rm -f $$pid_file; \
-	  fi; \
-	done
-	@pkill -f "go run ./cmd/server" >/dev/null 2>&1 || true
-	@pkill -f "nuxt dev" >/dev/null 2>&1 || true
-	@$(MAKE) --no-print-directory db_down
-	@echo "==> stack down"
-
+s_down:
+	docker compose -f docker-compose.yml down
 ## ---- database (db_up / db_down) -----------------------------------------
 
 db_up: ## start postgres via docker compose and wait until healthy

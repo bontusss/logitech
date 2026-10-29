@@ -11,6 +11,7 @@ import (
 	"backend/internal/db/sqlc"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 // ReportHandler serves the owner/manager analytics: shipments, revenue,
@@ -76,6 +77,7 @@ type ReportExceptionStats struct {
 // ReportOverview is the owner dashboard payload.
 type ReportOverview struct {
 	Period           ReportPeriod         `json:"period"`
+	Waybills         ReportShipmentStats  `json:"waybills"`
 	Shipments        ReportShipmentStats  `json:"shipments"`
 	Money            ReportMoneyStats     `json:"money"`
 	PaymentsByMethod []ReportMethodTotal  `json:"payments_by_method"`
@@ -118,6 +120,13 @@ func reportScopeFor(c *gin.Context) (reportScope, bool) {
 		return reportScope{}, false
 	}
 	if canSeeAllBranches(claims.Role) {
+		if raw := strings.TrimSpace(c.Query("branch_id")); raw != "" {
+			if _, err := uuid.Parse(raw); err != nil {
+				c.JSON(http.StatusBadRequest, ErrorResponse{Error: "branch_id must be a valid UUID"})
+				return reportScope{}, false
+			}
+			return reportScope{all: false, branchID: &raw}, true
+		}
 		return reportScope{all: true}, true
 	}
 	if claims.Role != auth.RoleManager {
@@ -168,6 +177,7 @@ func parseReportPeriod(c *gin.Context) (time.Time, time.Time, error) {
 // @Security BearerAuth
 // @Param from query string false "Start date (YYYY-MM-DD), default 29 days ago"
 // @Param to query string false "End date (YYYY-MM-DD), default today"
+// @Param branch_id query string false "Branch UUID (owner / system admin only)"
 // @Success 200 {object} ReportOverview
 // @Failure 400 {object} ErrorResponse
 // @Failure 403 {object} ErrorResponse
@@ -337,6 +347,7 @@ func (h *ReportHandler) Overview(c *gin.Context) {
 		return
 	}
 
+	result.Waybills = result.Shipments
 	c.JSON(http.StatusOK, result)
 }
 
@@ -348,6 +359,7 @@ func (h *ReportHandler) Overview(c *gin.Context) {
 // @Security BearerAuth
 // @Param from query string false "Start date (YYYY-MM-DD), default 29 days ago"
 // @Param to query string false "End date (YYYY-MM-DD), default today"
+// @Param branch_id query string false "Branch UUID (owner / system admin only)"
 // @Success 200 {array} DailyReportRow
 // @Failure 400 {object} ErrorResponse
 // @Failure 403 {object} ErrorResponse
@@ -419,6 +431,7 @@ func (h *ReportHandler) Daily(c *gin.Context) {
 // @Security BearerAuth
 // @Param from query string false "Start date (YYYY-MM-DD), default 29 days ago"
 // @Param to query string false "End date (YYYY-MM-DD), default today"
+// @Param branch_id query string false "Branch UUID (owner / system admin only)"
 // @Success 200 {array} BranchReportRow
 // @Failure 400 {object} ErrorResponse
 // @Failure 403 {object} ErrorResponse

@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import type { BranchReportRow } from '~/types/api'
 
-defineProps<{ rows: BranchReportRow[] }>()
+defineProps<{ rows: BranchReportRow[]; clickable?: boolean }>()
+defineEmits<{ select: [branchId: string] }>()
 </script>
 
 <template>
@@ -21,7 +22,15 @@ defineProps<{ rows: BranchReportRow[] }>()
       <tbody>
         <tr v-for="row in rows" :key="row.branch_id" class="text-label text-ink">
           <td class="border-b border-line py-2.5 pr-3">
-            <span class="block font-medium">{{ row.branch_name }}</span>
+            <button
+              v-if="clickable"
+              type="button"
+              class="block text-left font-medium text-blue transition hover:underline"
+              @click="$emit('select', row.branch_id)"
+            >
+              {{ row.branch_name }}
+            </button>
+            <span v-else class="block font-medium">{{ row.branch_name }}</span>
             <span class="text-meta text-ink-40">{{ row.branch_code }}</span>
           </td>
           <td class="border-b border-line py-2.5 text-right tabular-nums">{{ row.shipments_sent }}</td>

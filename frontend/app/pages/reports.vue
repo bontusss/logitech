@@ -6,8 +6,8 @@ useHead({ title: 'Reports' })
 definePageMeta({ layout: 'default' })
 
 const { token } = useAuth()
-const { branchId, isOwner } = usePermissions()
-const { name: branchName, load: loadBranches } = useBranches()
+const { branchId, canViewAllBranches } = usePermissions()
+const { options: branchOptions, name: branchName, load: loadBranches } = useBranches()
 
 const overview = ref<ReportOverview | null>(null)
 const daily = ref<DailyReportRow[]>([])
@@ -21,8 +21,15 @@ const periods = [
   { days: 90, label: '90 days' },
 ]
 const days = ref(30)
+/** Empty means every branch (owner / system admin only). */
+const branchFilter = ref('')
 
-const scopeLabel = computed(() => (isOwner.value ? 'All branches' : branchName(branchId.value) || 'Your branch'))
+const scopeLabel = computed(() => {
+  if (canViewAllBranches.value) {
+    return branchName(branchFilter.value) || 'All branches'
+  }
+  return branchName(branchId.value) || 'Your branch'
+})
 const range = computed(() => lastDays(days.value))
 const maxMethod = computed(() => Math.max(1, ...(overview.value?.payments_by_method.map((m) => m.amount) ?? [1])))
 const exceptionRows = computed(() => {
@@ -40,7 +47,9 @@ async function load() {
   if (!token.value) return
   loading.value = true
   error.value = ''
-  const query = `from=${range.value.from}&to=${range.value.to}`
+  const params = new URLSearchParams({ from: range.value.from, to: range.value.to })
+  if (branchFilter.value) params.set('branch_id', branchFilter.value)
+  const query = params.toString()
   try {
     const [summary, rows, branches] = await Promise.all([
       apiRequest<ReportOverview>(`/api/reports/overview?${query}`, { token: token.value }),
@@ -57,7 +66,7 @@ async function load() {
   }
 }
 
-watch(days, load)
+watch([days, branchFilter], load)
 
 onMounted(async () => {
   await loadBranches()
@@ -72,7 +81,16 @@ onMounted(async () => {
         <h1 class="text-h5 font-medium tracking-tight text-ink">Reports</h1>
         <p class="mt-1 text-label text-ink-64">{{ scopeLabel }} · {{ shortDate(range.from) }} – {{ shortDate(range.to) }}</p>
       </div>
-      <div class="flex items-center gap-1.5">
+      <div class="flex flex-wrap items-center gap-1.5">
+        <UiSelect
+          v-if="canViewAllBranches"
+          id="report-branch"
+          v-model="branchFilter"
+          label="Branch"
+          hide-label
+          :options="[{ value: '', label: 'All branches' }, ...branchOptions]"
+          class="w-[210px]"
+        />
         <button
           v-for="period in periods"
           :key="period.days"
@@ -99,9 +117,9 @@ onMounted(async () => {
     <template v-else-if="overview">
       <section class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <UiStat
-          label="Shipments"
-          :value="String(overview.shipments.total)"
-          :hint="`${overview.shipments.quantity} items · ${overview.shipments.received} received`"
+          label="Waybills"
+          :value="String(overview.waybills?.total ?? overview.shipments.total)"
+          :hint="`${overview.waybills?.quantity ?? overview.shipments.quantity} items · ${overview.waybills?.received ?? overview.shipments.received} received`"
           icon="package"
         />
         <UiStat label="Billed" :value="money(overview.money.billed)" :hint="`${overview.money.payments_count} payments received`" icon="receipt" />
@@ -169,7 +187,7 @@ onMounted(async () => {
           </section>
 
           <section class="rounded-lg bg-surface p-4 shadow-card">
-            <h2 class="text-h5 font-medium text-ink">Shipment mix</h2>
+            <h2 class="text-h5 font-medium text-ink">Waybill mix</h2>
             <dl class="mt-2 divide-y divide-line">
               <div v-for="(count, status) in overview.shipments.by_status" :key="status" class="flex items-center justify-between gap-3 py-2.5">
                 <dt class="text-label text-ink-64">{{ humanise(status) }}</dt>

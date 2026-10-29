@@ -16,6 +16,8 @@ export function usePermissions() {
   const isOwner = computed(() => role.value === 'owner')
   const isManager = computed(() => role.value === 'manager')
   const isStaff = computed(() => role.value === 'staff')
+  /** Operations staff work the drop-off counter: they send parcels and never receive them. */
+  const isOperations = computed(() => isStaff.value && jobRole.value === 'operations')
   const isSystemAdmin = computed(() => role.value === 'system_admin')
   const branchId = computed(() => user.value?.branch_id ?? '')
 
@@ -25,20 +27,19 @@ export function usePermissions() {
   const canManageBranches = computed(() => isOwner.value || isSystemAdmin.value)
   const canManageFleet = computed(() => isOwner.value || isSystemAdmin.value)
 
-  /** Sending is the front-desk job: operations/dispatch staff and managers. */
+  /** Sending is the front-desk job: operations/dispatch staff and managers (owners do not send). */
   const canSend = computed(
     () =>
-      isOwner.value ||
-      isManager.value ||
-      (isStaff.value && jobRole.value !== 'receiving'),
+      !isOwner.value &&
+      (isManager.value || (isStaff.value && jobRole.value !== 'receiving')),
   )
 
-  /** Receiving is the destination job: receiving staff and managers. */
+  /** Receiving is the destination job: receiving staff and managers (owners do not receive). */
   const canReceiveGoods = computed(
     () =>
-      isOwner.value ||
-      isManager.value ||
-      (isStaff.value && jobRole.value !== 'operations' && jobRole.value !== 'dispatch'),
+      !isOwner.value &&
+      (isManager.value ||
+        (isStaff.value && jobRole.value !== 'operations' && jobRole.value !== 'dispatch')),
   )
 
   function touchesBranch(record: Shipment, branch: string): boolean {
@@ -52,14 +53,14 @@ export function usePermissions() {
 
   /** Receiving happens at the destination branch, by a receiving-capable user. */
   function canReceive(record: Shipment): boolean {
-    if (isOwner.value) return true
+    if (isOwner.value) return false
     if (!canReceiveGoods.value || !branchId.value) return false
     return record.destination_branch_id === branchId.value
   }
 
   /** Sending happens at the origin branch. */
   function canDispatch(record: Shipment): boolean {
-    if (isOwner.value) return true
+    if (isOwner.value) return false
     if (!canSend.value || !branchId.value) return false
     return record.origin_branch_id === branchId.value
   }
@@ -73,7 +74,8 @@ export function usePermissions() {
 
   /** Cancelling is a manager/owner decision. */
   function canCancel(record: Shipment): boolean {
-    return (isManager.value || isOwner.value) && canDispatch(record) && record.status !== 'received' && record.status !== 'cancelled'
+    if (isOwner.value) return record.status !== 'received' && record.status !== 'cancelled'
+    return isManager.value && canDispatch(record) && record.status !== 'received' && record.status !== 'cancelled'
   }
 
   /** A record can be edited while it is still at the origin branch. */
@@ -88,6 +90,7 @@ export function usePermissions() {
     isOwner,
     isManager,
     isStaff,
+    isOperations,
     isSystemAdmin,
     canViewAllBranches,
     canViewReports,

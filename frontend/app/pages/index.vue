@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import type { BranchReportRow, DailyReportRow, ReportOverview, Shipment, ShipmentException } from '~/types/api'
+import type { BranchReportRow, DailyReportRow, RecordSummary, ReportOverview, Shipment, ShipmentException } from '~/types/api'
 import { ApiError } from '~/utils/api'
 
 useHead({ title: 'Dashboard' })
 definePageMeta({ layout: 'default' })
 
 const { token, user } = useAuth()
-const { branchId, isOwner, isManager, isStaff, isSystemAdmin, canViewReports, canSend, canReceiveGoods } = usePermissions()
+const { branchId, isOwner, isManager, isStaff, isOperations, isSystemAdmin, canViewReports, canSend, canReceiveGoods } = usePermissions()
 const { name: branchName, load: loadBranches } = useBranches()
 
 const loading = ref(true)
@@ -16,6 +16,7 @@ const daily = ref<DailyReportRow[]>([])
 const branchRows = ref<BranchReportRow[]>([])
 const recent = ref<Shipment[]>([])
 const incoming = ref<Shipment[]>([])
+const summary = ref<RecordSummary | null>(null)
 const balances = ref<Shipment[]>([])
 const exceptions = ref<ShipmentException[]>([])
 
@@ -92,7 +93,16 @@ async function load() {
       }
     }
 
-    if (branchId.value && !isOwner.value) {
+    // Operations staff work the drop-off counter: their own sent and
+    // not-yet-dispatched waybills, never the incoming queue.
+    if (isOperations.value) {
+      optional.push(
+        safe(
+          () => apiRequest<RecordSummary>('/api/records/summary', { token: t }),
+          (value) => (summary.value = value),
+        ),
+      )
+    } else if (branchId.value && !isOwner.value) {
       optional.push(
         safe(
           () =>
@@ -114,7 +124,12 @@ async function load() {
 
     // The record feed is the one call that has to work: if it fails the
     // session or the API is down, so is the dashboard.
-    recent.value = await apiRequest<Shipment[]>('/api/records?limit=6', { token: t })
+    // Operations never see incoming waybills: their feed is the waybills they
+    // created themselves and have not dispatched yet.
+    const feed = isOperations.value
+      ? '/api/records?status=pending&mine=true&limit=6'
+      : '/api/records?limit=6'
+    recent.value = await apiRequest<Shipment[]>(feed, { token: t })
     await Promise.all(optional)
   } catch (err) {
     error.value = err instanceof ApiError ? err.message : 'Could not load the dashboard. Please try again.'
@@ -162,10 +177,11 @@ onMounted(async () => {
       <section v-if="canViewReports && overview" class="space-y-2">
         <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <UiStat
-            label="Shipments"
-            :value="String(overview.shipments.total)"
-            :hint="`${overview.shipments.quantity} items · ${overview.shipments.received} received`"
+            label="Waybills"
+            :value="String(overview.waybills?.total ?? overview.shipments.total)"
+            :hint="`${overview.waybills?.quantity ?? overview.shipments.quantity} items · ${overview.waybills?.received ?? overview.shipments.received} received`"
             icon="package"
+            to="/records"
           />
           <UiStat
             label="Collected"
@@ -173,6 +189,7 @@ onMounted(async () => {
             :hint="`${overview.money.collection_rate.toFixed(1)}% of ${money(overview.money.billed)} billed`"
             icon="wallet"
             tone="info"
+            to="/records?payment_status=paid"
           />
           <UiStat
             label="Outstanding"
@@ -180,13 +197,15 @@ onMounted(async () => {
             hint="Unpaid balances on live records"
             icon="receipt"
             :tone="overview.money.outstanding > 0 ? 'danger' : 'default'"
+            to="/records?outstanding=true"
           />
           <UiStat
-            label="Open exceptions"
+            :label="isOwner ? 'Unresolved problems' : 'Open exceptions'"
             :value="String(attentionCount)"
             :hint="`${overview.exceptions.investigating} investigating · ${overview.exceptions.resolved} resolved`"
             icon="alert"
             :tone="attentionCount > 0 ? 'danger' : 'default'"
+            to="/records?status=exception"
           />
         </div>
         <p class="text-meta text-ink-40">
@@ -194,8 +213,25 @@ onMounted(async () => {
         </p>
       </section>
 
-      <!-- Staff see their queue first -->
-      <section v-if="!canViewReports && !isSystemAdmin" class="grid gap-3 sm:grid-cols-2">
+      <!-- Operations staff: what they sent and what is still at the counter -->
+      <section v-if="isOperations" class="grid gap-3 sm:grid-cols-2">
+        <UiStat
+          label="Waybills sent"
+          :value="String(summary?.sent ?? 0)"
+          hint="Recorded by you and dispatched"
+          icon="send"
+        />
+        <UiStat
+          label="Created, not dispatched"
+          :value="String(summary?.pending ?? 0)"
+          hint="Still waiting at your branch"
+          icon="clock"
+          :tone="(summary?.pending ?? 0) > 0 ? 'info' : 'default'"
+        />
+      </section>
+
+      <!-- Receiving staff see their queue first -->
+      <section v-else-if="!canViewReports && !isSystemAdmin" class="grid gap-3 sm:grid-cols-2">
         <UiStat
           :label="`Incoming to ${branch || 'your branch'}`"
           :value="String(incoming.length)"
@@ -215,7 +251,7 @@ onMounted(async () => {
       <!-- Admin setup shortcuts -->
       <section v-if="isSystemAdmin" class="rounded-lg bg-surface p-4 shadow-card">
         <h2 class="text-h5 font-medium text-ink">Set up the business</h2>
-        <p class="mt-0.5 text-label text-ink-64">Branches, accounts and the fleet behind every shipment.</p>
+        <p class="mt-0.5 text-label text-ink-64">Branches, accounts and the fleet behind every waybill.</p>
         <div class="mt-3 grid gap-2 sm:grid-cols-2">
           <NuxtLink
             v-for="item in [
@@ -235,9 +271,9 @@ onMounted(async () => {
       </section>
 
       <div class="grid gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
-        <div class="space-y-4">
+        <div class="min-w-0 space-y-4">
           <!-- Receiving queue -->
-          <section v-if="incoming.length" class="rounded-lg bg-surface p-4 shadow-card">
+          <section v-if="incoming.length && !isOperations" class="rounded-lg bg-surface p-4 shadow-card">
             <div class="flex items-center justify-between gap-3">
               <div>
                 <h2 class="text-h5 font-medium text-ink">Incoming to {{ branch || 'your branch' }}</h2>
@@ -298,8 +334,12 @@ onMounted(async () => {
           <section class="rounded-lg bg-surface p-4 shadow-card">
             <div class="flex items-center justify-between gap-3">
               <div>
-                <h2 class="text-h5 font-medium text-ink">Recent records</h2>
-                <p class="mt-0.5 text-label text-ink-64">The newest shipments in your view.</p>
+                <h2 class="text-h5 font-medium text-ink">
+                  {{ isOperations ? 'Waiting to dispatch' : 'Recent records' }}
+                </h2>
+                <p class="mt-0.5 text-label text-ink-64">
+                  {{ isOperations ? 'Waybills you created that have not been dispatched.' : 'The newest waybills in your view.' }}
+                </p>
               </div>
               <NuxtLink to="/records" class="shrink-0 text-label font-medium text-blue hover:underline">
                 All records
@@ -310,16 +350,22 @@ onMounted(async () => {
             </div>
             <div v-else class="mt-3">
               <UiEmptyState
-                title="No records yet"
-                description="Records you create or receive will show up here."
+                :title="isOperations ? 'Nothing waiting to dispatch' : 'No records yet'"
+                :description="
+                  isOperations
+                    ? 'Waybills you record stay here until they leave your branch.'
+                    : 'Records you create or receive will show up here.'
+                "
               >
-                <UiButton v-if="canSend" @click="navigateTo('/records/new')">Send the first parcel</UiButton>
+                <UiButton v-if="canSend" @click="navigateTo('/records/new')">
+                  {{ isOperations ? 'Record a waybill' : 'Send the first parcel' }}
+                </UiButton>
               </UiEmptyState>
             </div>
           </section>
         </div>
 
-        <div class="space-y-4">
+        <div class="min-w-0 space-y-4">
           <!-- Daily collections -->
           <section v-if="canViewReports" class="rounded-lg bg-surface p-4 shadow-card">
             <div class="flex items-start justify-between gap-3">
@@ -355,7 +401,7 @@ onMounted(async () => {
                 </NuxtLink>
               </li>
             </ul>
-            <p v-else class="mt-3 text-label text-ink-64">Nothing reported. Every shipment is moving cleanly.</p>
+            <p v-else class="mt-3 text-label text-ink-64">Nothing reported. Every waybill is moving cleanly.</p>
           </section>
         </div>
       </div>
