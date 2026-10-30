@@ -51,7 +51,7 @@ export default defineNuxtConfig({
       // Precache the generated app shell so installed launches work offline.
       globPatterns: ['**/*.{js,css,html,svg,png,ico,woff2}'],
       navigateFallback: '/index.html',
-      navigateFallbackDenylist: [/^\/api\//],
+      navigateFallbackDenylist: [/^\/api\//, /^\/health/, /^\/swagger/],
       cleanupOutdatedCaches: true,
       clientsClaim: true,
       skipWaiting: true,
