@@ -2,6 +2,7 @@ import tailwindcss from '@tailwindcss/vite'
 
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
+  ssr: false,
   devtools: { enabled: false },
   modules: ['@vite-pwa/nuxt'],
   // Post build outputs to .output/public for the Go embed (make build).
