@@ -28,7 +28,6 @@ export default defineNuxtConfig({
     },
   },
   pwa: {
-    disable: true,
     registerType: 'autoUpdate',
     includeAssets: ['favicon.svg', 'apple-touch-icon.png'],
     manifest: {
