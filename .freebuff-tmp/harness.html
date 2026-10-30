@@ -1,0 +1,41 @@
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><style>body{margin:0}iframe{border:0;height:2400px;display:block}</style></head>
+<body>
+<div id="frames"></div>
+<div id="out">PENDING</div>
+<script>
+const widths = [320, 360, 375, 390, 414, 430];
+const frames = document.getElementById('frames');
+const results = [];
+let pending = widths.length;
+const done = () => { document.getElementById('out').textContent = 'HARNESS::' + results.join(' ~~ '); };
+widths.forEach((w) => {
+  const f = document.createElement('iframe');
+  f.width = w;
+  f.src = 'repro.html';
+  f.onload = () => {
+    setTimeout(() => {
+      try {
+        const d = f.contentDocument;
+        const vw = d.documentElement.clientWidth;
+        const sw = d.documentElement.scrollWidth;
+        const over = [...d.querySelectorAll('body *')].filter((el) => {
+          const r = el.getBoundingClientRect();
+          return r.width > 0 && r.right > vw + 0.5;
+        }).slice(0, 8).map((el) => `${el.tagName}.${(el.className || '').toString().slice(0, 80)} w=${Math.round(el.getBoundingClientRect().width)}`);
+        const columns = [...d.querySelectorAll('.space-y-4')].map((el) => Math.round(el.getBoundingClientRect().width));
+        const stats = [...d.querySelectorAll('section.space-y-2 .grid > div')].map((el) => Math.round(el.getBoundingClientRect().width));
+        results.push(`vw=${vw} scrollWidth=${sw} overflows=${over.length} cols=${columns} stats=${stats} ${over.join(' | ')}`);
+      } catch (e) {
+        results.push(`width ${w} error ${e.message}`);
+      }
+      pending -= 1;
+      if (!pending) done();
+    }, 3000);
+  };
+  frames.appendChild(f);
+});
+</script>
+</body>
+</html>

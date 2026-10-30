@@ -1,0 +1,7 @@
+.git
+.env
+**/node_modules
+frontend/.output
+frontend/.nuxt
+backend/bin
+backend/.run

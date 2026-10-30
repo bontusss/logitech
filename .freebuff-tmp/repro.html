@@ -1,0 +1,290 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+<style type="text/tailwindcss">
+@theme {
+  --font-sans: 'Urbanist Variable', 'Urbanist', ui-sans-serif, system-ui, sans-serif;
+  --text-h5: 24px;
+  --text-h5--line-height: 32px;
+  --text-p1: 16px;
+  --text-p1--line-height: 24px;
+  --text-label: 16px;
+  --text-label--line-height: 20px;
+  --text-meta: 13px;
+  --text-meta--line-height: 16px;
+  --color-canvas: #f5f5f2;
+  --color-surface: #ffffff;
+  --color-ink: #262323;
+  --color-ink-64: rgb(38 35 35 / 0.64);
+  --color-ink-40: rgb(38 35 35 / 0.4);
+  --color-line: rgb(32 32 32 / 0.1);
+  --color-chip: #b2e7ff;
+  --color-blue: #2674da;
+  --color-danger: #dc3e42;
+  --radius-tag: 4px;
+  --shadow-card: 0 1px 1px rgb(32 32 32 / 0.04), 0 12px 28px -12px rgb(38 35 35 / 0.18), 0 0 0 1px rgb(32 32 32 / 0.06);
+  --shadow-inset: inset 0 0 0 1px rgb(32 32 32 / 0.1);
+}
+body { background:#f5f5f2; font-family: 'Urbanist', system-ui, sans-serif; }
+</style>
+</head>
+<body>
+<div class="min-h-dvh bg-canvas">
+  <header class="sticky top-0 z-30 flex h-14 items-center justify-between gap-3 border-b border-line bg-surface/95 px-4 backdrop-blur md:hidden">
+    <a class="flex items-center gap-2 text-p1 font-semibold text-ink">Galopin</a>
+    <div class="flex min-w-0 items-center gap-2">
+      <div class="min-w-0 text-right">
+        <p class="truncate text-label font-medium text-ink">Ada Nwosu</p>
+        <p class="truncate text-meta text-ink-40">Lagos</p>
+      </div>
+      <button class="flex size-9 shrink-0 items-center justify-center rounded-lg text-ink-64"></button>
+    </div>
+  </header>
+
+  <main class="mx-auto w-full max-w-[1180px] px-4 pt-5 pb-24 md:pl-[272px] md:pr-8 md:pt-8 md:pb-10">
+    <div class="space-y-5">
+      <header class="flex flex-wrap items-end justify-between gap-3">
+        <div class="min-w-0">
+          <h1 class="text-h5 font-medium tracking-tight text-ink">Dashboard</h1>
+          <p class="mt-1 text-label text-ink-64">Branch manager · Lagos</p>
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+          <button class="rounded-lg px-3 py-2 text-label">Receive</button>
+          <button class="rounded-lg bg-ink px-3 py-2 text-label text-white">Send parcel</button>
+        </div>
+      </header>
+
+      <section class="space-y-2">
+        <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <div class="rounded-lg bg-surface p-4 shadow-card">
+            <div class="flex items-start justify-between gap-3">
+              <p class="text-label text-ink-64">Shipments</p>
+              <span class="flex size-8 shrink-0 items-center justify-center rounded-lg bg-canvas"></span>
+            </div>
+            <p class="mt-3 text-h5 font-medium tracking-tight text-ink">128</p>
+            <p class="mt-1 text-meta text-ink-40">256 items · 104 received</p>
+          </div>
+          <div class="rounded-lg bg-surface p-4 shadow-card">
+            <div class="flex items-start justify-between gap-3">
+              <p class="text-label text-ink-64">Collected</p>
+              <span class="flex size-8 shrink-0 items-center justify-center rounded-lg bg-chip/45"></span>
+            </div>
+            <p class="mt-3 text-h5 font-medium tracking-tight text-ink">₦2,845,000</p>
+            <p class="mt-1 text-meta text-ink-40">88.4% of ₦3,219,500 billed</p>
+          </div>
+          <div class="rounded-lg bg-surface p-4 shadow-card">
+            <div class="flex items-start justify-between gap-3">
+              <p class="text-label text-ink-64">Outstanding</p>
+              <span class="flex size-8 shrink-0 items-center justify-center rounded-lg bg-danger/10"></span>
+            </div>
+            <p class="mt-3 text-h5 font-medium tracking-tight text-danger">₦1,235,500</p>
+            <p class="mt-1 text-meta text-ink-40">Unpaid balances on live records</p>
+          </div>
+          <div class="rounded-lg bg-surface p-4 shadow-card">
+            <div class="flex items-start justify-between gap-3">
+              <p class="text-label text-ink-64">Open exceptions</p>
+              <span class="flex size-8 shrink-0 items-center justify-center rounded-lg bg-danger/10"></span>
+            </div>
+            <p class="mt-3 text-h5 font-medium tracking-tight text-danger">7</p>
+            <p class="mt-1 text-meta text-ink-40">2 investigating · 11 resolved</p>
+          </div>
+        </div>
+        <p class="text-meta text-ink-40">30 Sep 2026 – 29 Oct 2026 · collected today ₦185,000</p>
+      </section>
+
+      <div class="grid gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+        <div class="min-w-0 space-y-4">
+          <!-- Receiving queue -->
+          <section class="rounded-lg bg-surface p-4 shadow-card">
+            <div class="flex items-center justify-between gap-3">
+              <div>
+                <h2 class="text-h5 font-medium text-ink">Incoming to Lagos</h2>
+                <p class="mt-0.5 text-label text-ink-64">Confirm delivery or raise an exception.</p>
+              </div>
+              <a class="shrink-0 text-label font-medium text-blue hover:underline">View all</a>
+            </div>
+            <ul class="mt-3 divide-y divide-line">
+              <li><a class="flex items-center justify-between gap-3 py-2.5">
+                <div class="min-w-0">
+                  <p class="truncate text-p1 font-medium text-ink">Samsung 43 inch smart television</p>
+                  <p class="truncate text-meta text-ink-40">GAL-000124 · from Abuja · Chinedu Okafor</p>
+                </div>
+                <span class="inline-flex h-5 items-center rounded-tag bg-chip/45 px-2 text-meta font-medium tracking-[0.06em] text-blue uppercase">In transit</span>
+              </a></li>
+              <li><a class="flex items-center justify-between gap-3 py-2.5">
+                <div class="min-w-0">
+                  <p class="truncate text-p1 font-medium text-ink">Two cartons of ceramic tiles</p>
+                  <p class="truncate text-meta text-ink-40">GAL-000125 · from Ibadan · Mary James</p>
+                </div>
+                <span class="inline-flex h-5 items-center rounded-tag px-2 text-meta font-medium tracking-[0.06em] text-ink-40 uppercase shadow-inset">Pending</span>
+              </a></li>
+            </ul>
+          </section>
+
+          <!-- Balances -->
+          <section class="rounded-lg bg-surface p-4 shadow-card">
+            <div class="flex items-center justify-between gap-3">
+              <h2 class="text-h5 font-medium text-ink">Balances to collect</h2>
+              <a class="shrink-0 text-label font-medium text-blue hover:underline">View all</a>
+            </div>
+            <ul class="mt-3 divide-y divide-line">
+              <li><a class="flex items-center justify-between gap-3 py-2.5">
+                <div class="min-w-0">
+                  <p class="truncate text-p1 font-medium text-ink">Samsung 43 inch smart television</p>
+                  <p class="truncate text-meta text-ink-40">GAL-000124 · Chinedu Okafor → Lagos</p>
+                </div>
+                <div class="shrink-0 text-right">
+                  <p class="text-label font-medium text-danger">₦185,500</p>
+                  <p class="text-meta text-ink-40">of ₦450,000</p>
+                </div>
+              </a></li>
+            </ul>
+          </section>
+
+          <!-- Recent records -->
+          <section class="rounded-lg bg-surface p-4 shadow-card">
+            <div class="flex items-center justify-between gap-3">
+              <div>
+                <h2 class="text-h5 font-medium text-ink">Recent records</h2>
+                <p class="mt-0.5 text-label text-ink-64">The newest shipments in your view.</p>
+              </div>
+              <a class="shrink-0 text-label font-medium text-blue hover:underline">All records</a>
+            </div>
+            <div class="mt-3 grid gap-3 sm:grid-cols-2">
+              <div class="min-w-0 grid gap-3 sm:grid-cols-2">
+                <a class="group block min-w-0 rounded-lg bg-surface p-4 shadow-card">
+                  <div class="flex items-start justify-between gap-3">
+                    <div class="min-w-0">
+                      <p class="text-meta tracking-wide text-ink-40">GAL-000124</p>
+                      <p class="mt-0.5 truncate text-p1 font-medium text-ink">Samsung 43 inch smart television</p>
+                    </div>
+                    <div class="flex shrink-0 items-center gap-1.5">
+                      <span class="inline-flex h-5 items-center rounded-tag bg-chip/45 px-2 text-meta font-medium tracking-[0.06em] text-blue uppercase">In transit</span>
+                    </div>
+                  </div>
+                  <p class="mt-1.5 flex flex-wrap items-center gap-x-1.5 text-meta text-ink-64">
+                    <span>Lagos</span><span class="text-ink-40">→</span><span>Abuja</span>
+                    <span class="text-ink-40">·</span><span>Qty 2</span>
+                  </p>
+                  <p class="mt-0.5 truncate text-meta text-ink-40">Chinedu Okafor → Mary James</p>
+                  <div class="mt-3 flex items-end justify-between gap-3 border-t border-line pt-2.5">
+                    <div><p class="text-meta text-ink-40">Charged</p><p class="text-label font-medium text-ink">₦450,000</p></div>
+                    <div><p class="text-meta text-ink-40">Paid</p><p class="text-label font-medium text-ink-64">₦264,500</p></div>
+                    <div class="text-right"><p class="text-meta text-ink-40">Balance</p><p class="text-label font-medium text-danger">₦185,500</p></div>
+                  </div>
+                </a>
+              </div>
+              <div class="min-w-0 grid gap-3 sm:grid-cols-2">
+                <a class="group block min-w-0 rounded-lg bg-surface p-4 shadow-card">
+                  <div class="flex items-start justify-between gap-3">
+                    <div class="min-w-0">
+                      <p class="text-meta tracking-wide text-ink-40">GAL-000125</p>
+                      <p class="mt-0.5 truncate text-p1 font-medium text-ink">Two cartons of ceramic tiles</p>
+                    </div>
+                    <div class="flex shrink-0 items-center gap-1.5">
+                      <span class="inline-flex h-5 items-center rounded-tag px-2 text-meta font-medium tracking-[0.06em] text-ink-40 uppercase shadow-inset">Pending</span>
+                    </div>
+                  </div>
+                  <p class="mt-1.5 flex flex-wrap items-center gap-x-1.5 text-meta text-ink-64">
+                    <span>Ibadan</span><span class="text-ink-40">→</span><span>Lagos</span>
+                    <span class="text-ink-40">·</span><span>Qty 5</span>
+                  </p>
+                  <p class="mt-0.5 truncate text-meta text-ink-40">Ifeoma Nnaji → Ada Nwosu</p>
+                  <div class="mt-3 flex items-end justify-between gap-3 border-t border-line pt-2.5">
+                    <div><p class="text-meta text-ink-40">Charged</p><p class="text-label font-medium text-ink">₦1,250,000</p></div>
+                    <div><p class="text-meta text-ink-40">Paid</p><p class="text-label font-medium text-ink-64">₦0</p></div>
+                    <div class="text-right"><p class="text-meta text-ink-40">Balance</p><p class="text-label font-medium text-danger">₦1,250,000</p></div>
+                  </div>
+                </a>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <div class="min-w-0 space-y-4">
+          <!-- Daily collections -->
+          <section class="rounded-lg bg-surface p-4 shadow-card">
+            <div class="flex items-start justify-between gap-3">
+              <div>
+                <h2 class="text-h5 font-medium text-ink">Collections</h2>
+                <p class="mt-0.5 text-label text-ink-64">Payments taken, last 14 days.</p>
+              </div>
+              <a class="shrink-0 text-label font-medium text-blue hover:underline">Reports</a>
+            </div>
+            <div class="mt-3">
+              <div>
+                <div class="flex items-baseline justify-between gap-3">
+                  <p class="text-h5 font-medium text-ink">₦2,845,000</p>
+                  <p class="text-meta text-ink-40">Best day 26 Oct 2026 · ₦845,000</p>
+                </div>
+                <div class="mt-4 flex h-28 items-end gap-[3px]">
+                  <div class="group flex h-full flex-1 flex-col justify-end"><div class="w-full rounded-t-[3px] bg-blue/20" style="height:40%"></div></div>
+                  <div class="group flex h-full flex-1 flex-col justify-end"><div class="w-full rounded-t-[3px] bg-blue/20" style="height:60%"></div></div>
+                  <div class="group flex h-full flex-1 flex-col justify-end"><div class="w-full rounded-t-[3px] bg-blue/20" style="height:80%"></div></div>
+                  <div class="group flex h-full flex-1 flex-col justify-end"><div class="w-full rounded-t-[3px] bg-blue/20" style="height:100%"></div></div>
+                  <div class="group flex h-full flex-1 flex-col justify-end"><div class="w-full rounded-t-[3px] bg-blue/20" style="height:20%"></div></div>
+                  <div class="group flex h-full flex-1 flex-col justify-end"><div class="w-full rounded-t-[3px] bg-blue/20" style="height:2px"></div></div>
+                  <div class="group flex h-full flex-1 flex-col justify-end"><div class="w-full rounded-t-[3px] bg-blue/20" style="height:50%"></div></div>
+                  <div class="group flex h-full flex-1 flex-col justify-end"><div class="w-full rounded-t-[3px] bg-blue/20" style="height:70%"></div></div>
+                  <div class="group flex h-full flex-1 flex-col justify-end"><div class="w-full rounded-t-[3px] bg-blue/20" style="height:30%"></div></div>
+                  <div class="group flex h-full flex-1 flex-col justify-end"><div class="w-full rounded-t-[3px] bg-blue/20" style="height:90%"></div></div>
+                  <div class="group flex h-full flex-1 flex-col justify-end"><div class="w-full rounded-t-[3px] bg-blue/20" style="height:10%"></div></div>
+                  <div class="group flex h-full flex-1 flex-col justify-end"><div class="w-full rounded-t-[3px] bg-blue/20" style="height:55%"></div></div>
+                  <div class="group flex h-full flex-1 flex-col justify-end"><div class="w-full rounded-t-[3px] bg-blue/20" style="height:45%"></div></div>
+                  <div class="group flex h-full flex-1 flex-col justify-end"><div class="w-full rounded-t-[3px] bg-blue/20" style="height:65%"></div></div>
+                </div>
+                <div class="mt-2 flex justify-between text-meta text-ink-40">
+                  <span>16 Oct 2026</span><span>29 Oct 2026</span>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <!-- Exceptions -->
+          <section class="rounded-lg bg-surface p-4 shadow-card">
+            <div class="flex items-center justify-between gap-3">
+              <h2 class="text-h5 font-medium text-ink">Needs attention</h2>
+              <a class="shrink-0 text-label font-medium text-blue hover:underline">All</a>
+            </div>
+            <ul class="mt-2 divide-y divide-line">
+              <li><a class="block py-2.5">
+                <div class="flex items-start justify-between gap-2">
+                  <p class="min-w-0 truncate text-label font-medium text-ink">Box arrived damaged at the counter</p>
+                  <span class="inline-flex h-5 items-center rounded-tag bg-danger/10 px-2 text-meta font-medium tracking-[0.06em] text-danger uppercase shadow-inset">Open</span>
+                </div>
+                <p class="mt-0.5 truncate text-meta text-ink-40">EXC-000004 · GAL-000124</p>
+              </a></li>
+            </ul>
+          </section>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <nav class="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-surface/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden">
+    <div class="mx-auto flex max-w-[480px] items-stretch justify-around">
+      <a class="flex flex-1 flex-col items-center gap-1 py-2.5 text-[11px] text-blue">Home</a>
+      <a class="flex flex-1 flex-col items-center gap-1 py-2.5 text-[11px] text-ink-64">Records</a>
+      <a class="flex flex-1 flex-col items-center gap-1 py-2.5 text-[11px] text-ink-64">Exceptions</a>
+      <a class="flex flex-1 flex-col items-center gap-1 py-2.5 text-[11px] text-ink-64">Reports</a>
+    </div>
+  </nav>
+</div>
+<div id="report" style="position:fixed;top:0;left:0;background:#fff;z-index:999"></div>
+<script>
+window.addEventListener('load', () => setTimeout(() => {
+  const vw = document.documentElement.clientWidth;
+  const lines = ['viewport=' + vw, 'docScrollWidth=' + document.documentElement.scrollWidth];
+  const over = [...document.querySelectorAll('body *')].filter((el) => {
+    const r = el.getBoundingClientRect();
+    return r.width > 0 && r.right > vw + 0.5;
+  }).slice(0, 40).map((el) => `${el.tagName}.${(el.className || '').toString().slice(0, 90)} [w=${Math.round(el.getBoundingClientRect().width)} right=${Math.round(el.getBoundingClientRect().right)}]`);
+  lines.push(...over);
+  document.getElementById('report').textContent = 'REPORT::' + lines.join(' || ');
+}, 2500));
+</script>
+</body>
+</html>
