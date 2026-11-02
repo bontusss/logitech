@@ -15,6 +15,7 @@ const MAPS: Record<string, Record<string, { label: string; tone: Tone }>> = {
     pending: { label: 'Pending', tone: 'neutral' },
     in_transit: { label: 'In transit', tone: 'info' },
     received: { label: 'Received', tone: 'info' },
+    delivered: { label: 'Delivered', tone: 'info' },
     exception: { label: 'Exception', tone: 'danger' },
     cancelled: { label: 'Cancelled', tone: 'neutral' },
   },

@@ -3,6 +3,7 @@ const route = useRoute()
 const { user, logout } = useAuth()
 const { sections, mobileItems } = useNav()
 const { name: branchName, load: loadBranches } = useBranches()
+const { isDark, label: themeLabel, toggle: toggleTheme } = useTheme()
 const signingOut = ref(false)
 
 const initials = computed(() => {
@@ -47,7 +48,7 @@ watch(user, (next) => {
     <!-- Desktop sidebar -->
     <aside class="fixed inset-y-0 left-0 z-30 hidden w-[248px] flex-col border-r border-line bg-surface px-4 py-5 md:flex">
       <NuxtLink to="/" class="flex items-center gap-2 px-1 text-h5 font-semibold text-ink">
-        <span class="flex size-8 items-center justify-center rounded-lg bg-ink text-white">
+        <span class="flex size-8 items-center justify-center rounded-lg bg-ink text-surface">
           <UiIcon name="package" :size="17" />
         </span>
         Galopin
@@ -84,6 +85,15 @@ watch(user, (next) => {
           <button
             type="button"
             class="flex size-8 shrink-0 items-center justify-center rounded-lg text-ink-64 transition hover:bg-canvas hover:text-ink"
+            :aria-label="themeLabel"
+            :title="themeLabel"
+            @click="toggleTheme"
+          >
+            <UiIcon :name="isDark ? 'sun' : 'moon'" :size="16" />
+          </button>
+          <button
+            type="button"
+            class="flex size-8 shrink-0 items-center justify-center rounded-lg text-ink-64 transition hover:bg-canvas hover:text-ink"
             aria-label="Sign out"
             title="Sign out"
             :disabled="signingOut"
@@ -98,7 +108,7 @@ watch(user, (next) => {
     <!-- Mobile top bar -->
     <header class="sticky top-0 z-30 flex h-14 items-center justify-between gap-3 border-b border-line bg-surface/95 px-4 backdrop-blur md:hidden">
       <NuxtLink to="/" class="flex items-center gap-2 text-p1 font-semibold text-ink">
-        <span class="flex size-7 items-center justify-center rounded-lg bg-ink text-white">
+        <span class="flex size-7 items-center justify-center rounded-lg bg-ink text-surface">
           <UiIcon name="package" :size="15" />
         </span>
         Galopin
@@ -108,6 +118,15 @@ watch(user, (next) => {
           <p class="truncate text-label font-medium text-ink">{{ user?.full_name }}</p>
           <p class="truncate text-meta text-ink-40">{{ branch || roleLabel }}</p>
         </div>
+        <button
+          type="button"
+          class="flex size-9 shrink-0 items-center justify-center rounded-lg text-ink-64 transition hover:bg-canvas hover:text-ink"
+          :aria-label="themeLabel"
+          :title="themeLabel"
+          @click="toggleTheme"
+        >
+          <UiIcon :name="isDark ? 'sun' : 'moon'" :size="17" />
+        </button>
         <button
           type="button"
           class="flex size-9 shrink-0 items-center justify-center rounded-lg text-ink-64 transition hover:bg-canvas hover:text-ink"

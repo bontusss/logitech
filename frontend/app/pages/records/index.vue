@@ -32,7 +32,8 @@ const statusOptions = computed(() => [
   { value: 'pending', label: 'Pending' },
   { value: 'in_transit', label: 'In transit' },
   { value: 'pending,in_transit', label: 'In motion' },
-  { value: 'received', label: 'Received' },
+  { value: 'received', label: 'At branch' },
+  { value: 'delivered', label: 'Delivered' },
   { value: 'exception', label: isOwner.value ? 'Unresolved problems' : 'Exception' },
   { value: 'cancelled', label: 'Cancelled' },
 ])
@@ -158,7 +159,7 @@ onMounted(async () => {
           class="h-8 shrink-0 rounded-full px-3 text-label transition"
           :class="
             status === option.value
-              ? 'bg-ink font-medium text-white'
+              ? 'bg-ink font-medium text-surface'
               : 'bg-surface text-ink-64 shadow-light hover:text-ink'
           "
           :aria-pressed="status === option.value"
@@ -189,7 +190,7 @@ onMounted(async () => {
         <button
           type="button"
           class="h-10 rounded-lg px-3 text-label shadow-light transition"
-          :class="outstanding ? 'bg-ink font-medium text-white' : 'bg-surface text-ink-64 hover:text-ink'"
+          :class="outstanding ? 'bg-ink font-medium text-surface' : 'bg-surface text-ink-64 hover:text-ink'"
           :aria-pressed="outstanding"
           @click="outstanding = !outstanding"
         >

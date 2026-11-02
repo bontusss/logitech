@@ -1,5 +1,8 @@
 @import 'tailwindcss';
 
+/* Class-based dark mode: the theme toggle puts `.dark` on <html>. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 /*
   Logitech design system — tokens.
   Every colour, radius and shadow in the app resolves to one of these.
@@ -36,6 +39,7 @@
   --color-chip: #b2e7ff; /* icon chip fill — blue/16 */
   --color-blue: #2674da; /* primary action */
   --color-danger: #dc3e42; /* attention */
+  --color-on-action: #ffffff; /* label on the blue/danger fills */
   --color-grad-start: #4f4f4f; /* dark CTA gradient */
   --color-grad-end: #202020;
 
@@ -58,6 +62,60 @@
     0 0 0 1px rgb(32 32 32 / 0.06), 0 0 0 4px rgb(38 35 35 / 0.04);
 }
 
+/*
+  Dark theme. These override the same tokens, so every utility follows
+  without a dark: variant on each element. Surfaces sit above the canvas and
+  the soft shadows become faint light rings so cards still separate.
+*/
+.dark {
+  color-scheme: dark;
+
+  --color-canvas: #121211;
+  --color-surface: #1d1d1b;
+  --color-ink: #f4f2ef;
+  --color-ink-64: rgb(244 242 239 / 0.64);
+  --color-ink-40: rgb(244 242 239 / 0.4);
+  --color-line: rgb(255 255 255 / 0.12);
+  --color-muted: #2b2b28;
+  --color-chip: #1b3a4e;
+  --color-blue: #64a0f2;
+  --color-danger: #f07478;
+  /* The dark fills are light tints, so their labels go near-black. */
+  --color-on-action: #262323;
+  --color-grad-start: #3b3b38;
+  --color-grad-end: #171716;
+
+  --shadow-card:
+    0 1px 1px rgb(0 0 0 / 0.4), 0 12px 28px -12px rgb(0 0 0 / 0.6),
+    0 0 0 1px rgb(255 255 255 / 0.07);
+  --shadow-halo:
+    0 1px 1px rgb(0 0 0 / 0.4), 0 12px 28px -12px rgb(0 0 0 / 0.6),
+    0 0 0 1px rgb(255 255 255 / 0.08), 0 0 0 4px rgb(255 255 255 / 0.04);
+  --shadow-light:
+    0 1px 2px rgb(0 0 0 / 0.35), 0 0 0 1px rgb(255 255 255 / 0.1),
+    inset 0 1px 0 rgb(255 255 255 / 0.06);
+  --shadow-inset: inset 0 0 0 1px rgb(255 255 255 / 0.09);
+  --shadow-raised:
+    0 1px 2px rgb(0 0 0 / 0.5), inset 0 1px 0 rgb(255 255 255 / 0.16),
+    inset 0 -1px 0 rgb(0 0 0 / 0.5);
+}
+
+/* Receipts stay on white paper even when the app is dark (PDF and print). */
+.receipt-light {
+  color-scheme: light;
+
+  --color-canvas: #f5f5f2;
+  --color-surface: #ffffff;
+  --color-ink: #262323;
+  --color-ink-64: rgb(38 35 35 / 0.64);
+  --color-ink-40: rgb(38 35 35 / 0.4);
+  --color-line: rgb(32 32 32 / 0.1);
+  --color-muted: #eaeaea;
+  --color-blue: #2674da;
+  --color-danger: #dc3e42;
+  --color-on-action: #ffffff;
+}
+
 @layer base {
   html {
     -webkit-font-smoothing: antialiased;
@@ -75,5 +133,61 @@
   /* Fields keep the 8px corner and only change the ring on focus. */
   input::placeholder {
     @apply text-ink-40;
+  }
+}
+
+/* Printable documents --------------------------------------------------------
+   Only the receipt (<article class="receipt-paper">) reaches the printer: the
+   rest of the app is hidden, and the receipt is lifted to the top of the page
+   without chrome, padding, corners or shadows. */
+@media print {
+  @page {
+    margin: 12mm;
+  }
+
+  body:has(.receipt-paper) {
+    background: #fff;
+  }
+
+  body:has(.receipt-paper) * {
+    visibility: hidden;
+  }
+
+  body:has(.receipt-paper) .receipt-paper,
+  body:has(.receipt-paper) .receipt-paper * {
+    visibility: visible;
+  }
+
+  body:has(.receipt-paper) .receipt-paper {
+    --color-canvas: #f5f5f2;
+    --color-surface: #ffffff;
+    --color-ink: #262323;
+    --color-ink-64: rgb(38 35 35 / 0.64);
+    --color-ink-40: rgb(38 35 35 / 0.4);
+    --color-line: rgb(32 32 32 / 0.1);
+    --color-muted: #eaeaea;
+    --color-blue: #2674da;
+    --color-danger: #dc3e42;
+    --color-on-action: #ffffff;
+    color-scheme: light;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    max-width: none;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .receipt-paper .receipt-section {
+    break-inside: avoid;
+  }
+
+  .no-print {
+    display: none !important;
   }
 }

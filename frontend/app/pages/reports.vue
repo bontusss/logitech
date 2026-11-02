@@ -96,7 +96,7 @@ onMounted(async () => {
           :key="period.days"
           type="button"
           class="h-8 rounded-full px-3 text-label transition"
-          :class="days === period.days ? 'bg-ink font-medium text-white' : 'bg-surface text-ink-64 shadow-light hover:text-ink'"
+          :class="days === period.days ? 'bg-ink font-medium text-surface' : 'bg-surface text-ink-64 shadow-light hover:text-ink'"
           :aria-pressed="days === period.days"
           @click="days = period.days"
         >

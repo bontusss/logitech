@@ -351,6 +351,13 @@ definitions:
       shipments:
         type: integer
     type: object
+  handler.DeliverRecordRequest:
+    properties:
+      notes:
+        type: string
+      payment:
+        $ref: '#/definitions/handler.PaymentPayload'
+    type: object
   handler.DispatchRecordRequest:
     properties:
       notes:
@@ -546,8 +553,6 @@ definitions:
         type: string
       notes:
         type: string
-      payment:
-        $ref: '#/definitions/handler.PaymentPayload'
       received_quantity:
         example: 10
         type: integer
@@ -565,6 +570,12 @@ definitions:
       created_at:
         type: string
       currency:
+        type: string
+      delivered_at:
+        type: string
+      delivered_by:
+        type: string
+      delivered_by_name:
         type: string
       description:
         type: string
@@ -2055,6 +2066,53 @@ paths:
       summary: Cancel a record
       tags:
       - records
+  /api/records/{id}/deliver:
+    post:
+      consumes:
+      - application/json
+      description: 'The final step of a record: staff at the destination branch hand
+        the goods to the receiver. The record must already have been received, and
+        the remaining balance can be collected in the same call by sending a payment,
+        which updates the balance and payment status. The record becomes "delivered".'
+      parameters:
+      - description: Record UUID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Hand-over details
+        in: body
+        name: request
+        schema:
+          $ref: '#/definitions/handler.DeliverRecordRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.Record'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/handler.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Hand a received record over to the customer
+      tags:
+      - records
   /api/records/{id}/dispatch:
     post:
       consumes:
@@ -2244,10 +2302,10 @@ paths:
       consumes:
       - application/json
       description: 'The receiver-side flow: staff at the destination branch confirm
-        the quantity and condition actually received. Any remaining balance can be
-        collected in the same call by sending a payment, which updates the balance
-        and payment status. The record becomes "received"; use POST /api/records/:id/exceptions
-        instead when goods are missing, damaged or wrong.'
+        the quantity and condition actually received. The record becomes "received"
+        once the branch has the goods; the balance is collected at the hand-over (POST
+        /api/records/:id/deliver). Use POST /api/records/:id/exceptions instead when
+        goods are missing, damaged or wrong.'
       parameters:
       - description: Record UUID
         in: path

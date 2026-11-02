@@ -54,6 +54,7 @@ type Querier interface {
 	ListPaymentsByItem(ctx context.Context, manifestItemID uuid.UUID) ([]ListPaymentsByItemRow, error)
 	ListStaff(ctx context.Context) ([]Staff, error)
 	ListStaffByBranch(ctx context.Context, branchID uuid.UUID) ([]Staff, error)
+	MarkManifestItemDelivered(ctx context.Context, arg MarkManifestItemDeliveredParams) (ManifestItem, error)
 	MarkManifestItemDispatched(ctx context.Context, id uuid.UUID) (ManifestItem, error)
 	MarkManifestItemReceived(ctx context.Context, arg MarkManifestItemReceivedParams) (ManifestItem, error)
 	NextExceptionNumber(ctx context.Context) (int64, error)

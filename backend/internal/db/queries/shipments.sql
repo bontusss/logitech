@@ -75,6 +75,16 @@ SET status            = sqlc.arg('status'),
 WHERE id = sqlc.arg('id')
 RETURNING *;
 
+-- name: MarkManifestItemDelivered :one
+UPDATE manifest_items
+SET status       = 'delivered',
+    delivered_by = sqlc.arg('delivered_by'),
+    delivered_at = now(),
+    notes        = COALESCE(sqlc.narg('notes'), notes),
+    updated_at   = now()
+WHERE id = sqlc.arg('id')
+RETURNING *;
+
 -- name: CancelManifestItem :one
 UPDATE manifest_items
 SET status = 'cancelled',

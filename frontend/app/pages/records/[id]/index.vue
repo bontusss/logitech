@@ -43,11 +43,19 @@ const steps = computed(() => {
     },
     {
       label: current.condition && current.condition !== 'good' ? `Received · ${humanise(current.condition)}` : 'Received',
-      detail: current.received_at ? shortDateTime(current.received_at) : 'Not received yet',
+      detail: current.received_at ? shortDateTime(current.received_at) : 'Not at the branch yet',
       done: Boolean(current.received_at),
       description: current.received_at
-        ? `By ${current.received_by_name || 'staff'} · ${current.received_quantity ?? current.quantity} of ${current.quantity} items`
+        ? `Confirmed at ${current.destination_branch} by ${current.received_by_name || 'staff'} · ${current.received_quantity ?? current.quantity} of ${current.quantity} items`
         : `Waiting at ${current.destination_branch}`,
+    },
+    {
+      label: 'Delivered',
+      detail: current.delivered_at ? shortDateTime(current.delivered_at) : 'Not handed over yet',
+      done: Boolean(current.delivered_at),
+      description: current.delivered_at
+        ? `Handed to ${current.receiver.full_name} by ${current.delivered_by_name || 'staff'}`
+        : `Waiting for ${current.receiver.full_name} at ${current.destination_branch}`,
     },
   ]
 })
@@ -132,8 +140,8 @@ watch(recordId, load)
               <li v-for="(step, index) in steps" :key="step.label" class="flex gap-3">
                 <div class="flex flex-col items-center">
                   <span
-                    class="flex size-6 shrink-0 items-center justify-center rounded-full text-white"
-                    :class="step.done ? 'bg-blue' : 'bg-muted text-ink-40'"
+                    class="flex size-6 shrink-0 items-center justify-center rounded-full"
+                    :class="step.done ? 'bg-blue text-on-action' : 'bg-muted text-ink-40'"
                   >
                     <UiIcon v-if="step.done" name="check" :size="13" />
                     <span v-else class="text-meta">{{ index + 1 }}</span>
@@ -177,7 +185,17 @@ watch(recordId, load)
           <section class="rounded-lg bg-surface p-4 shadow-card">
             <div class="flex items-end justify-between gap-3">
               <h2 class="text-h5 font-medium text-ink">Payments</h2>
-              <p class="text-label text-ink-64">{{ record.payments?.length ?? 0 }} recorded</p>
+              <div class="flex items-center gap-3">
+                <p class="text-label text-ink-64">{{ record.payments?.length ?? 0 }} recorded</p>
+                <NuxtLink
+                  v-if="record.payments?.length"
+                  :to="`/records/${record.id}/receipt`"
+                  class="inline-flex items-center gap-1.5 text-label font-medium text-blue hover:underline"
+                >
+                  <UiIcon name="receipt" :size="15" />
+                  Receipt
+                </NuxtLink>
+              </div>
             </div>
 
             <ul v-if="record.payments?.length" class="mt-3 divide-y divide-line">

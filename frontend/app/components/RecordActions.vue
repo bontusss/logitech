@@ -19,7 +19,7 @@ const emit = defineEmits<{ updated: [] }>()
 const { token } = useAuth()
 const { options: branchOptions, load: loadBranches } = useBranches()
 
-type Action = 'receive' | 'dispatch' | 'payment' | 'edit' | 'exception' | 'cancel'
+type Action = 'receive' | 'deliver' | 'dispatch' | 'payment' | 'edit' | 'exception' | 'cancel'
 const action = ref<Action | null>(null)
 const saving = ref(false)
 const error = ref('')
@@ -56,8 +56,15 @@ const conditions = [
   { value: 'missing', label: 'Missing' },
 ]
 
-const received = computed(() => props.record.status === 'received' || Boolean(props.record.received_at))
-const awaitingDelivery = computed(() => props.record.status !== 'cancelled' && !received.value)
+/** Step 3: the destination branch confirmed the goods arrived. */
+const arrived = computed(() => Boolean(props.record.received_at))
+/** Step 4: the customer collected the goods at the destination branch. */
+const handedOver = computed(
+  () => Boolean(props.record.delivered_at) || props.record.status === 'delivered',
+)
+const awaitingArrival = computed(
+  () => props.record.status !== 'cancelled' && !arrived.value && !handedOver.value,
+)
 const hasBalance = computed(() => props.record.balance > 0 && props.record.status !== 'cancelled')
 
 // Receive
@@ -97,7 +104,8 @@ const exception = reactive({
 })
 
 const titles: Record<Action, string> = {
-  receive: 'Receive this record',
+  receive: 'Confirm arrival at the branch',
+  deliver: 'Hand over to the customer',
   dispatch: 'Dispatch this record',
   payment: 'Record a payment',
   edit: 'Edit this record',
@@ -114,6 +122,8 @@ function open(next: Action) {
   if (next === 'receive') {
     receivedQuantity.value = String(record.received_quantity ?? record.quantity)
     condition.value = record.condition || 'good'
+  }
+  if (next === 'deliver') {
     collectBalance.value = record.balance > 0
     collectAmount.value = String(record.balance)
     collectMethod.value = 'cash'
@@ -165,33 +175,48 @@ async function run<T>(request: () => Promise<T>, closeAfter = true): Promise<T |
   }
 }
 
-function receive() {
+async function receive() {
   const quantity = Number(receivedQuantity.value)
   if (!Number.isInteger(quantity) || quantity < 0) {
     error.value = 'Received quantity must be zero or more.'
     return
   }
-  const amount = Number(collectAmount.value || 0)
-  if (collectBalance.value && (Number.isNaN(amount) || amount <= 0)) {
-    error.value = 'Enter the balance collected, or untick the box.'
-    return
-  }
 
-  void run(async () => {
-    await apiRequest<Shipment>(`/api/records/${props.record.id}/receive`, {
+  await run(() =>
+    apiRequest<Shipment>(`/api/records/${props.record.id}/receive`, {
       method: 'POST',
       token: token.value,
       body: {
         received_quantity: quantity,
         condition: condition.value,
         notes: notes.value.trim() || undefined,
-        payment:
-          collectBalance.value && amount > 0
-            ? { amount, method: collectMethod.value, reference: collectReference.value.trim() || undefined }
-            : undefined,
       },
-    })
-  })
+    }),
+  )
+}
+
+/** The final step: the customer collects the goods and pays what is left. */
+async function deliver() {
+  const amount = Number(collectAmount.value || 0)
+  if (collectBalance.value && (Number.isNaN(amount) || amount <= 0)) {
+    error.value = 'Enter the balance collected, or untick the box.'
+    return
+  }
+  const collected = collectBalance.value && amount > 0
+
+  const updated = await run(() =>
+    apiRequest<Shipment>(`/api/records/${props.record.id}/deliver`, {
+      method: 'POST',
+      token: token.value,
+      body: {
+        notes: notes.value.trim() || undefined,
+        payment: collected
+          ? { amount, method: collectMethod.value, reference: collectReference.value.trim() || undefined }
+          : undefined,
+      },
+    }),
+  )
+  if (updated && collected) await navigateTo(`/records/${props.record.id}/receipt`)
 }
 
 function dispatch() {
@@ -204,13 +229,13 @@ function dispatch() {
   )
 }
 
-function recordPayment() {
+async function recordPayment() {
   const amount = Number(paymentAmount.value)
   if (Number.isNaN(amount) || amount <= 0) {
     error.value = 'Enter an amount greater than zero.'
     return
   }
-  void run(() =>
+  const updated = await run(() =>
     apiRequest<Shipment>(`/api/records/${props.record.id}/payments`, {
       method: 'POST',
       token: token.value,
@@ -221,6 +246,7 @@ function recordPayment() {
       },
     }),
   )
+  if (updated) await navigateTo(`/records/${props.record.id}/receipt`)
 }
 
 function saveEdit() {
@@ -301,9 +327,13 @@ defineExpose({ open })
 
 <template>
   <div class="flex flex-wrap items-center gap-2">
-    <UiButton v-if="canReceive && awaitingDelivery" @click="open('receive')">
+    <UiButton v-if="canReceive && awaitingArrival" @click="open('receive')">
       <UiIcon name="receive" :size="17" />
       Receive
+    </UiButton>
+    <UiButton v-else-if="canReceive && arrived && !handedOver" @click="open('deliver')">
+      <UiIcon name="check" :size="17" />
+      Hand over
     </UiButton>
     <UiButton v-else-if="canDispatch && record.status === 'pending'" @click="open('dispatch')">
       <UiIcon name="send" :size="17" />
@@ -344,25 +374,58 @@ defineExpose({ open })
         <UiSelect id="received-condition" v-model="condition" label="Condition" :options="conditions" />
       </div>
 
-      <div class="rounded-lg border border-line p-3">
-        <p class="text-label font-medium text-ink">Balance due {{ money(record.balance, record.currency) }}</p>
-        <label v-if="record.balance > 0" class="mt-2 flex items-center gap-2 text-label text-ink-64">
-          <input v-model="collectBalance" type="checkbox" class="size-4 accent-[#2674da]">
-          Collect the balance now
-        </label>
-        <div v-if="collectBalance && record.balance > 0" class="mt-3 grid gap-3 sm:grid-cols-3">
-          <UiField id="collect-amount" v-model="collectAmount" label="Amount (₦)" inputmode="decimal" autocomplete="off" />
-          <UiSelect id="collect-method" v-model="collectMethod" label="Method" :options="paymentMethods" />
-          <UiField id="collect-reference" v-model="collectReference" label="Reference" autocomplete="off" />
-        </div>
-      </div>
-
       <UiField id="receive-notes" v-model="notes" label="Notes (optional)" autocomplete="off" />
+      <p class="text-meta text-ink-40">
+        This confirms the goods reached {{ record.destination_branch }}. The balance is collected when
+        you hand them over to the customer.
+      </p>
     </form>
 
     <template #footer>
       <div class="flex flex-col gap-2 sm:flex-row-reverse">
-        <UiButton block :loading="saving" @click="receive">Confirm receipt</UiButton>
+        <UiButton block :loading="saving" @click="receive">Confirm arrival</UiButton>
+        <UiButton variant="tertiary" block :disabled="saving" @click="close">Close</UiButton>
+      </div>
+    </template>
+  </UiModal>
+
+  <!-- Deliver: the final hand-over, where the balance is collected -->
+  <UiModal
+    :open="action === 'deliver'"
+    :title="titles.deliver"
+    :description="`${record.tracking_number} · ${record.receiver.full_name}`"
+    size="md"
+    :dismissible="!saving"
+    @close="close"
+  >
+    <form class="space-y-4" novalidate @submit.prevent="deliver">
+      <div v-if="error" class="rounded-lg border border-danger/25 bg-danger/5 px-3 py-2 text-label text-danger" role="alert">
+        {{ error }}
+      </div>
+
+      <p class="text-label text-ink-64">
+        Confirm {{ record.receiver.full_name }} has collected the goods at {{ record.destination_branch }}.
+      </p>
+
+      <div class="rounded-lg border border-line p-3">
+        <p class="text-label font-medium text-ink">Balance due {{ money(record.balance, record.currency) }}</p>
+        <label v-if="record.balance > 0" class="mt-2 flex items-center gap-2 text-label text-ink-64">
+          <input v-model="collectBalance" type="checkbox" class="size-4 accent-blue">
+          Collect the balance now
+        </label>
+        <div v-if="collectBalance && record.balance > 0" class="mt-3 grid gap-3 sm:grid-cols-3">
+          <UiField id="handover-amount" v-model="collectAmount" label="Amount (₦)" inputmode="decimal" autocomplete="off" />
+          <UiSelect id="handover-method" v-model="collectMethod" label="Method" :options="paymentMethods" />
+          <UiField id="handover-reference" v-model="collectReference" label="Reference" autocomplete="off" />
+        </div>
+      </div>
+
+      <UiField id="deliver-notes" v-model="notes" label="Notes (optional)" autocomplete="off" />
+    </form>
+
+    <template #footer>
+      <div class="flex flex-col gap-2 sm:flex-row-reverse">
+        <UiButton block :loading="saving" @click="deliver">Hand over</UiButton>
         <UiButton variant="tertiary" block :disabled="saving" @click="close">Close</UiButton>
       </div>
     </template>

@@ -93,6 +93,9 @@ type Record struct {
 	ReceivedAt          *time.Time              `json:"received_at,omitempty"`
 	ReceivedQuantity    *int32                  `json:"received_quantity,omitempty"`
 	Condition           string                  `json:"condition,omitempty"`
+	DeliveredBy         string                  `json:"delivered_by,omitempty"`
+	DeliveredByName     string                  `json:"delivered_by_name,omitempty"`
+	DeliveredAt         *time.Time              `json:"delivered_at,omitempty"`
 	CreatedAt           time.Time               `json:"created_at"`
 	UpdatedAt           time.Time               `json:"updated_at"`
 	Payments            []RecordPaymentResponse `json:"payments,omitempty"`
@@ -144,14 +147,20 @@ type DispatchRecordRequest struct {
 	Notes string `json:"notes,omitempty"`
 }
 
-// ReceiveRecordRequest is the body of POST /api/records/:id/receive. Payment is
-// optional: the receiver can collect the remaining balance at the destination
-// branch in the same call.
+// ReceiveRecordRequest is the body of POST /api/records/:id/receive. Receiving
+// only confirms that the goods reached the destination branch; the balance is
+// collected later, when the goods are handed over to the customer.
 type ReceiveRecordRequest struct {
-	ReceivedQuantity *int            `json:"received_quantity,omitempty" example:"10"`
-	Condition        string          `json:"condition,omitempty" example:"good"`
-	Notes            string          `json:"notes,omitempty"`
-	Payment          *PaymentPayload `json:"payment,omitempty"`
+	ReceivedQuantity *int   `json:"received_quantity,omitempty" example:"10"`
+	Condition        string `json:"condition,omitempty" example:"good"`
+	Notes            string `json:"notes,omitempty"`
+}
+
+// DeliverRecordRequest is the body of POST /api/records/:id/deliver: the hand-
+// over to the customer, where any remaining balance is collected.
+type DeliverRecordRequest struct {
+	Notes   string          `json:"notes,omitempty"`
+	Payment *PaymentPayload `json:"payment,omitempty"`
 }
 
 // trackingNumberPattern is the shape of a tracking number accepted from the client.
@@ -730,7 +739,7 @@ func (h *RecordHandler) DispatchRecord(c *gin.Context) {
 
 // ReceiveRecord godoc
 // @Summary Receive a record at the destination branch
-// @Description The receiver-side flow: staff at the destination branch confirm the quantity and condition actually received. Any remaining balance can be collected in the same call by sending a payment, which updates the balance and payment status. The record becomes "received"; use POST /api/records/:id/exceptions instead when goods are missing, damaged or wrong.
+// @Description The receiver-side flow: staff at the destination branch confirm the quantity and condition actually received. The record becomes "received" once the branch has the goods; the balance is collected at the hand-over (POST /api/records/:id/deliver). Use POST /api/records/:id/exceptions instead when goods are missing, damaged or wrong.
 // @Tags records
 // @Accept json
 // @Produce json
@@ -831,24 +840,16 @@ func (h *RecordHandler) ReceiveRecord(c *gin.Context) {
 		receivedQuantity = int32(*req.ReceivedQuantity)
 	}
 
-	updated, err := txq.MarkManifestItemReceived(ctx, sqlc.MarkManifestItemReceivedParams{
+	if _, err := txq.MarkManifestItemReceived(ctx, sqlc.MarkManifestItemReceivedParams{
 		ID:               record.ID,
 		Status:           receiptStatus,
 		ReceivedBy:       uuid.NullUUID{UUID: staffID, Valid: true},
 		ReceivedQuantity: sql.NullInt32{Int32: receivedQuantity, Valid: true},
 		Condition:        sqlc.NullItemCondition{ItemCondition: sqlc.ItemCondition(condition), Valid: true},
 		Notes:            nullIfEmpty(req.Notes),
-	})
-	if err != nil {
+	}); err != nil {
 		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "failed to receive the record: " + err.Error()})
 		return
-	}
-
-	if req.Payment != nil {
-		if _, err := h.addPayment(ctx, txq, updated, req.Payment.Amount, req.Payment.Method, req.Payment.Reference, req.Payment.Notes, staffID); err != nil {
-			c.JSON(http.StatusBadRequest, ErrorResponse{Error: err.Error()})
-			return
-		}
 	}
 
 	if err := logActivity(ctx, tx, staffID, "manifest_item", record.ID, "record_received", map[string]any{
@@ -867,6 +868,118 @@ func (h *RecordHandler) ReceiveRecord(c *gin.Context) {
 	records, err := h.loadRecords(ctx, claims, recordFilter{IDs: []uuid.UUID{id}})
 	if err != nil || len(records) == 0 {
 		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "failed to load the received record"})
+		return
+	}
+	c.JSON(http.StatusOK, records[0])
+}
+
+// DeliverRecord godoc
+// @Summary Hand a received record over to the customer
+// @Description The final step of a record: staff at the destination branch hand the goods to the receiver. The record must already have been received, and the remaining balance can be collected in the same call by sending a payment, which updates the balance and payment status. The record becomes "delivered".
+// @Tags records
+// @Accept json
+// @Produce json
+// @Security BearerAuth
+// @Param id path string true "Record UUID"
+// @Param request body DeliverRecordRequest false "Hand-over details"
+// @Success 200 {object} Record
+// @Failure 400 {object} ErrorResponse
+// @Failure 403 {object} ErrorResponse
+// @Failure 404 {object} ErrorResponse
+// @Failure 409 {object} ErrorResponse
+// @Router /api/records/{id}/deliver [post]
+func (h *RecordHandler) DeliverRecord(c *gin.Context) {
+	if h.queries == nil || h.db == nil {
+		c.JSON(http.StatusServiceUnavailable, ErrorResponse{Error: "database is unavailable"})
+		return
+	}
+	staffID, claims, ok := claimsStaffID(c)
+	if !ok {
+		return
+	}
+	if claims.Role == auth.RoleOwner {
+		c.JSON(http.StatusForbidden, ErrorResponse{Error: "owners cannot hand parcels over"})
+		return
+	}
+	id, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, ErrorResponse{Error: "record id must be a valid UUID"})
+		return
+	}
+	var req DeliverRecordRequest
+	_ = c.ShouldBindJSON(&req)
+
+	ctx := c.Request.Context()
+	tx, err := h.db.BeginTx(ctx, nil)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "failed to start transaction: " + err.Error()})
+		return
+	}
+	defer func() { _ = tx.Rollback() }()
+	txq := h.queries.WithTx(tx)
+
+	record, err := txq.GetManifestItemForUpdate(ctx, id)
+	if errors.Is(err, sql.ErrNoRows) {
+		c.JSON(http.StatusNotFound, ErrorResponse{Error: "record not found"})
+		return
+	}
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "failed to load the record: " + err.Error()})
+		return
+	}
+	if !h.canReceive(claims, record) {
+		c.JSON(http.StatusNotFound, ErrorResponse{Error: "record not found"})
+		return
+	}
+	if record.Status == sqlc.ManifestItemStatusCancelled {
+		c.JSON(http.StatusConflict, ErrorResponse{Error: "a cancelled record cannot be handed over"})
+		return
+	}
+	if record.Status == sqlc.ManifestItemStatusDelivered || record.DeliveredAt.Valid {
+		c.JSON(http.StatusConflict, ErrorResponse{Error: "this record has already been handed over"})
+		return
+	}
+	// Arrival first, hand-over second: the goods must be on the branch.
+	if !record.ReceivedAt.Valid {
+		c.JSON(http.StatusConflict, ErrorResponse{Error: "confirm the goods arrived at the branch before handing them over"})
+		return
+	}
+	if record.Status == sqlc.ManifestItemStatusException {
+		c.JSON(http.StatusConflict, ErrorResponse{Error: "resolve the record's exceptions before handing the goods over"})
+		return
+	}
+
+	updated, err := txq.MarkManifestItemDelivered(ctx, sqlc.MarkManifestItemDeliveredParams{
+		ID:          record.ID,
+		DeliveredBy: uuid.NullUUID{UUID: staffID, Valid: true},
+		Notes:       nullIfEmpty(req.Notes),
+	})
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "failed to hand the record over: " + err.Error()})
+		return
+	}
+
+	if req.Payment != nil {
+		if _, err := h.addPayment(ctx, txq, updated, req.Payment.Amount, req.Payment.Method, req.Payment.Reference, req.Payment.Notes, staffID); err != nil {
+			c.JSON(http.StatusBadRequest, ErrorResponse{Error: err.Error()})
+			return
+		}
+	}
+
+	if err := logActivity(ctx, tx, staffID, "manifest_item", record.ID, "record_delivered", map[string]any{
+		"tracking_number": record.TrackingNumber,
+	}); err != nil {
+		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "failed to log the hand-over: " + err.Error()})
+		return
+	}
+	if err := tx.Commit(); err != nil {
+		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "failed to save the hand-over: " + err.Error()})
+		return
+	}
+
+	records, err := h.loadRecords(ctx, claims, recordFilter{IDs: []uuid.UUID{id}})
+	if err != nil || len(records) == 0 {
+		c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "failed to load the delivered record"})
 		return
 	}
 	c.JSON(http.StatusOK, records[0])
@@ -925,7 +1038,7 @@ func (h *RecordHandler) CancelRecord(c *gin.Context) {
 		c.JSON(http.StatusNotFound, ErrorResponse{Error: "record not found"})
 		return
 	}
-	if record.Status == sqlc.ManifestItemStatusReceived || record.Status == sqlc.ManifestItemStatusException {
+	if record.Status == sqlc.ManifestItemStatusReceived || record.Status == sqlc.ManifestItemStatusDelivered || record.Status == sqlc.ManifestItemStatusException {
 		c.JSON(http.StatusConflict, ErrorResponse{Error: "a received record cannot be cancelled"})
 		return
 	}
@@ -1098,6 +1211,7 @@ var knownRecordStatuses = map[string]bool{
 	"pending":    true,
 	"in_transit": true,
 	"received":   true,
+	"delivered":  true,
 	"exception":  true,
 	"cancelled":  true,
 }
@@ -1193,6 +1307,7 @@ func (h *RecordHandler) loadRecords(ctx context.Context, claims *auth.Claims, fi
 		       mi.dispatched_at,
 		       COALESCE(mi.received_by::text, ''), COALESCE(receiver_staff.full_name, ''),
 		       mi.received_at, mi.received_quantity, COALESCE(mi.condition::text, ''),
+		       COALESCE(mi.delivered_by::text, ''), COALESCE(deliverer.full_name, ''), mi.delivered_at,
 		       mi.created_at, mi.updated_at
 		FROM manifest_items mi
 		JOIN customers sender ON sender.id = mi.sender_customer_id
@@ -1201,6 +1316,7 @@ func (h *RecordHandler) loadRecords(ctx context.Context, claims *auth.Claims, fi
 		LEFT JOIN branches destination ON destination.id = mi.destination_branch_id
 		LEFT JOIN staff recorder ON recorder.id = mi.recorded_by
 		LEFT JOIN staff receiver_staff ON receiver_staff.id = mi.received_by
+		LEFT JOIN staff deliverer ON deliverer.id = mi.delivered_by
 		WHERE 1 = 1` + where + `
 		ORDER BY mi.created_at DESC, mi.tracking_number DESC`
 
@@ -1218,7 +1334,7 @@ func (h *RecordHandler) loadRecords(ctx context.Context, claims *auth.Claims, fi
 	records := make([]Record, 0)
 	for rows.Next() {
 		var record Record
-		var dispatchedAt, receivedAt sql.NullTime
+		var dispatchedAt, receivedAt, deliveredAt sql.NullTime
 		var receivedQuantity sql.NullInt32
 		if err := rows.Scan(
 			&record.ID, &record.TrackingNumber, &record.SerialNumber, &record.Description,
@@ -1234,6 +1350,7 @@ func (h *RecordHandler) loadRecords(ctx context.Context, claims *auth.Claims, fi
 			&dispatchedAt,
 			&record.ReceivedBy, &record.ReceivedByName,
 			&receivedAt, &receivedQuantity, &record.Condition,
+			&record.DeliveredBy, &record.DeliveredByName, &deliveredAt,
 			&record.CreatedAt, &record.UpdatedAt,
 		); err != nil {
 			return nil, err
@@ -1243,6 +1360,9 @@ func (h *RecordHandler) loadRecords(ctx context.Context, claims *auth.Claims, fi
 		}
 		if receivedAt.Valid {
 			record.ReceivedAt = &receivedAt.Time
+		}
+		if deliveredAt.Valid {
+			record.DeliveredAt = &deliveredAt.Time
 		}
 		if receivedQuantity.Valid {
 			quantity := receivedQuantity.Int32

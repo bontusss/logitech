@@ -23,14 +23,14 @@ const props = withDefaults(
 
 const VARIANT_CLASSES: Record<Variant, string> = {
   primary:
-    'bg-blue text-white shadow-raised hover:brightness-105 active:brightness-95 disabled:bg-muted disabled:text-ink-40 disabled:shadow-none',
+    'bg-blue text-on-action shadow-raised hover:brightness-105 active:brightness-95 disabled:bg-muted disabled:text-ink-40 disabled:shadow-none',
   secondary:
     'bg-linear-to-b from-grad-start to-grad-end text-white shadow-raised hover:brightness-110 active:brightness-95 disabled:bg-muted disabled:bg-none disabled:text-ink-40 disabled:shadow-none',
   tertiary:
     'bg-surface text-ink shadow-light hover:bg-canvas disabled:bg-muted disabled:text-ink-40 disabled:shadow-none',
   link: 'h-auto px-0 text-ink underline decoration-ink-40 underline-offset-4 hover:decoration-ink disabled:bg-transparent disabled:text-ink-40',
   danger:
-    'bg-danger text-white shadow-raised hover:brightness-105 active:brightness-95 disabled:bg-muted disabled:text-ink-40 disabled:shadow-none',
+    'bg-danger text-on-action shadow-raised hover:brightness-105 active:brightness-95 disabled:bg-muted disabled:text-ink-40 disabled:shadow-none',
 }
 </script>
 

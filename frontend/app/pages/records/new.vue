@@ -119,7 +119,13 @@ async function submit() {
         })),
       },
     })
-    await navigateTo(created.length === 1 ? `/records/${created[0]!.id}` : '/records')
+    const paidIndex = items.value.findIndex((item) => Number(item.amountPaid || 0) > 0)
+    const receiptRecord = paidIndex >= 0 ? created[paidIndex] : undefined
+    if (receiptRecord) {
+      await navigateTo(`/records/${receiptRecord.id}/receipt`)
+    } else {
+      await navigateTo(created.length === 1 ? `/records/${created[0]!.id}` : '/records')
+    }
   } catch (err) {
     error.value = err instanceof ApiError ? err.message : 'Could not save the record. Please try again.'
   } finally {

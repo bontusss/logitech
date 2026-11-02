@@ -204,7 +204,7 @@ func (h *ReportHandler) Overview(c *gin.Context) {
 		Shipments: ReportShipmentStats{
 			// Zero-filled so dashboards get every key even on an empty period.
 			ByStatus: map[string]int64{
-				"pending": 0, "in_transit": 0, "received": 0, "exception": 0, "cancelled": 0,
+				"pending": 0, "in_transit": 0, "received": 0, "delivered": 0, "exception": 0, "cancelled": 0,
 			},
 			ByPaymentStatus: map[string]int64{"pending": 0, "partial": 0, "paid": 0},
 		},

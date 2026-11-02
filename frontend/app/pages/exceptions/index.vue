@@ -76,7 +76,7 @@ onMounted(async () => {
           :key="option.value"
           type="button"
           class="h-8 shrink-0 rounded-full px-3 text-label transition"
-          :class="status === option.value ? 'bg-ink font-medium text-white' : 'bg-surface text-ink-64 shadow-light hover:text-ink'"
+          :class="status === option.value ? 'bg-ink font-medium text-surface' : 'bg-surface text-ink-64 shadow-light hover:text-ink'"
           :aria-pressed="status === option.value"
           @click="status = option.value"
         >

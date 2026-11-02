@@ -287,6 +287,7 @@ const (
 	ManifestItemStatusReceived  ManifestItemStatus = "received"
 	ManifestItemStatusException ManifestItemStatus = "exception"
 	ManifestItemStatusCancelled ManifestItemStatus = "cancelled"
+	ManifestItemStatusDelivered ManifestItemStatus = "delivered"
 )
 
 func (e *ManifestItemStatus) Scan(src interface{}) error {
@@ -743,6 +744,8 @@ type ManifestItem struct {
 	Condition        NullItemCondition `json:"condition"`
 	CreatedAt        time.Time         `json:"created_at"`
 	UpdatedAt        time.Time         `json:"updated_at"`
+	DeliveredBy      uuid.NullUUID     `json:"delivered_by"`
+	DeliveredAt      sql.NullTime      `json:"delivered_at"`
 }
 
 type Payment struct {

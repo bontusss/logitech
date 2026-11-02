@@ -15,21 +15,33 @@ export default defineNuxtConfig({
     head: {
       title: 'Logitech',
       htmlAttrs: { lang: 'en' },
+      // The manifest link is set per theme in app.vue (light and dark
+      // manifests carry different launch colours).
       link: [
         { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' },
         { rel: 'apple-touch-icon', href: '/apple-touch-icon.png' },
-        { rel: 'manifest', href: '/manifest.webmanifest' },
       ],
       meta: [
         { name: 'viewport', content: 'width=device-width, initial-scale=1' },
         { name: 'theme-color', content: '#f5f5f2' },
         { name: 'apple-mobile-web-app-title', content: 'Logitech' },
       ],
+      // Runs while the page is still parsing, before anything is painted, so a
+      // dark device never flashes the light canvas. Mirrors useTheme():
+      // 'dark' wins, 'light' blocks the OS preference, anything else follows it.
+      script: [
+        {
+          innerHTML: `(function(){try{var s=localStorage.getItem('logitech:theme');var d=s==='dark'||(s!=='light'&&matchMedia('(prefers-color-scheme: dark)').matches);document.documentElement.classList.toggle('dark',d);var m=document.querySelector('meta[name="theme-color"]');if(m)m.setAttribute('content',d?'#121211':'#f5f5f2')}catch(e){}})();`,
+          tagPosition: 'head',
+        },
+      ],
     },
   },
   pwa: {
     registerType: 'autoUpdate',
     includeAssets: ['favicon.svg', 'apple-touch-icon.png'],
+    // Light launch colours. The dark twin lives in public/manifest.dark.webmanifest
+    // and app.vue links whichever matches the theme; keep the two in sync.
     manifest: {
       id: '/',
       name: 'Logitech',
@@ -63,7 +75,12 @@ export default defineNuxtConfig({
   runtimeConfig: {
     public: {
       // Base URL of the Go server; override with NUXT_PUBLIC_API_BASE.
-      apiBase: process.env.NUXT_PUBLIC_API_BASE ?? '',
+      // In `nuxt dev` the app runs on :3000 while the API runs on :8080, so
+      // requests go cross-origin (the Go server's CORS allows it). The built
+      // app is served by the Go server itself, so it calls its own origin.
+      apiBase:
+        process.env.NUXT_PUBLIC_API_BASE ??
+        (process.env.NODE_ENV === 'development' ? 'http://localhost:8080' : ''),
     },
   },
 })

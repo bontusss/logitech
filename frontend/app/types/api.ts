@@ -164,6 +164,10 @@ export interface Shipment {
   received_at?: string
   received_quantity?: number
   condition?: string
+  /** Set when the destination branch handed the goods to the customer. */
+  delivered_by?: string
+  delivered_by_name?: string
+  delivered_at?: string
   created_at: string
   updated_at: string
   payments?: Payment[]

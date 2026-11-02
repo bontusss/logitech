@@ -74,8 +74,10 @@ export function usePermissions() {
 
   /** Cancelling is a manager/owner decision. */
   function canCancel(record: Shipment): boolean {
-    if (isOwner.value) return record.status !== 'received' && record.status !== 'cancelled'
-    return isManager.value && canDispatch(record) && record.status !== 'received' && record.status !== 'cancelled'
+    const finished =
+      record.status === 'received' || record.status === 'delivered' || record.status === 'cancelled'
+    if (isOwner.value) return !finished
+    return isManager.value && canDispatch(record) && !finished
   }
 
   /** A record can be edited while it is still at the origin branch. */

@@ -1,7 +1,9 @@
 version: "2"
 sql:
   - engine: "postgresql"
-    schema: "migrations/000001_logitech_schema.up.sql"
+    schema:
+      - "migrations/000001_logitech_schema.up.sql"
+      - "migrations/000003_journey_delivery.up.sql"
     queries: "internal/db/queries"
     gen:
       go:

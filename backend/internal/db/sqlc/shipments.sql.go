@@ -18,7 +18,7 @@ UPDATE manifest_items
 SET status = 'cancelled',
     updated_at = now()
 WHERE id = $1
-RETURNING id, tracking_number, serial_number, description, quantity, sender_customer_id, receiver_customer_id, origin_branch_id, destination_branch_id, amount, amount_paid, balance, currency, payment_status, status, recorded_by, photo_url, notes, dispatched_at, received_by, received_at, received_quantity, condition, created_at, updated_at
+RETURNING id, tracking_number, serial_number, description, quantity, sender_customer_id, receiver_customer_id, origin_branch_id, destination_branch_id, amount, amount_paid, balance, currency, payment_status, status, recorded_by, photo_url, notes, dispatched_at, received_by, received_at, received_quantity, condition, created_at, updated_at, delivered_by, delivered_at
 `
 
 func (q *Queries) CancelManifestItem(ctx context.Context, id uuid.UUID) (ManifestItem, error) {
@@ -50,6 +50,8 @@ func (q *Queries) CancelManifestItem(ctx context.Context, id uuid.UUID) (Manifes
 		&i.Condition,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.DeliveredBy,
+		&i.DeliveredAt,
 	)
 	return i, err
 }
@@ -78,7 +80,7 @@ INSERT INTO manifest_items (
   $14,
   $15
 )
-RETURNING id, tracking_number, serial_number, description, quantity, sender_customer_id, receiver_customer_id, origin_branch_id, destination_branch_id, amount, amount_paid, balance, currency, payment_status, status, recorded_by, photo_url, notes, dispatched_at, received_by, received_at, received_quantity, condition, created_at, updated_at
+RETURNING id, tracking_number, serial_number, description, quantity, sender_customer_id, receiver_customer_id, origin_branch_id, destination_branch_id, amount, amount_paid, balance, currency, payment_status, status, recorded_by, photo_url, notes, dispatched_at, received_by, received_at, received_quantity, condition, created_at, updated_at, delivered_by, delivered_at
 `
 
 type CreateManifestItemParams struct {
@@ -145,6 +147,8 @@ func (q *Queries) CreateManifestItem(ctx context.Context, arg CreateManifestItem
 		&i.Condition,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.DeliveredBy,
+		&i.DeliveredAt,
 	)
 	return i, err
 }
@@ -206,7 +210,7 @@ func (q *Queries) CreatePayment(ctx context.Context, arg CreatePaymentParams) (P
 }
 
 const getManifestItemByID = `-- name: GetManifestItemByID :one
-SELECT id, tracking_number, serial_number, description, quantity, sender_customer_id, receiver_customer_id, origin_branch_id, destination_branch_id, amount, amount_paid, balance, currency, payment_status, status, recorded_by, photo_url, notes, dispatched_at, received_by, received_at, received_quantity, condition, created_at, updated_at FROM manifest_items
+SELECT id, tracking_number, serial_number, description, quantity, sender_customer_id, receiver_customer_id, origin_branch_id, destination_branch_id, amount, amount_paid, balance, currency, payment_status, status, recorded_by, photo_url, notes, dispatched_at, received_by, received_at, received_quantity, condition, created_at, updated_at, delivered_by, delivered_at FROM manifest_items
 WHERE id = $1 LIMIT 1
 `
 
@@ -239,12 +243,14 @@ func (q *Queries) GetManifestItemByID(ctx context.Context, id uuid.UUID) (Manife
 		&i.Condition,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.DeliveredBy,
+		&i.DeliveredAt,
 	)
 	return i, err
 }
 
 const getManifestItemByTrackingNumber = `-- name: GetManifestItemByTrackingNumber :one
-SELECT id, tracking_number, serial_number, description, quantity, sender_customer_id, receiver_customer_id, origin_branch_id, destination_branch_id, amount, amount_paid, balance, currency, payment_status, status, recorded_by, photo_url, notes, dispatched_at, received_by, received_at, received_quantity, condition, created_at, updated_at FROM manifest_items
+SELECT id, tracking_number, serial_number, description, quantity, sender_customer_id, receiver_customer_id, origin_branch_id, destination_branch_id, amount, amount_paid, balance, currency, payment_status, status, recorded_by, photo_url, notes, dispatched_at, received_by, received_at, received_quantity, condition, created_at, updated_at, delivered_by, delivered_at FROM manifest_items
 WHERE tracking_number = $1 LIMIT 1
 `
 
@@ -277,12 +283,14 @@ func (q *Queries) GetManifestItemByTrackingNumber(ctx context.Context, trackingN
 		&i.Condition,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.DeliveredBy,
+		&i.DeliveredAt,
 	)
 	return i, err
 }
 
 const getManifestItemForUpdate = `-- name: GetManifestItemForUpdate :one
-SELECT id, tracking_number, serial_number, description, quantity, sender_customer_id, receiver_customer_id, origin_branch_id, destination_branch_id, amount, amount_paid, balance, currency, payment_status, status, recorded_by, photo_url, notes, dispatched_at, received_by, received_at, received_quantity, condition, created_at, updated_at FROM manifest_items
+SELECT id, tracking_number, serial_number, description, quantity, sender_customer_id, receiver_customer_id, origin_branch_id, destination_branch_id, amount, amount_paid, balance, currency, payment_status, status, recorded_by, photo_url, notes, dispatched_at, received_by, received_at, received_quantity, condition, created_at, updated_at, delivered_by, delivered_at FROM manifest_items
 WHERE id = $1 LIMIT 1
 FOR UPDATE
 `
@@ -316,6 +324,8 @@ func (q *Queries) GetManifestItemForUpdate(ctx context.Context, id uuid.UUID) (M
 		&i.Condition,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.DeliveredBy,
+		&i.DeliveredAt,
 	)
 	return i, err
 }
@@ -400,13 +410,65 @@ func (q *Queries) ListPaymentsByItem(ctx context.Context, manifestItemID uuid.UU
 	return items, nil
 }
 
+const markManifestItemDelivered = `-- name: MarkManifestItemDelivered :one
+UPDATE manifest_items
+SET status       = 'delivered',
+    delivered_by = $1,
+    delivered_at = now(),
+    notes        = COALESCE($2, notes),
+    updated_at   = now()
+WHERE id = $3
+RETURNING id, tracking_number, serial_number, description, quantity, sender_customer_id, receiver_customer_id, origin_branch_id, destination_branch_id, amount, amount_paid, balance, currency, payment_status, status, recorded_by, photo_url, notes, dispatched_at, received_by, received_at, received_quantity, condition, created_at, updated_at, delivered_by, delivered_at
+`
+
+type MarkManifestItemDeliveredParams struct {
+	DeliveredBy uuid.NullUUID  `json:"delivered_by"`
+	Notes       sql.NullString `json:"notes"`
+	ID          uuid.UUID      `json:"id"`
+}
+
+func (q *Queries) MarkManifestItemDelivered(ctx context.Context, arg MarkManifestItemDeliveredParams) (ManifestItem, error) {
+	row := q.db.QueryRowContext(ctx, markManifestItemDelivered, arg.DeliveredBy, arg.Notes, arg.ID)
+	var i ManifestItem
+	err := row.Scan(
+		&i.ID,
+		&i.TrackingNumber,
+		&i.SerialNumber,
+		&i.Description,
+		&i.Quantity,
+		&i.SenderCustomerID,
+		&i.ReceiverCustomerID,
+		&i.OriginBranchID,
+		&i.DestinationBranchID,
+		&i.Amount,
+		&i.AmountPaid,
+		&i.Balance,
+		&i.Currency,
+		&i.PaymentStatus,
+		&i.Status,
+		&i.RecordedBy,
+		&i.PhotoUrl,
+		&i.Notes,
+		&i.DispatchedAt,
+		&i.ReceivedBy,
+		&i.ReceivedAt,
+		&i.ReceivedQuantity,
+		&i.Condition,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeliveredBy,
+		&i.DeliveredAt,
+	)
+	return i, err
+}
+
 const markManifestItemDispatched = `-- name: MarkManifestItemDispatched :one
 UPDATE manifest_items
 SET status = 'in_transit',
     dispatched_at = COALESCE(dispatched_at, now()),
     updated_at = now()
 WHERE id = $1
-RETURNING id, tracking_number, serial_number, description, quantity, sender_customer_id, receiver_customer_id, origin_branch_id, destination_branch_id, amount, amount_paid, balance, currency, payment_status, status, recorded_by, photo_url, notes, dispatched_at, received_by, received_at, received_quantity, condition, created_at, updated_at
+RETURNING id, tracking_number, serial_number, description, quantity, sender_customer_id, receiver_customer_id, origin_branch_id, destination_branch_id, amount, amount_paid, balance, currency, payment_status, status, recorded_by, photo_url, notes, dispatched_at, received_by, received_at, received_quantity, condition, created_at, updated_at, delivered_by, delivered_at
 `
 
 func (q *Queries) MarkManifestItemDispatched(ctx context.Context, id uuid.UUID) (ManifestItem, error) {
@@ -438,6 +500,8 @@ func (q *Queries) MarkManifestItemDispatched(ctx context.Context, id uuid.UUID) 
 		&i.Condition,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.DeliveredBy,
+		&i.DeliveredAt,
 	)
 	return i, err
 }
@@ -452,7 +516,7 @@ SET status            = $1,
     notes             = COALESCE($5, notes),
     updated_at        = now()
 WHERE id = $6
-RETURNING id, tracking_number, serial_number, description, quantity, sender_customer_id, receiver_customer_id, origin_branch_id, destination_branch_id, amount, amount_paid, balance, currency, payment_status, status, recorded_by, photo_url, notes, dispatched_at, received_by, received_at, received_quantity, condition, created_at, updated_at
+RETURNING id, tracking_number, serial_number, description, quantity, sender_customer_id, receiver_customer_id, origin_branch_id, destination_branch_id, amount, amount_paid, balance, currency, payment_status, status, recorded_by, photo_url, notes, dispatched_at, received_by, received_at, received_quantity, condition, created_at, updated_at, delivered_by, delivered_at
 `
 
 type MarkManifestItemReceivedParams struct {
@@ -500,6 +564,8 @@ func (q *Queries) MarkManifestItemReceived(ctx context.Context, arg MarkManifest
 		&i.Condition,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.DeliveredBy,
+		&i.DeliveredAt,
 	)
 	return i, err
 }
@@ -513,7 +579,7 @@ SET status = 'in_transit',
     condition = NULL,
     updated_at = now()
 WHERE id = $1
-RETURNING id, tracking_number, serial_number, description, quantity, sender_customer_id, receiver_customer_id, origin_branch_id, destination_branch_id, amount, amount_paid, balance, currency, payment_status, status, recorded_by, photo_url, notes, dispatched_at, received_by, received_at, received_quantity, condition, created_at, updated_at
+RETURNING id, tracking_number, serial_number, description, quantity, sender_customer_id, receiver_customer_id, origin_branch_id, destination_branch_id, amount, amount_paid, balance, currency, payment_status, status, recorded_by, photo_url, notes, dispatched_at, received_by, received_at, received_quantity, condition, created_at, updated_at, delivered_by, delivered_at
 `
 
 func (q *Queries) ResetManifestItemToTransit(ctx context.Context, id uuid.UUID) (ManifestItem, error) {
@@ -545,6 +611,8 @@ func (q *Queries) ResetManifestItemToTransit(ctx context.Context, id uuid.UUID) 
 		&i.Condition,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.DeliveredBy,
+		&i.DeliveredAt,
 	)
 	return i, err
 }
@@ -585,7 +653,7 @@ SET description           = COALESCE($1, description),
     notes                 = COALESCE($8, notes),
     updated_at            = now()
 WHERE id = $9
-RETURNING id, tracking_number, serial_number, description, quantity, sender_customer_id, receiver_customer_id, origin_branch_id, destination_branch_id, amount, amount_paid, balance, currency, payment_status, status, recorded_by, photo_url, notes, dispatched_at, received_by, received_at, received_quantity, condition, created_at, updated_at
+RETURNING id, tracking_number, serial_number, description, quantity, sender_customer_id, receiver_customer_id, origin_branch_id, destination_branch_id, amount, amount_paid, balance, currency, payment_status, status, recorded_by, photo_url, notes, dispatched_at, received_by, received_at, received_quantity, condition, created_at, updated_at, delivered_by, delivered_at
 `
 
 type UpdateManifestItemParams struct {
@@ -639,6 +707,8 @@ func (q *Queries) UpdateManifestItem(ctx context.Context, arg UpdateManifestItem
 		&i.Condition,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.DeliveredBy,
+		&i.DeliveredAt,
 	)
 	return i, err
 }

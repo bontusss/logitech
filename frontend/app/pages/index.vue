@@ -16,6 +16,8 @@ const daily = ref<DailyReportRow[]>([])
 const branchRows = ref<BranchReportRow[]>([])
 const recent = ref<Shipment[]>([])
 const incoming = ref<Shipment[]>([])
+/** Arrived at this branch and waiting to be handed to the customer. */
+const handovers = ref<Shipment[]>([])
 const summary = ref<RecordSummary | null>(null)
 const balances = ref<Shipment[]>([])
 const exceptions = ref<ShipmentException[]>([])
@@ -46,6 +48,10 @@ const attentionCount = computed(() =>
 
 const receiveLink = computed(() =>
   branchId.value ? `/records?status=pending,in_transit&destination_branch_id=${branchId.value}` : '/records?status=pending,in_transit',
+)
+
+const handoverLink = computed(() =>
+  branchId.value ? `/records?status=received&destination_branch_id=${branchId.value}` : '/records?status=received',
 )
 
 /** One failing panel must not blank the whole dashboard. */
@@ -111,6 +117,15 @@ async function load() {
               { token: t },
             ),
           (value) => (incoming.value = value),
+        ),
+        // Arrived at this branch: the customer can now collect them.
+        safe(
+          () =>
+            apiRequest<Shipment[]>(
+              `/api/records?destination_branch_id=${branchId.value}&status=received&limit=5`,
+              { token: t },
+            ),
+          (value) => (handovers.value = value),
         ),
       )
     }
@@ -272,6 +287,45 @@ onMounted(async () => {
 
       <div class="grid gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
         <div class="min-w-0 space-y-4">
+          <!-- Hand-over queue: arrived and waiting for the customer -->
+          <section v-if="handovers.length" class="rounded-lg bg-surface p-4 shadow-card">
+            <div class="flex items-center justify-between gap-3">
+              <div>
+                <h2 class="text-h5 font-medium text-ink">Ready for hand-over</h2>
+                <p class="mt-0.5 text-label text-ink-64">
+                  Arrived at {{ branch || 'your branch' }} and waiting for the customer.
+                </p>
+              </div>
+              <NuxtLink :to="handoverLink" class="shrink-0 text-label font-medium text-blue hover:underline">
+                View all
+              </NuxtLink>
+            </div>
+            <ul class="mt-3 divide-y divide-line">
+              <li v-for="record in handovers" :key="record.id">
+                <NuxtLink
+                  :to="`/records/${record.id}`"
+                  class="flex items-center justify-between gap-3 py-2.5 transition hover:text-blue"
+                >
+                  <div class="min-w-0">
+                    <p class="truncate text-p1 font-medium text-ink">
+                      {{ record.receiver.full_name }}
+                    </p>
+                    <p class="truncate text-meta text-ink-40">
+                      {{ record.tracking_number }} · {{ record.description }}
+                      <template v-if="record.received_at"> · arrived {{ shortDate(record.received_at) }}</template>
+                    </p>
+                  </div>
+                  <div class="shrink-0 text-right">
+                    <p class="text-label font-medium" :class="record.balance > 0 ? 'text-danger' : 'text-ink-64'">
+                      {{ money(record.balance, record.currency) }}
+                    </p>
+                    <p class="text-meta text-ink-40">{{ record.balance > 0 ? 'to collect' : 'fully paid' }}</p>
+                  </div>
+                </NuxtLink>
+              </li>
+            </ul>
+          </section>
+
           <!-- Receiving queue -->
           <section v-if="incoming.length && !isOperations" class="rounded-lg bg-surface p-4 shadow-card">
             <div class="flex items-center justify-between gap-3">

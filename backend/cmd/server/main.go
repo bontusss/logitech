@@ -147,6 +147,7 @@ func main() {
 			protected.PUT("/records/:id", recordHandler.UpdateRecord)
 			protected.POST("/records/:id/dispatch", recordHandler.DispatchRecord)
 			protected.POST("/records/:id/receive", recordHandler.ReceiveRecord)
+			protected.POST("/records/:id/deliver", recordHandler.DeliverRecord)
 			protected.POST("/records/:id/cancel", recordHandler.CancelRecord)
 			protected.GET("/records/:id/payments", recordHandler.ListRecordPayments)
 			protected.POST("/records/:id/payments", recordHandler.RecordPayment)

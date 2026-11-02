@@ -39,13 +39,27 @@ export async function apiRequest<T>(
   const config = useRuntimeConfig()
 
   try {
-    return await $fetch<T>(path, {
+    const response = await $fetch.raw<T>(path, {
       baseURL: config.public.apiBase,
       method: options.method ?? 'GET',
       body: options.body as Record<string, unknown> | undefined,
       headers: options.token ? { Authorization: `Bearer ${options.token}` } : undefined,
     })
+
+    // A 2xx that is not JSON means the request never reached the API (for
+    // example the app shell answering every path). Fail loudly instead of
+    // handing the caller an HTML string that silently has no token in it.
+    const contentType = response.headers.get('content-type') ?? ''
+    if (response.status !== 204 && !contentType.includes('application/json')) {
+      throw new ApiError(
+        response.status,
+        'The server did not answer with JSON. Check that the API is reachable.',
+      )
+    }
+
+    return response._data as T
   } catch (error) {
+    if (error instanceof ApiError) throw error
     const err = error as { status?: number; statusCode?: number; data?: ApiErrorBody }
     const status = err.status ?? err.statusCode ?? 0
     const message = err.data?.error ?? 'Something went wrong. Please try again.'

@@ -1676,6 +1676,75 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/records/{id}/deliver": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "The final step of a record: staff at the destination branch hand the goods to the receiver. The record must already have been received, and the remaining balance can be collected in the same call by sending a payment, which updates the balance and payment status. The record becomes \"delivered\".",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "records"
+                ],
+                "summary": "Hand a received record over to the customer",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Record UUID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Hand-over details",
+                        "name": "request",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/handler.DeliverRecordRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handler.Record"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/records/{id}/dispatch": {
             "post": {
                 "security": [
@@ -1961,7 +2030,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "The receiver-side flow: staff at the destination branch confirm the quantity and condition actually received. Any remaining balance can be collected in the same call by sending a payment, which updates the balance and payment status. The record becomes \"received\"; use POST /api/records/:id/exceptions instead when goods are missing, damaged or wrong.",
+                "description": "The receiver-side flow: staff at the destination branch confirm the quantity and condition actually received. The record becomes \"received\" once the branch has the goods; the balance is collected at the hand-over (POST /api/records/:id/deliver). Use POST /api/records/:id/exceptions instead when goods are missing, damaged or wrong.",
                 "consumes": [
                     "application/json"
                 ],
@@ -3149,6 +3218,17 @@ const docTemplate = `{
                 }
             }
         },
+        "handler.DeliverRecordRequest": {
+            "type": "object",
+            "properties": {
+                "notes": {
+                    "type": "string"
+                },
+                "payment": {
+                    "$ref": "#/definitions/handler.PaymentPayload"
+                }
+            }
+        },
         "handler.DispatchRecordRequest": {
             "type": "object",
             "properties": {
@@ -3429,9 +3509,6 @@ const docTemplate = `{
                 "notes": {
                     "type": "string"
                 },
-                "payment": {
-                    "$ref": "#/definitions/handler.PaymentPayload"
-                },
                 "received_quantity": {
                     "type": "integer",
                     "example": 10
@@ -3457,6 +3534,15 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "currency": {
+                    "type": "string"
+                },
+                "delivered_at": {
+                    "type": "string"
+                },
+                "delivered_by": {
+                    "type": "string"
+                },
+                "delivered_by_name": {
                     "type": "string"
                 },
                 "description": {
