@@ -721,8 +721,8 @@ type ManifestItem struct {
 	SerialNumber        sql.NullString `json:"serial_number"`
 	Description         string         `json:"description"`
 	Quantity            int32          `json:"quantity"`
-	SenderCustomerID    uuid.UUID      `json:"sender_customer_id"`
-	ReceiverCustomerID  uuid.UUID      `json:"receiver_customer_id"`
+	SenderCustomerID    uuid.NullUUID  `json:"sender_customer_id"`
+	ReceiverCustomerID  uuid.NullUUID  `json:"receiver_customer_id"`
 	OriginBranchID      uuid.UUID      `json:"origin_branch_id"`
 	DestinationBranchID uuid.UUID      `json:"destination_branch_id"`
 	Amount              string         `json:"amount"`

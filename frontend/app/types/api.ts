@@ -1,4 +1,4 @@
-/** Shapes returned by the Logitech API. */
+/** Shapes returned by the Galopin API. */
 
 export interface AuthUser {
   id: string

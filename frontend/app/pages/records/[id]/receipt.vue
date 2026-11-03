@@ -7,7 +7,6 @@ definePageMeta({ layout: 'default' })
 
 const route = useRoute()
 const { token } = useAuth()
-const { branches, load: loadBranches } = useBranches()
 
 const record = ref<Shipment | null>(null)
 const loading = ref(true)
@@ -21,106 +20,35 @@ const actionMessage = ref('')
 
 const recordId = computed(() => String(route.params.id))
 
-/** A block of contact lines printed under an office heading. */
-interface ReceiptOffice {
-  address: string
-  phones: string
-}
-
-interface ReceiptBranch extends ReceiptOffice {
-  name: string
-}
-
-/** The parts of the receipt the business can customise. */
-interface ReceiptTemplate {
-  companyName: string
-  services: string[]
-  headOffice: ReceiptOffice
-  branchOffices: ReceiptBranch[]
-  corporateOffice: ReceiptOffice
-}
-
-const SERVICE_SLOTS = 6
-const TEMPLATE_KEY = 'logitech:receipt-template'
-const defaultServices = [
-  'Nationwide parcel delivery',
-  'Same-day and express courier',
-  'Freight forwarding and haulage',
-  'Warehousing and storage',
-  'Door-to-door delivery',
-  'Package tracking and insurance',
-]
-
-const template = reactive<ReceiptTemplate>({
+/**
+ * Company details printed on every receipt. They are fixed in the app, so
+ * staff never edit them on the printed document.
+ */
+const template = {
   companyName: 'Galopin Logistics',
-  services: [...defaultServices],
-  headOffice: { address: '', phones: '' },
-  branchOffices: [],
-  corporateOffice: { address: '', phones: '' },
-})
-let ready = false
-
-function normaliseTemplate(raw: Partial<ReceiptTemplate>): ReceiptTemplate {
-  const services = Array.isArray(raw.services)
-    ? raw.services.slice(0, SERVICE_SLOTS).map((service) => String(service ?? ''))
-    : []
-  while (services.length < SERVICE_SLOTS) services.push('')
-
-  return {
-    companyName: typeof raw.companyName === 'string' ? raw.companyName : 'Galopin Logistics',
-    services,
-    headOffice: {
-      address: typeof raw.headOffice?.address === 'string' ? raw.headOffice.address : '',
-      phones: typeof raw.headOffice?.phones === 'string' ? raw.headOffice.phones : '',
+  services: [
+    'NURTW rep',
+    'Commission agent',
+    'Auto dealers',
+    'Transports',
+    'Revenue consultants',
+    'General merchandise',
+  ],
+  headOffice: {
+    address: "#1 Milverton Road, Aba\n#10 Asa Road by St. Michael's Road, Aba, Abia State",
+    phones: '08165074444, 070385494444, 080338399414',
+  },
+  branchOffices: [
+    {
+      name: 'Port Harcourt Branch',
+      address: '#36 Aba Road by Market Junction, PH',
+      phones: '09137716414',
     },
-    branchOffices: Array.isArray(raw.branchOffices)
-      ? raw.branchOffices.map((branch) => ({
-          name: typeof branch?.name === 'string' ? branch.name : '',
-          address: typeof branch?.address === 'string' ? branch.address : '',
-          phones: typeof branch?.phones === 'string' ? branch.phones : '',
-        }))
-      : [],
-    corporateOffice: {
-      address: typeof raw.corporateOffice?.address === 'string' ? raw.corporateOffice.address : '',
-      phones: typeof raw.corporateOffice?.phones === 'string' ? raw.corporateOffice.phones : '',
-    },
-  }
-}
-
-/** The company details the staff member edited last, on this device. */
-function storedTemplate(): ReceiptTemplate | null {
-  if (!import.meta.client) return null
-  try {
-    const raw = window.localStorage.getItem(TEMPLATE_KEY)
-    if (!raw) return null
-    return normaliseTemplate(JSON.parse(raw) as Partial<ReceiptTemplate>)
-  } catch {
-    return null
-  }
-}
-
-function persist() {
-  if (!import.meta.client || !ready) return
-  window.localStorage.setItem(TEMPLATE_KEY, JSON.stringify(template))
-}
-
-/** A branch address with its state, e.g. "12 Apapa Road, Lagos". */
-function officeAddress(branch: { address?: string; state?: string }): string {
-  return [branch.address, branch.state].filter(Boolean).join(', ')
-}
-
-/** First-time defaults: the sending branch is the head office and the other
- * active branches are the branch offices. Everything stays editable. */
-function applyBranchDefaults() {
-  const current = record.value
-  if (!current) return
-  const origin = branches.value.find((branch) => branch.id === current.origin_branch_id)
-  if (origin) {
-    template.headOffice = { address: officeAddress(origin), phones: origin.phone ?? '' }
-  }
-  template.branchOffices = branches.value
-    .filter((branch) => branch.id !== current.origin_branch_id && branch.status === 'active')
-    .map((branch) => ({ name: branch.name, address: officeAddress(branch), phones: branch.phone ?? '' }))
+  ],
+  corporateOffice: {
+    address: "#40 St Michael's Road, Aba",
+    phones: '',
+  },
 }
 
 async function load() {
@@ -129,15 +57,6 @@ async function load() {
   error.value = ''
   try {
     record.value = await apiRequest<Shipment>(`/api/records/${recordId.value}`, { token: token.value })
-    await loadBranches()
-    const stored = storedTemplate()
-    if (stored) {
-      Object.assign(template, stored)
-    } else {
-      applyBranchDefaults()
-    }
-    ready = true
-    if (!stored) persist()
     invalidatePdf()
   } catch (err) {
     error.value =
@@ -155,15 +74,6 @@ async function load() {
   await nextTick()
   if (record.value) void buildPdf().catch(() => {})
 }
-
-watch(
-  template,
-  () => {
-    invalidatePdf()
-    persist()
-  },
-  { deep: true },
-)
 
 const payments = computed(() => record.value?.payments ?? [])
 
@@ -184,41 +94,8 @@ const receiptNumber = computed(() => {
   return `RCPT-${record.value?.tracking_number ?? ''}`
 })
 
-const services = computed(() => template.services.map((service) => service.trim()).filter(Boolean))
-
-/** Six labelled bullets, editable one slot at a time. */
-const serviceSlots = computed(() =>
-  Array.from({ length: SERVICE_SLOTS }, (_, index) => ({
-    id: `receipt-service-${index}`,
-    label: `Bullet ${index + 1}`,
-    value: template.services[index] ?? '',
-    set: (value: string) => {
-      template.services[index] = value
-    },
-  })),
-)
-
-const branchOffices = computed(() =>
-  template.branchOffices.filter(
-    (branch) => branch.name.trim() || branch.address.trim() || branch.phones.trim(),
-  ),
-)
-
-const hasHeadOffice = computed(
-  () => Boolean(template.headOffice.address.trim() || template.headOffice.phones.trim()),
-)
-const hasCorporateOffice = computed(
-  () => Boolean(template.corporateOffice.address.trim() || template.corporateOffice.phones.trim()),
-)
-
-function addBranch() {
-  template.branchOffices.push({ name: '', address: '', phones: '' })
-}
-
-function removeBranch(index: number) {
-  template.branchOffices.splice(index, 1)
-}
-
+const services = computed(() => template.services)
+const branchOffices = computed(() => template.branchOffices)
 function print() {
   if (!import.meta.client) return
   window.print()
@@ -398,8 +275,7 @@ watch(recordId, load)
         <header>
           <h1 class="text-h5 font-medium tracking-tight text-ink">Payment receipt</h1>
           <p class="mt-1 text-label text-ink-64">
-            Check the receipt, edit the company details if needed, then print, download or share it
-            with the customer.
+            Check the receipt, then print, download or share it with the customer.
           </p>
           <p v-if="actionMessage" class="mt-2 text-label text-ink-64" role="status">{{ actionMessage }}</p>
         </header>
@@ -437,17 +313,14 @@ watch(recordId, load)
       </UiEmptyState>
     </div>
 
-    <div
-      v-else-if="record"
-      class="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_360px]"
-    >
+    <div v-else-if="record">
       <div class="space-y-3">
         <p
           v-if="!payments.length"
           class="rounded-lg border border-line bg-surface px-4 py-3 text-label text-ink-64 no-print"
         >
-          No payment has been recorded on this record yet, so the receipt prints without an amount
-          received. Record a payment first for a complete receipt.
+          Nothing has been paid at the counter, so this receipt prints with nothing received and the
+          full amount as the balance due. The consignee pays on collection.
         </p>
 
         <!-- The printable document. Everything outside .receipt-paper is hidden by print CSS. -->
@@ -456,11 +329,20 @@ watch(recordId, load)
           class="receipt-paper mx-auto w-full max-w-[760px] rounded-lg bg-surface p-5 text-ink shadow-card sm:p-8"
         >
           <header class="flex flex-wrap items-start justify-between gap-4 border-b-2 border-ink pb-4">
-            <div class="min-w-0">
-              <h2 class="text-h5 font-semibold tracking-tight text-ink">
-                {{ template.companyName || 'Company name' }}
-              </h2>
-              <p class="mt-1 text-meta font-medium tracking-[0.18em] text-ink-64 uppercase">Payment receipt</p>
+            <div class="flex min-w-0 items-center gap-3">
+              <img
+                src="/logo.png"
+                alt=""
+                width="56"
+                height="56"
+                class="size-14 shrink-0"
+              />
+              <div class="min-w-0">
+                <h2 class="text-h5 font-semibold tracking-tight text-ink">
+                  {{ template.companyName || 'Company name' }}
+                </h2>
+                <p class="mt-1 text-meta font-medium tracking-[0.18em] text-ink-64 uppercase">Payment receipt</p>
+              </div>
             </div>
             <div class="text-right text-meta text-ink-64">
               <p class="text-label font-medium text-ink">{{ receiptNumber }}</p>
@@ -469,15 +351,50 @@ watch(recordId, load)
             </div>
           </header>
 
+          <!-- The company's own offices sit under the masthead, as a business receipt prints them. -->
+          <section class="mt-3 grid gap-3 sm:grid-cols-2">
+            <div class="receipt-section">
+              <p class="text-meta tracking-[0.08em] text-ink-40 uppercase">Head office</p>
+              <p v-if="template.headOffice.address" class="mt-1 text-label whitespace-pre-line text-ink">
+                {{ template.headOffice.address }}
+              </p>
+              <p v-if="template.headOffice.phones" class="text-label text-ink-64">
+                {{ template.headOffice.phones }}
+              </p>
+            </div>
+            <div class="receipt-section">
+              <p class="text-meta tracking-[0.08em] text-ink-40 uppercase">Corporate office</p>
+              <p v-if="template.corporateOffice.address" class="mt-1 text-label whitespace-pre-line text-ink">
+                {{ template.corporateOffice.address }}
+              </p>
+              <p v-if="template.corporateOffice.phones" class="text-label text-ink-64">
+                {{ template.corporateOffice.phones }}
+              </p>
+            </div>
+          </section>
+
+          <section v-if="branchOffices.length" class="receipt-section mt-3">
+            <p class="text-meta tracking-[0.08em] text-ink-40 uppercase">Branch offices</p>
+            <ul class="mt-1.5 grid gap-3 sm:grid-cols-2">
+              <li v-for="(branch, index) in branchOffices" :key="`branch-${index}`">
+                <p v-if="branch.name.trim()" class="text-label font-medium text-ink">{{ branch.name }}</p>
+                <p v-if="branch.address.trim()" class="text-label whitespace-pre-line text-ink-64">
+                  {{ branch.address }}
+                </p>
+                <p v-if="branch.phones.trim()" class="text-label text-ink-64">{{ branch.phones }}</p>
+              </li>
+            </ul>
+          </section>
+
           <section class="mt-4 grid gap-4 sm:grid-cols-2">
             <div>
               <p class="text-meta tracking-[0.08em] text-ink-40 uppercase">Received from</p>
-              <p class="mt-1 text-p1 font-medium text-ink">{{ record.sender.full_name }}</p>
+              <p class="mt-1 text-p1 font-medium text-ink">{{ record.sender.full_name || '—' }}</p>
               <p v-if="record.sender.phone" class="text-label text-ink-64">{{ record.sender.phone }}</p>
             </div>
             <div>
               <p class="text-meta tracking-[0.08em] text-ink-40 uppercase">Consignee</p>
-              <p class="mt-1 text-p1 font-medium text-ink">{{ record.receiver.full_name }}</p>
+              <p class="mt-1 text-p1 font-medium text-ink">{{ record.receiver.full_name || '—' }}</p>
               <p v-if="record.receiver.phone" class="text-label text-ink-64">{{ record.receiver.phone }}</p>
             </div>
           </section>
@@ -567,40 +484,6 @@ watch(recordId, load)
             </ul>
           </section>
 
-          <section class="mt-4 grid gap-3 sm:grid-cols-2">
-            <div v-if="hasHeadOffice" class="receipt-section">
-              <p class="text-meta tracking-[0.08em] text-ink-40 uppercase">Head office</p>
-              <p v-if="template.headOffice.address" class="mt-1 text-label whitespace-pre-line text-ink">
-                {{ template.headOffice.address }}
-              </p>
-              <p v-if="template.headOffice.phones" class="text-label text-ink-64">
-                {{ template.headOffice.phones }}
-              </p>
-            </div>
-            <div v-if="hasCorporateOffice" class="receipt-section">
-              <p class="text-meta tracking-[0.08em] text-ink-40 uppercase">Corporate office</p>
-              <p v-if="template.corporateOffice.address" class="mt-1 text-label whitespace-pre-line text-ink">
-                {{ template.corporateOffice.address }}
-              </p>
-              <p v-if="template.corporateOffice.phones" class="text-label text-ink-64">
-                {{ template.corporateOffice.phones }}
-              </p>
-            </div>
-          </section>
-
-          <section v-if="branchOffices.length" class="receipt-section mt-3">
-            <p class="text-meta tracking-[0.08em] text-ink-40 uppercase">Branch offices</p>
-            <ul class="mt-1.5 grid gap-3 sm:grid-cols-2">
-              <li v-for="(branch, index) in branchOffices" :key="`branch-${index}`">
-                <p v-if="branch.name.trim()" class="text-label font-medium text-ink">{{ branch.name }}</p>
-                <p v-if="branch.address.trim()" class="text-label whitespace-pre-line text-ink-64">
-                  {{ branch.address }}
-                </p>
-                <p v-if="branch.phones.trim()" class="text-label text-ink-64">{{ branch.phones }}</p>
-              </li>
-            </ul>
-          </section>
-
           <footer class="receipt-section mt-5 rounded-lg border border-ink/15 bg-canvas px-3 py-2.5">
             <p class="text-meta font-semibold tracking-[0.08em] text-ink uppercase">Disclaimer</p>
             <p class="mt-1 text-label text-ink">
@@ -611,98 +494,6 @@ watch(recordId, load)
 
         <p class="text-center text-meta text-ink-40 no-print">Only the receipt is printed.</p>
       </div>
-
-      <!-- Editable company details, kept for the next receipt on this device. -->
-      <section class="space-y-4 rounded-lg bg-surface p-4 shadow-card no-print">
-        <div>
-          <h2 class="text-h5 font-medium text-ink">Receipt details</h2>
-          <p class="mt-0.5 text-label text-ink-64">
-            These details are saved on this device and reused for every receipt.
-          </p>
-        </div>
-
-        <UiField id="receipt-company" v-model="template.companyName" label="Company name" />
-
-        <fieldset class="space-y-3 border-t border-line pt-4">
-          <legend class="text-label font-medium text-ink">Services rendered (6 bullets)</legend>
-          <UiField
-            v-for="bullet in serviceSlots"
-            :id="bullet.id"
-            :key="bullet.id"
-            :model-value="bullet.value"
-            :label="bullet.label"
-            @update:model-value="bullet.set"
-          />
-        </fieldset>
-
-        <fieldset class="space-y-3 border-t border-line pt-4">
-          <legend class="text-label font-medium text-ink">Head office</legend>
-          <UiTextarea
-            id="receipt-head-address"
-            v-model="template.headOffice.address"
-            label="Address"
-            :rows="2"
-          />
-          <UiField
-            id="receipt-head-phones"
-            v-model="template.headOffice.phones"
-            label="Phones"
-            hint="Separate numbers with a comma."
-          />
-        </fieldset>
-
-        <fieldset class="space-y-3 border-t border-line pt-4">
-          <legend class="text-label font-medium text-ink">Corporate office</legend>
-          <UiTextarea
-            id="receipt-corporate-address"
-            v-model="template.corporateOffice.address"
-            label="Address"
-            :rows="2"
-          />
-          <UiField
-            id="receipt-corporate-phones"
-            v-model="template.corporateOffice.phones"
-            label="Phones"
-            hint="Separate numbers with a comma."
-          />
-        </fieldset>
-
-        <fieldset class="space-y-3 border-t border-line pt-4">
-          <legend class="text-label font-medium text-ink">Branch offices</legend>
-          <div
-            v-for="(branch, index) in template.branchOffices"
-            :key="`branch-editor-${index}`"
-            class="space-y-3 rounded-lg border border-line p-3"
-          >
-            <div class="flex items-center justify-between gap-3">
-              <p class="text-meta font-medium tracking-[0.08em] text-ink-40 uppercase">
-                Branch {{ index + 1 }}
-              </p>
-              <UiButton variant="link" class="text-danger" @click="removeBranch(index)">Remove</UiButton>
-            </div>
-            <UiField
-              :id="`receipt-branch-name-${index}`"
-              v-model="branch.name"
-              label="Branch name"
-            />
-            <UiTextarea
-              :id="`receipt-branch-address-${index}`"
-              v-model="branch.address"
-              label="Address"
-              :rows="2"
-            />
-            <UiField
-              :id="`receipt-branch-phones-${index}`"
-              v-model="branch.phones"
-              label="Phones"
-            />
-          </div>
-          <UiButton variant="tertiary" @click="addBranch">
-            <UiIcon name="plus" :size="16" />
-            Add branch office
-          </UiButton>
-        </fieldset>
-      </section>
     </div>
   </div>
 </template>

@@ -39,11 +39,12 @@ export function useNav() {
       { label: 'Records', to: '/records', icon: 'package' },
       { label: 'Exceptions', to: '/exceptions', icon: 'alert' },
     ]
-    items.push(
-      canViewReports.value
-        ? { label: 'Reports', to: '/reports', icon: 'chart' }
-        : { label: 'Settings', to: '/settings', icon: 'settings' },
-    )
+    if (canViewReports.value) {
+      items.push({ label: 'Reports', to: '/reports', icon: 'chart' })
+    }
+    // Settings hosts the Manage links (staff, branches, fleet) on small screens,
+    // so owners and managers need it alongside Reports, not instead of it.
+    items.push({ label: 'Settings', to: '/settings', icon: 'settings' })
     return items
   })
 

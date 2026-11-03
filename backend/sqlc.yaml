@@ -4,6 +4,7 @@ sql:
     schema:
       - "migrations/000001_logitech_schema.up.sql"
       - "migrations/000003_journey_delivery.up.sql"
+      - "migrations/000004_optional_parties.up.sql"
     queries: "internal/db/queries"
     gen:
       go:

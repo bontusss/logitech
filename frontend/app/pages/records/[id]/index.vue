@@ -188,7 +188,6 @@ watch(recordId, load)
               <div class="flex items-center gap-3">
                 <p class="text-label text-ink-64">{{ record.payments?.length ?? 0 }} recorded</p>
                 <NuxtLink
-                  v-if="record.payments?.length"
                   :to="`/records/${record.id}/receipt`"
                   class="inline-flex items-center gap-1.5 text-label font-medium text-blue hover:underline"
                 >

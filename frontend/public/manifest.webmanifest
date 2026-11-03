@@ -1,7 +1,7 @@
 {
   "id": "/",
-  "name": "Logitech",
-  "short_name": "Logitech",
+  "name": "Galopin",
+  "short_name": "Galopin",
   "description": "Record waybills, receive parcels and track collections across branches.",
   "start_url": "/",
   "scope": "/",

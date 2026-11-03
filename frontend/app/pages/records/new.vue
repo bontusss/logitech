@@ -74,8 +74,6 @@ function validate(): string {
   if (!origin.value) return 'Choose the branch sending this parcel.'
   if (!destination.value) return 'Choose the branch the parcel is going to.'
   if (destination.value === origin.value) return 'The destination must be different from the origin branch.'
-  if (!sender.fullName.trim()) return "Enter the sender's name."
-  if (!receiver.fullName.trim()) return "Enter the receiver's name."
 
   for (const [index, item] of items.value.entries()) {
     const label = `Item ${index + 1}`
@@ -119,12 +117,15 @@ async function submit() {
         })),
       },
     })
+    // Every drop-off gets a receipt, whether or not anything was paid at the
+    // counter: when the consignee pays on collection, the sender still walks
+    // away with the waybill receipt showing the balance due.
     const paidIndex = items.value.findIndex((item) => Number(item.amountPaid || 0) > 0)
-    const receiptRecord = paidIndex >= 0 ? created[paidIndex] : undefined
+    const receiptRecord = (paidIndex >= 0 ? created[paidIndex] : created[0]) ?? created[0]
     if (receiptRecord) {
       await navigateTo(`/records/${receiptRecord.id}/receipt`)
     } else {
-      await navigateTo(created.length === 1 ? `/records/${created[0]!.id}` : '/records')
+      await navigateTo('/records')
     }
   } catch (err) {
     error.value = err instanceof ApiError ? err.message : 'Could not save the record. Please try again.'
@@ -188,11 +189,14 @@ onMounted(async () => {
       <!-- Customer -->
       <section class="rounded-lg bg-surface p-4 shadow-card">
         <h2 class="text-h5 font-medium text-ink">Customer</h2>
-        <p class="mt-0.5 text-label text-ink-64">Phone numbers let the same customer be recognised next time.</p>
+        <p class="mt-0.5 text-label text-ink-64">
+          Phone numbers let the same customer be recognised next time. Leave a name blank when it is
+          not known yet — a phone is only saved alongside a name.
+        </p>
         <div class="mt-3 grid gap-4 sm:grid-cols-2">
-          <UiField id="sender-name" v-model="sender.fullName" label="Sender name" autocomplete="off" />
+          <UiField id="sender-name" v-model="sender.fullName" label="Sender name (optional)" autocomplete="off" />
           <UiField id="sender-phone" v-model="sender.phone" label="Sender phone" type="tel" inputmode="tel" autocomplete="off" />
-          <UiField id="receiver-name" v-model="receiver.fullName" label="Receiver name" autocomplete="off" />
+          <UiField id="receiver-name" v-model="receiver.fullName" label="Receiver name (optional)" autocomplete="off" />
           <UiField id="receiver-phone" v-model="receiver.phone" label="Receiver phone" type="tel" inputmode="tel" autocomplete="off" />
         </div>
       </section>

@@ -204,7 +204,7 @@ func claimsStaffID(c *gin.Context) (uuid.UUID, *auth.Claims, bool) {
 
 // CreateRecord godoc
 // @Summary Record one or more shipments
-// @Description The sender-side flow: a staff member records the item(s) a customer brings in, the destination branch, the amount charged and the payment taken at the counter. Any unpaid remainder becomes the record's balance. Senders and receivers are matched on phone number, or created when they are new. When origin_branch_id is omitted the staff member's own branch is used.
+// @Description The sender-side flow: a staff member records the item(s) a customer brings in, the destination branch, the amount charged and the payment taken at the counter. Any unpaid remainder becomes the record's balance. Senders and receivers are optional; when a name is given they are matched on phone number, or created when they are new. When origin_branch_id is omitted the staff member's own branch is used.
 // @Tags records
 // @Accept json
 // @Produce json
@@ -612,7 +612,7 @@ func (h *RecordHandler) UpdateRecord(c *gin.Context) {
 			c.JSON(http.StatusBadRequest, ErrorResponse{Error: "receiver: " + err.Error()})
 			return
 		}
-		params.ReceiverCustomerID = uuid.NullUUID{UUID: receiverID, Valid: true}
+		params.ReceiverCustomerID = receiverID
 	}
 
 	if _, err := txq.UpdateManifestItem(ctx, params); err != nil {
@@ -1296,8 +1296,8 @@ func (h *RecordHandler) loadRecords(ctx context.Context, claims *auth.Claims, fi
 	query := `
 		SELECT mi.id::text, mi.tracking_number, COALESCE(mi.serial_number, ''), mi.description,
 		       mi.quantity,
-		       sender.full_name, COALESCE(sender.phone, ''),
-		       receiver.full_name, COALESCE(receiver.phone, ''),
+		       COALESCE(sender.full_name, ''), COALESCE(sender.phone, ''),
+		       COALESCE(receiver.full_name, ''), COALESCE(receiver.phone, ''),
 		       mi.origin_branch_id::text, COALESCE(origin.name, ''),
 		       mi.destination_branch_id::text, COALESCE(destination.name, ''),
 		       mi.amount::float8, mi.amount_paid::float8, COALESCE(mi.balance, 0)::float8,
@@ -1310,8 +1310,8 @@ func (h *RecordHandler) loadRecords(ctx context.Context, claims *auth.Claims, fi
 		       COALESCE(mi.delivered_by::text, ''), COALESCE(deliverer.full_name, ''), mi.delivered_at,
 		       mi.created_at, mi.updated_at
 		FROM manifest_items mi
-		JOIN customers sender ON sender.id = mi.sender_customer_id
-		JOIN customers receiver ON receiver.id = mi.receiver_customer_id
+		LEFT JOIN customers sender ON sender.id = mi.sender_customer_id
+		LEFT JOIN customers receiver ON receiver.id = mi.receiver_customer_id
 		LEFT JOIN branches origin ON origin.id = mi.origin_branch_id
 		LEFT JOIN branches destination ON destination.id = mi.destination_branch_id
 		LEFT JOIN staff recorder ON recorder.id = mi.recorded_by
@@ -1424,10 +1424,6 @@ func validateRecordItem(item CreateRecordItem, hasDefaultDestination bool) strin
 		return "description is required"
 	case item.Quantity < 1:
 		return "quantity must be at least 1"
-	case strings.TrimSpace(item.Sender.FullName) == "":
-		return "sender name is required"
-	case strings.TrimSpace(item.Receiver.FullName) == "":
-		return "receiver name is required"
 	case !hasDefaultDestination && strings.TrimSpace(item.DestinationBranchID) == "":
 		return "destination branch is required unless the request has one"
 	case item.Amount < 0:
@@ -1450,11 +1446,13 @@ func validateRecordItem(item CreateRecordItem, hasDefaultDestination bool) strin
 
 // resolveCustomer finds a customer by phone, or creates one. Customers are
 // shared between branches, so a returning sender or receiver keeps its history.
-func resolveCustomer(ctx context.Context, q *sqlc.Queries, p RecordParty) (uuid.UUID, error) {
+// The party is optional: without a name the shipment simply has no customer on
+// that side, and no placeholder row is written.
+func resolveCustomer(ctx context.Context, q *sqlc.Queries, p RecordParty) (uuid.NullUUID, error) {
 	name := strings.TrimSpace(p.FullName)
 	phone := strings.TrimSpace(p.Phone)
 	if name == "" {
-		return uuid.Nil, errors.New("name is required")
+		return uuid.NullUUID{}, nil
 	}
 	if phone == "" {
 		created, err := q.CreateCustomer(ctx, sqlc.CreateCustomerParams{
@@ -1463,9 +1461,9 @@ func resolveCustomer(ctx context.Context, q *sqlc.Queries, p RecordParty) (uuid.
 			CustomerType: sqlc.CustomerTypeIndividual,
 		})
 		if err != nil {
-			return uuid.Nil, err
+			return uuid.NullUUID{}, err
 		}
-		return created.ID, nil
+		return uuid.NullUUID{UUID: created.ID, Valid: true}, nil
 	}
 	upserted, err := q.UpsertCustomerByPhone(ctx, sqlc.UpsertCustomerByPhoneParams{
 		ID:           uuid.New(),
@@ -1474,9 +1472,9 @@ func resolveCustomer(ctx context.Context, q *sqlc.Queries, p RecordParty) (uuid.
 		CustomerType: sqlc.CustomerTypeIndividual,
 	})
 	if err != nil {
-		return uuid.Nil, err
+		return uuid.NullUUID{}, err
 	}
-	return upserted.ID, nil
+	return uuid.NullUUID{UUID: upserted.ID, Valid: true}, nil
 }
 
 // recordWhere builds the WHERE clause for the record listing. Managers and

@@ -4,7 +4,7 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 /*
-  Logitech design system — tokens.
+  Galopin design system — tokens.
   Every colour, radius and shadow in the app resolves to one of these.
   Values come from the style guide (figma images/style-guide).
 */

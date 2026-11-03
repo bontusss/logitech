@@ -8,7 +8,7 @@ const manifestHref = computed(() =>
 )
 
 useHead({
-  titleTemplate: (title) => (title ? `${title} · Logitech` : 'Logitech'),
+  titleTemplate: (title) => (title ? `${title} · Galopin` : 'Galopin'),
   htmlAttrs: {
     class: computed(() => (isDark.value ? 'dark' : '')),
   },

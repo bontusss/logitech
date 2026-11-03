@@ -13,7 +13,7 @@ export default defineNuxtConfig({
   },
   app: {
     head: {
-      title: 'Logitech',
+      title: 'Galopin',
       htmlAttrs: { lang: 'en' },
       // The manifest link is set per theme in app.vue (light and dark
       // manifests carry different launch colours).
@@ -24,7 +24,7 @@ export default defineNuxtConfig({
       meta: [
         { name: 'viewport', content: 'width=device-width, initial-scale=1' },
         { name: 'theme-color', content: '#f5f5f2' },
-        { name: 'apple-mobile-web-app-title', content: 'Logitech' },
+        { name: 'apple-mobile-web-app-title', content: 'Galopin' },
       ],
       // Runs while the page is still parsing, before anything is painted, so a
       // dark device never flashes the light canvas. Mirrors useTheme():
@@ -44,8 +44,8 @@ export default defineNuxtConfig({
     // and app.vue links whichever matches the theme; keep the two in sync.
     manifest: {
       id: '/',
-      name: 'Logitech',
-      short_name: 'Logitech',
+      name: 'Galopin',
+      short_name: 'Galopin',
       description: 'Record waybills, receive parcels and track collections across branches.',
       start_url: '/',
       scope: '/',
