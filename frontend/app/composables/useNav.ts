@@ -6,7 +6,7 @@ export interface NavItem {
 }
 
 export function useNav() {
-  const { canViewReports, canManageStaff, canManageBranches, canManageFleet } = usePermissions()
+  const { canViewReports, canManageStaff, canManageBranches, canManageFleet, canViewActivity } = usePermissions()
 
   const sections = computed<Array<{ title: string; items: NavItem[] }>>(() => {
     const operations: NavItem[] = [
@@ -25,6 +25,7 @@ export function useNav() {
       manage.push({ label: 'Drivers', to: '/drivers', icon: 'user' })
       manage.push({ label: 'Vehicles', to: '/vehicles', icon: 'truck' })
     }
+    if (canViewActivity.value) manage.push({ label: 'Activity', to: '/activity', icon: 'clock' })
 
     return [
       { title: 'Operations', items: operations },
@@ -39,11 +40,11 @@ export function useNav() {
       { label: 'Records', to: '/records', icon: 'package' },
       { label: 'Exceptions', to: '/exceptions', icon: 'alert' },
     ]
-    if (canViewReports.value) {
-      items.push({ label: 'Reports', to: '/reports', icon: 'chart' })
+    // The bottom bar holds five tabs at most, so Reports moves into Settings
+    // (its Manage list) on small screens while Activity gets its own tab.
+    if (canViewActivity.value) {
+      items.push({ label: 'Activity', to: '/activity', icon: 'clock' })
     }
-    // Settings hosts the Manage links (staff, branches, fleet) on small screens,
-    // so owners and managers need it alongside Reports, not instead of it.
     items.push({ label: 'Settings', to: '/settings', icon: 'settings' })
     return items
   })

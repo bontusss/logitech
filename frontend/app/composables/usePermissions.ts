@@ -26,6 +26,8 @@ export function usePermissions() {
   const canManageStaff = computed(() => isOwner.value || isManager.value)
   const canManageBranches = computed(() => isOwner.value || isSystemAdmin.value)
   const canManageFleet = computed(() => isOwner.value || isSystemAdmin.value)
+  /** The audit trail: every branch for the owner and system admin, own branch for a manager. */
+  const canViewActivity = computed(() => isOwner.value || isManager.value || isSystemAdmin.value)
 
   /** Sending is the front-desk job: operations/dispatch staff and managers (owners do not send). */
   const canSend = computed(
@@ -99,6 +101,7 @@ export function usePermissions() {
     canManageStaff,
     canManageBranches,
     canManageFleet,
+    canViewActivity,
     canSend,
     canReceiveGoods,
     canView,

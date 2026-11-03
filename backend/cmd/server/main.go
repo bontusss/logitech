@@ -114,6 +114,7 @@ func main() {
 	recordHandler := handler.NewRecordHandler(cfg, queries, pool)
 	exceptionHandler := handler.NewExceptionHandler(queries, pool)
 	reportHandler := handler.NewReportHandler(queries, pool)
+	activityHandler := handler.NewActivityHandler(pool)
 
 	r := gin.Default()
 	r.Use(cors())
@@ -158,6 +159,10 @@ func main() {
 			protected.GET("/exceptions", exceptionHandler.ListExceptions)
 			protected.GET("/exceptions/:id", exceptionHandler.GetException)
 			protected.POST("/exceptions/:id/updates", exceptionHandler.UpdateException)
+
+			// Activity log: owner and system admin see every branch, a manager
+			// sees only their own branch's staff.
+			protected.GET("/activity", auth.RequireRoles(auth.RoleSystemAdmin, auth.RoleOwner, auth.RoleManager), activityHandler.List)
 
 			// Owner / manager reports
 			protected.GET("/reports/overview", reportHandler.Overview)

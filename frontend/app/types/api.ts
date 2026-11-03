@@ -204,6 +204,20 @@ export interface CreateRecordPayload {
   items: RecordItemPayload[]
 }
 
+/** One audit entry: who acted, on what, and when. */
+export interface ActivityLog {
+  id: string
+  user_id: string
+  user_name: string
+  branch_id?: string
+  branch_name?: string
+  entity_type: string
+  entity_id: string
+  action: string
+  details?: Record<string, unknown>
+  created_at: string
+}
+
 export interface ReportPeriod {
   from: string
   to: string

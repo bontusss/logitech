@@ -13,6 +13,7 @@ const {
   canManageStaff,
   canManageBranches,
   canManageFleet,
+  canViewActivity,
 } = usePermissions()
 const { name: branchName, code: branchCode, load: loadBranches } = useBranches()
 
@@ -52,6 +53,9 @@ const links = computed(() => {
   if (canManageFleet.value) {
     items.push({ to: '/vehicles', label: 'Vehicles', description: 'The fleet that moves parcels.', icon: 'truck' })
     items.push({ to: '/drivers', label: 'Drivers', description: 'Licences and availability.', icon: 'user' })
+  }
+  if (canViewActivity.value) {
+    items.push({ to: '/activity', label: 'Activity', description: 'Who did what, and when.', icon: 'clock' })
   }
   return items
 })
