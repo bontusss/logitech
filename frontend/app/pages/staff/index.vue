@@ -17,6 +17,7 @@ const branchFilter = ref('')
 const statusFilter = ref<'all' | 'active' | 'inactive'>('all')
 
 const canCreateManager = computed(() => isOwner.value || isSystemAdmin.value)
+const canCreateOwner = computed(() => isSystemAdmin.value)
 
 const jobRoles = [
   { value: 'operations', label: 'Operations' },
@@ -26,7 +27,7 @@ const jobRoles = [
 
 // Add dialog
 const addOpen = ref(false)
-const addRole = ref<'staff' | 'manager'>('staff')
+const addRole = ref<'staff' | 'manager' | 'owner'>('staff')
 const addForm = reactive({ fullName: '', phone: '', email: '', branch: '', jobRole: 'operations' })
 const adding = ref(false)
 const addError = ref('')
@@ -93,7 +94,7 @@ async function load() {
   }
 }
 
-function openAdd(role: 'staff' | 'manager') {
+function openAdd(role: 'staff' | 'manager' | 'owner') {
   addRole.value = role
   addError.value = ''
   addForm.fullName = ''
@@ -118,20 +119,23 @@ async function addPerson() {
 
   adding.value = true
   try {
-    const created = await apiRequest<CreateUserResponse>(
-      addRole.value === 'manager' ? '/api/managers' : '/api/staff',
-      {
-        method: 'POST',
-        token: token.value,
-        body: {
-          branch_id: addForm.branch,
-          full_name: addForm.fullName.trim(),
-          phone: addForm.phone.trim() || undefined,
-          email: addForm.email.trim() || undefined,
-          ...(addRole.value === 'staff' ? { job_role: addForm.jobRole } : {}),
-        },
+    const path =
+      addRole.value === 'owner'
+        ? '/api/owners'
+        : addRole.value === 'manager'
+          ? '/api/managers'
+          : '/api/staff'
+    const created = await apiRequest<CreateUserResponse>(path, {
+      method: 'POST',
+      token: token.value,
+      body: {
+        branch_id: addForm.branch,
+        full_name: addForm.fullName.trim(),
+        phone: addForm.phone.trim() || undefined,
+        email: addForm.email.trim() || undefined,
+        ...(addRole.value === 'staff' ? { job_role: addForm.jobRole } : {}),
       },
-    )
+    })
     addOpen.value = false
     otp.value = { name: created.full_name, staffId: created.staff_id, password: created.one_time_password }
     await load()
@@ -277,10 +281,14 @@ onMounted(async () => {
       <div class="min-w-0">
         <h1 class="text-h5 font-medium tracking-tight text-ink">Staff</h1>
         <p class="mt-1 text-label text-ink-64">
-          {{ isOwner ? 'Everyone across every branch.' : `The team at ${branchName(branchId) || 'your branch'}.` }}
+          {{ isOwner || isSystemAdmin ? 'Everyone across every branch.' : `The team at ${branchName(branchId) || 'your branch'}.` }}
         </p>
       </div>
       <div class="flex flex-wrap items-center gap-2">
+        <UiButton v-if="canCreateOwner" variant="tertiary" @click="openAdd('owner')">
+          <UiIcon name="user" :size="17" />
+          Add owner
+        </UiButton>
         <UiButton v-if="canCreateManager" variant="tertiary" @click="openAdd('manager')">
           <UiIcon name="user" :size="17" />
           Add manager
@@ -411,11 +419,15 @@ onMounted(async () => {
     <!-- Add -->
     <UiModal
       :open="addOpen"
-      :title="addRole === 'manager' ? 'Add branch manager' : 'Add staff'"
+      :title="
+        addRole === 'manager' ? 'Add branch manager' : addRole === 'owner' ? 'Add owner' : 'Add staff'
+      "
       :description="
         addRole === 'manager'
           ? 'A manager runs one branch: sending, receiving and its staff.'
-          : 'They will get a staff ID and a one-time password to set their PIN.'
+          : addRole === 'owner'
+            ? 'An owner sees every branch and runs the business. Only the system admin creates owners.'
+            : 'They will get a staff ID and a one-time password to set their PIN.'
       "
       size="md"
       :dismissible="!adding"
@@ -436,7 +448,13 @@ onMounted(async () => {
           label="Branch"
           :options="branchOptions"
           :disabled="!canViewAllBranches"
-          :hint="canViewAllBranches ? undefined : 'Managers create staff in their own branch.'"
+          :hint="
+            !canViewAllBranches
+              ? 'Managers create staff in their own branch.'
+              : addRole === 'owner'
+                ? 'Owners see every branch; this is only where their account is filed.'
+                : undefined
+          "
         />
         <UiSelect
           v-if="addRole === 'staff'"

@@ -23,7 +23,7 @@ export function usePermissions() {
 
   const canViewAllBranches = computed(() => isOwner.value || isSystemAdmin.value)
   const canViewReports = computed(() => isOwner.value || isManager.value)
-  const canManageStaff = computed(() => isOwner.value || isManager.value)
+  const canManageStaff = computed(() => isOwner.value || isManager.value || isSystemAdmin.value)
   const canManageBranches = computed(() => isOwner.value || isSystemAdmin.value)
   const canManageFleet = computed(() => isOwner.value || isSystemAdmin.value)
   /** The audit trail: every branch for the owner and system admin, own branch for a manager. */
