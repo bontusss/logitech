@@ -1,478 +1,479 @@
 <script setup lang="ts">
-import type { BranchReportRow, DailyReportRow, RecordSummary, ReportOverview, Shipment, ShipmentException } from '~/types/api'
-import { ApiError } from '~/utils/api'
+/**
+ * Public landing page for based on logistics (BOL).
+ * No session, no API calls: everything on this page is static marketing copy
+ * plus illustrative demo data in the preview components.
+ */
+definePageMeta({ layout: 'landing' })
 
-useHead({ title: 'Dashboard' })
-definePageMeta({ layout: 'default' })
+// Absolute URL for the share banner: link previews do not resolve relative paths.
+const shareImage = `${useRequestURL().origin}/og-image.png`
 
-const { token, user } = useAuth()
-const { branchId, isOwner, isManager, isStaff, isOperations, isSystemAdmin, canViewReports, canSend, canReceiveGoods } = usePermissions()
-const { name: branchName, load: loadBranches } = useBranches()
-
-const loading = ref(true)
-const error = ref('')
-const overview = ref<ReportOverview | null>(null)
-const daily = ref<DailyReportRow[]>([])
-const branchRows = ref<BranchReportRow[]>([])
-const recent = ref<Shipment[]>([])
-const incoming = ref<Shipment[]>([])
-/** Arrived at this branch and waiting to be handed to the customer. */
-const handovers = ref<Shipment[]>([])
-const summary = ref<RecordSummary | null>(null)
-const balances = ref<Shipment[]>([])
-const exceptions = ref<ShipmentException[]>([])
-
-const branch = computed(() => branchName(branchId.value))
-
-const roleLine = computed(() => {
-  if (isOwner.value) return 'Owner · every branch'
-  if (isManager.value) return branch.value ? `Branch manager · ${branch.value}` : 'Branch manager'
-  if (isStaff.value) {
-    const job = humanise(user.value?.job_role ?? 'staff')
-    return branch.value ? `${job} · ${branch.value}` : job
-  }
-  return 'System admin'
+useHead({
+  title: 'based on logistics (BOL) — the logistics operating system',
+  // app.vue appends "· Galopin"; the landing page owns its own title.
+  titleTemplate: (title) => title ?? '',
+  meta: [
+    {
+      name: 'description',
+      content:
+        'based on logistics (BOL) is the operating system for courier, haulage and consolidation businesses — one record for every waybill, bag, dispatch, hand-over and naira across every branch.',
+    },
+    { property: 'og:type', content: 'website' },
+    { property: 'og:site_name', content: 'based on logistics (BOL)' },
+    { property: 'og:image', content: shareImage },
+    { property: 'og:image:type', content: 'image/png' },
+    { property: 'og:image:width', content: '1200' },
+    { property: 'og:image:height', content: '630' },
+    {
+      property: 'og:image:alt',
+      content:
+        'based on logistics (BOL) — Every parcel. Every movement. Accounted for. The logistics operating system.',
+    },
+    { property: 'og:title', content: 'Every parcel. Every movement. Accounted for.' },
+    {
+      property: 'og:description',
+      content:
+        'Record waybills, dispatch bags and containers, follow custody and reconcile collections across every branch — on one logistics operating system.',
+    },
+    { name: 'twitter:card', content: 'summary_large_image' },
+    { name: 'twitter:image', content: shareImage },
+    { name: 'twitter:title', content: 'Every parcel. Every movement. Accounted for.' },
+    {
+      name: 'twitter:description',
+      content:
+        'The logistics operating system for courier, haulage and consolidation businesses. Record, dispatch, receive, reconcile.',
+    },
+  ],
 })
 
-const periodLabel = computed(() =>
-  overview.value ? `${shortDate(overview.value.period.from)} – ${shortDate(overview.value.period.to)}` : 'Last 30 days',
-)
+const steps = [
+  {
+    n: '01',
+    title: 'Record at the counter',
+    body: 'Staff capture the waybill, sender, receiver and items, take payment or leave a balance, and hand the customer a receipt.',
+  },
+  {
+    n: '02',
+    title: 'Build the bag',
+    body: 'Group everything heading the same way into a bag or container, with a manifest that lists every parcel inside it.',
+  },
+  {
+    n: '03',
+    title: 'Dispatch the movement',
+    body: 'Assign the vehicle and driver. The bag leaves — whole or in part — and every parcel inside inherits the leg.',
+  },
+  {
+    n: '04',
+    title: 'Receive and reconcile',
+    body: 'The receiving branch confirms hand-over. Collections, balances and exceptions roll up into one report.',
+  },
+]
 
-const openExceptions = computed(() =>
-  exceptions.value.filter((item) => item.status === 'open' || item.status === 'investigating'),
-)
+const modules = [
+  {
+    icon: 'package',
+    title: 'Waybills & records',
+    body: 'One record per parcel: sender, receiver, items, declared value and every movement since drop-off.',
+  },
+  {
+    icon: 'truck',
+    title: 'Bags & containers',
+    body: 'Group parcels into manifests that can be sealed, scanned and dispatched as a single unit.',
+  },
+  {
+    icon: 'filter',
+    title: 'Partial dispatch',
+    body: 'Hold back the parcels that are not ready without breaking the manifest or the custody trail.',
+  },
+  {
+    icon: 'building',
+    title: 'Branch network',
+    body: 'Every counter sees what is coming to it, what has arrived and what is waiting for collection.',
+  },
+  {
+    icon: 'check',
+    title: 'Custody & hand-over',
+    body: 'Who held what, at which branch, and when — with the signature captured at collection.',
+  },
+  {
+    icon: 'wallet',
+    title: 'Collections & balances',
+    body: 'Part payments, outstanding balances and receipts that reconcile back to the waybill they came from.',
+  },
+  {
+    icon: 'alert',
+    title: 'Exceptions & follow-up',
+    body: 'Log a missing item, a damaged parcel or a delay, and follow it through to a resolution.',
+  },
+  {
+    icon: 'users',
+    title: 'Fleet, drivers & audit',
+    body: 'Vehicles, drivers and an activity log of every action taken inside the workspace.',
+  },
+]
 
-const attentionCount = computed(() =>
-  overview.value ? overview.value.exceptions.open + overview.value.exceptions.investigating : openExceptions.value.length,
-)
+const audiences = [
+  {
+    title: 'Courier & parcel operators',
+    body: 'Counters that take walk-in parcels and hand them to a rider or a line haul the same day.',
+  },
+  {
+    title: 'Haulage & trucking',
+    body: 'Loads that leave as one vehicle but belong to many customers with different balances.',
+  },
+  {
+    title: 'Consolidators & forwarders',
+    body: 'Bags and containers built over days, dispatched in parts, and reconciled on arrival.',
+  },
+  {
+    title: 'Branch networks & franchises',
+    body: 'Many counters, one standard: the same record, the same receipt, the same report.',
+  },
+]
 
-const receiveLink = computed(() =>
-  branchId.value ? `/records?status=pending,in_transit&destination_branch_id=${branchId.value}` : '/records?status=pending,in_transit',
-)
-
-const handoverLink = computed(() =>
-  branchId.value ? `/records?status=received&destination_branch_id=${branchId.value}` : '/records?status=received',
-)
-
-/** One failing panel must not blank the whole dashboard. */
-async function safe<T>(run: () => Promise<T>, assign: (value: T) => void) {
-  try {
-    assign(await run())
-  } catch {
-    // Panel stays empty; the rest of the dashboard still renders.
-  }
-}
-
-async function load() {
-  if (!token.value || !user.value) return
-  loading.value = true
-  error.value = ''
-
-  const t = token.value
-  const period = lastDays(30)
-  const range = `from=${period.from}&to=${period.to}`
-  const optional: Promise<unknown>[] = []
-
-  try {
-    if (canViewReports.value) {
-      optional.push(
-        safe(
-          () => apiRequest<ReportOverview>(`/api/reports/overview?${range}`, { token: t }),
-          (value) => (overview.value = value),
-        ),
-        safe(
-          () => apiRequest<DailyReportRow[]>(`/api/reports/daily?${range}`, { token: t }),
-          (value) => (daily.value = value),
-        ),
-        safe(
-          () => apiRequest<Shipment[]>('/api/records?outstanding=true&limit=5', { token: t }),
-          (value) => (balances.value = value),
-        ),
-      )
-      if (isOwner.value) {
-        optional.push(
-          safe(
-            () => apiRequest<BranchReportRow[]>(`/api/reports/branches?${range}`, { token: t }),
-            (value) => (branchRows.value = value),
-          ),
-        )
-      }
-    }
-
-    // Operations staff work the drop-off counter: their own sent and
-    // not-yet-dispatched waybills, never the incoming queue.
-    if (isOperations.value) {
-      optional.push(
-        safe(
-          () => apiRequest<RecordSummary>('/api/records/summary', { token: t }),
-          (value) => (summary.value = value),
-        ),
-      )
-    } else if (branchId.value && !isOwner.value) {
-      optional.push(
-        safe(
-          () =>
-            apiRequest<Shipment[]>(
-              `/api/records?destination_branch_id=${branchId.value}&status=pending,in_transit&limit=5`,
-              { token: t },
-            ),
-          (value) => (incoming.value = value),
-        ),
-        // Arrived at this branch: the customer can now collect them.
-        safe(
-          () =>
-            apiRequest<Shipment[]>(
-              `/api/records?destination_branch_id=${branchId.value}&status=received&limit=5`,
-              { token: t },
-            ),
-          (value) => (handovers.value = value),
-        ),
-      )
-    }
-
-    optional.push(
-      safe(
-        () => apiRequest<ShipmentException[]>('/api/exceptions?limit=20', { token: t }),
-        (value) => (exceptions.value = value),
-      ),
-    )
-
-    // The record feed is the one call that has to work: if it fails the
-    // session or the API is down, so is the dashboard.
-    // Operations never see incoming waybills: their feed is the waybills they
-    // created themselves and have not dispatched yet.
-    const feed = isOperations.value
-      ? '/api/records?status=pending&mine=true&limit=6'
-      : '/api/records?limit=6'
-    recent.value = await apiRequest<Shipment[]>(feed, { token: t })
-    await Promise.all(optional)
-  } catch (err) {
-    error.value = err instanceof ApiError ? err.message : 'Could not load the dashboard. Please try again.'
-  } finally {
-    loading.value = false
-  }
-}
-
-onMounted(async () => {
-  await loadBranches()
-  await load()
-})
+const tenants = [
+  { name: 'Swift Line Logistics', initials: 'SL', branches: '6 branches', tone: 'bg-[#2674da]' },
+  { name: 'Kano Express', initials: 'KE', branches: '3 branches', tone: 'bg-[#0f9d8e]' },
+  { name: 'Apapa Cargo Co.', initials: 'AC', branches: '9 branches', tone: 'bg-[#7b5cf0]' },
+]
 </script>
 
 <template>
-  <div class="space-y-5">
-    <header class="flex flex-wrap items-end justify-between gap-3">
-      <div class="min-w-0">
-        <h1 class="text-h5 font-medium tracking-tight text-ink">Dashboard</h1>
-        <p class="mt-1 text-label text-ink-64">{{ roleLine }}</p>
-      </div>
-      <div class="flex flex-wrap items-center gap-2">
-        <UiButton v-if="canReceiveGoods" variant="tertiary" @click="navigateTo(receiveLink)">
-          <UiIcon name="receive" :size="17" />
-          Receive
-        </UiButton>
-        <UiButton v-if="canSend" @click="navigateTo('/records/new')">
-          <UiIcon name="plus" :size="17" />
-          Send parcel
-        </UiButton>
-      </div>
-    </header>
+  <div>
+    <!-- ── Hero ─────────────────────────────────────────────────────────── -->
+    <section id="top" class="relative overflow-hidden">
+      <div
+        class="pointer-events-none absolute inset-x-0 top-0 h-[560px] bg-[radial-gradient(760px_420px_at_50%_-8%,rgba(38,116,218,0.10),transparent_70%)]"
+        aria-hidden="true"
+      />
+      <div
+        class="landing-grid pointer-events-none absolute inset-x-0 top-0 h-[520px] [mask-image:linear-gradient(to_bottom,black,transparent)]"
+        aria-hidden="true"
+      />
 
-    <div v-if="error" class="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-danger/25 bg-danger/5 px-4 py-3">
-      <p class="text-label text-danger">{{ error }}</p>
-      <UiButton variant="tertiary" :loading="loading" @click="load">Try again</UiButton>
-    </div>
-
-    <div v-if="loading" class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4" aria-hidden="true">
-      <div v-for="index in 4" :key="index" class="h-[108px] animate-pulse rounded-lg bg-surface shadow-card" />
-    </div>
-
-    <template v-else>
-      <!-- Metrics for the owner and branch managers -->
-      <section v-if="canViewReports && overview" class="space-y-2">
-        <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <UiStat
-            label="Waybills"
-            :value="String(overview.waybills?.total ?? overview.shipments.total)"
-            :hint="`${overview.waybills?.quantity ?? overview.shipments.quantity} items · ${overview.waybills?.received ?? overview.shipments.received} received`"
-            icon="package"
-            to="/records"
-          />
-          <UiStat
-            label="Collected"
-            :value="money(overview.money.collected)"
-            :hint="`${overview.money.collection_rate.toFixed(1)}% of ${money(overview.money.billed)} billed`"
-            icon="wallet"
-            tone="info"
-            to="/records?payment_status=paid"
-          />
-          <UiStat
-            label="Outstanding"
-            :value="money(overview.money.outstanding)"
-            hint="Unpaid balances on live records"
-            icon="receipt"
-            :tone="overview.money.outstanding > 0 ? 'danger' : 'default'"
-            to="/records?outstanding=true"
-          />
-          <UiStat
-            :label="isOwner ? 'Unresolved problems' : 'Open exceptions'"
-            :value="String(attentionCount)"
-            :hint="`${overview.exceptions.investigating} investigating · ${overview.exceptions.resolved} resolved`"
-            icon="alert"
-            :tone="attentionCount > 0 ? 'danger' : 'default'"
-            to="/records?status=exception"
-          />
-        </div>
-        <p class="text-meta text-ink-40">
-          {{ periodLabel }} · collected today {{ money(overview.money.collected_today) }}
-        </p>
-      </section>
-
-      <!-- Operations staff: what they sent and what is still at the counter -->
-      <section v-if="isOperations" class="grid gap-3 sm:grid-cols-2">
-        <UiStat
-          label="Waybills sent"
-          :value="String(summary?.sent ?? 0)"
-          hint="Recorded by you and dispatched"
-          icon="send"
-        />
-        <UiStat
-          label="Created, not dispatched"
-          :value="String(summary?.pending ?? 0)"
-          hint="Still waiting at your branch"
-          icon="clock"
-          :tone="(summary?.pending ?? 0) > 0 ? 'info' : 'default'"
-        />
-      </section>
-
-      <!-- Receiving staff see their queue first -->
-      <section v-else-if="!canViewReports && !isSystemAdmin" class="grid gap-3 sm:grid-cols-2">
-        <UiStat
-          :label="`Incoming to ${branch || 'your branch'}`"
-          :value="String(incoming.length)"
-          hint="Pending and in transit"
-          icon="receive"
-          :tone="incoming.length > 0 ? 'info' : 'default'"
-        />
-        <UiStat
-          label="Open exceptions"
-          :value="String(openExceptions.length)"
-          hint="At your branch"
-          icon="alert"
-          :tone="openExceptions.length > 0 ? 'danger' : 'default'"
-        />
-      </section>
-
-      <!-- Admin setup shortcuts -->
-      <section v-if="isSystemAdmin" class="rounded-lg bg-surface p-4 shadow-card">
-        <h2 class="text-h5 font-medium text-ink">Set up the business</h2>
-        <p class="mt-0.5 text-label text-ink-64">Branches, accounts and the fleet behind every waybill.</p>
-        <div class="mt-3 grid gap-2 sm:grid-cols-2">
-          <NuxtLink
-            v-for="item in [
-              { to: '/branches', label: 'Branches', icon: 'building' },
-              { to: '/staff', label: 'Staff', icon: 'users' },
-              { to: '/vehicles', label: 'Vehicles', icon: 'truck' },
-              { to: '/drivers', label: 'Drivers', icon: 'user' },
-            ]"
-            :key="item.to"
-            :to="item.to"
-            class="flex items-center gap-2.5 rounded-lg border border-line px-3 py-2.5 text-label font-medium text-ink transition hover:border-blue/40 hover:text-blue"
+      <div class="relative mx-auto max-w-[1200px] px-5 pt-16 pb-10 sm:px-8 sm:pt-24">
+        <div class="landing-reveal mx-auto max-w-3xl text-center">
+          <p
+            class="inline-flex items-center gap-2 rounded-full border border-[#0b1424]/10 bg-white/80 px-3 py-1 text-[11.5px] font-medium tracking-[0.02em] text-[#0b1424]/60 backdrop-blur"
           >
-            <UiIcon :name="item.icon" :size="17" />
-            {{ item.label }}
-          </NuxtLink>
-        </div>
-      </section>
+            <span class="relative flex size-1.5">
+              <span class="absolute inline-flex size-full animate-ping rounded-full bg-[#0f9d8e] opacity-60" />
+              <span class="relative inline-flex size-1.5 rounded-full bg-[#0f9d8e]" />
+            </span>
+            The logistics operating system
+          </p>
 
-      <div class="grid gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
-        <div class="min-w-0 space-y-4">
-          <!-- Hand-over queue: arrived and waiting for the customer -->
-          <section v-if="handovers.length" class="rounded-lg bg-surface p-4 shadow-card">
-            <div class="flex items-center justify-between gap-3">
-              <div>
-                <h2 class="text-h5 font-medium text-ink">Ready for hand-over</h2>
-                <p class="mt-0.5 text-label text-ink-64">
-                  Arrived at {{ branch || 'your branch' }} and waiting for the customer.
-                </p>
-              </div>
-              <NuxtLink :to="handoverLink" class="shrink-0 text-label font-medium text-blue hover:underline">
-                View all
-              </NuxtLink>
-            </div>
-            <ul class="mt-3 divide-y divide-line">
-              <li v-for="record in handovers" :key="record.id">
-                <NuxtLink
-                  :to="`/records/${record.id}`"
-                  class="flex items-center justify-between gap-3 py-2.5 transition hover:text-blue"
-                >
-                  <div class="min-w-0">
-                    <p class="truncate text-p1 font-medium text-ink">
-                      {{ record.receiver.full_name }}
-                    </p>
-                    <p class="truncate text-meta text-ink-40">
-                      {{ record.tracking_number }} · {{ record.description }}
-                      <template v-if="record.received_at"> · arrived {{ shortDate(record.received_at) }}</template>
-                    </p>
-                  </div>
-                  <div class="shrink-0 text-right">
-                    <p class="text-label font-medium" :class="record.balance > 0 ? 'text-danger' : 'text-ink-64'">
-                      {{ money(record.balance, record.currency) }}
-                    </p>
-                    <p class="text-meta text-ink-40">{{ record.balance > 0 ? 'to collect' : 'fully paid' }}</p>
-                  </div>
-                </NuxtLink>
-              </li>
-            </ul>
-          </section>
+          <h1
+            class="mt-6 text-[clamp(2.2rem,5.6vw,4.1rem)] leading-[1.03] font-semibold tracking-[-0.045em] text-[#0b1424] text-balance"
+          >
+            Every parcel. Every movement.
+            <span
+              class="bg-[linear-gradient(100deg,#1b5cab,#2674da_45%,#0f9d8e)] bg-clip-text text-transparent"
+            >
+              Accounted for.
+            </span>
+          </h1>
 
-          <!-- Receiving queue -->
-          <section v-if="incoming.length && !isOperations" class="rounded-lg bg-surface p-4 shadow-card">
-            <div class="flex items-center justify-between gap-3">
-              <div>
-                <h2 class="text-h5 font-medium text-ink">Incoming to {{ branch || 'your branch' }}</h2>
-                <p class="mt-0.5 text-label text-ink-64">Confirm delivery or raise an exception.</p>
-              </div>
-              <NuxtLink :to="receiveLink" class="shrink-0 text-label font-medium text-blue hover:underline">
-                View all
-              </NuxtLink>
-            </div>
-            <ul class="mt-3 divide-y divide-line">
-              <li v-for="record in incoming" :key="record.id">
-                <NuxtLink
-                  :to="`/records/${record.id}`"
-                  class="flex items-center justify-between gap-3 py-2.5 transition hover:text-blue"
-                >
-                  <div class="min-w-0">
-                    <p class="truncate text-p1 font-medium text-ink">{{ record.description }}</p>
-                    <p class="truncate text-meta text-ink-40">
-                      {{ record.tracking_number }} · from {{ record.origin_branch }} · {{ record.receiver.full_name }}
-                    </p>
-                  </div>
-                  <StatusPill :status="record.status" />
-                </NuxtLink>
-              </li>
-            </ul>
-          </section>
+          <p
+            class="mx-auto mt-6 max-w-2xl text-[17px] leading-[1.65] text-[#0b1424]/60 text-pretty sm:text-[18px]"
+          >
+            BOL is the system courier, haulage and consolidation businesses run on: waybills, bags and
+            containers, custody between branches, and the money that comes with all of it — in one record.
+          </p>
 
-          <!-- Money still owed -->
-          <section v-if="canViewReports && balances.length" class="rounded-lg bg-surface p-4 shadow-card">
-            <div class="flex items-center justify-between gap-3">
-              <h2 class="text-h5 font-medium text-ink">Balances to collect</h2>
-              <NuxtLink to="/records?outstanding=true" class="shrink-0 text-label font-medium text-blue hover:underline">
-                View all
-              </NuxtLink>
-            </div>
-            <ul class="mt-3 divide-y divide-line">
-              <li v-for="record in balances" :key="record.id">
-                <NuxtLink
-                  :to="`/records/${record.id}`"
-                  class="flex items-center justify-between gap-3 py-2.5 transition hover:text-blue"
-                >
-                  <div class="min-w-0">
-                    <p class="truncate text-p1 font-medium text-ink">{{ record.description }}</p>
-                    <p class="truncate text-meta text-ink-40">
-                      {{ record.tracking_number }} · {{ record.receiver.full_name }} → {{ record.destination_branch }}
-                    </p>
-                  </div>
-                  <div class="shrink-0 text-right">
-                    <p class="text-label font-medium text-danger">{{ money(record.balance, record.currency) }}</p>
-                    <p class="text-meta text-ink-40">of {{ money(record.amount, record.currency) }}</p>
-                  </div>
-                </NuxtLink>
-              </li>
-            </ul>
-          </section>
+          <div class="mt-8 flex flex-col items-center justify-center gap-2.5 sm:flex-row">
+            <LandingActionLink to="/sign-in" size="lg" class="w-full sm:w-auto">
+              Get started free
+              <UiIcon name="arrowRight" :size="16" />
+            </LandingActionLink>
+            <LandingActionLink to="#how-it-works" variant="secondary" size="lg" class="w-full sm:w-auto">
+              See how it works
+            </LandingActionLink>
+          </div>
 
-          <!-- Latest activity -->
-          <section class="rounded-lg bg-surface p-4 shadow-card">
-            <div class="flex items-center justify-between gap-3">
-              <div>
-                <h2 class="text-h5 font-medium text-ink">
-                  {{ isOperations ? 'Waiting to dispatch' : 'Recent records' }}
-                </h2>
-                <p class="mt-0.5 text-label text-ink-64">
-                  {{ isOperations ? 'Waybills you created that have not been dispatched.' : 'The newest waybills in your view.' }}
-                </p>
-              </div>
-              <NuxtLink to="/records" class="shrink-0 text-label font-medium text-blue hover:underline">
-                All records
-              </NuxtLink>
-            </div>
-            <div v-if="recent.length" class="mt-3 grid gap-3 sm:grid-cols-2">
-              <RecordCard v-for="record in recent" :key="record.id" :record="record" />
-            </div>
-            <div v-else class="mt-3">
-              <UiEmptyState
-                :title="isOperations ? 'Nothing waiting to dispatch' : 'No records yet'"
-                :description="
-                  isOperations
-                    ? 'Waybills you record stay here until they leave your branch.'
-                    : 'Records you create or receive will show up here.'
-                "
-              >
-                <UiButton v-if="canSend" @click="navigateTo('/records/new')">
-                  {{ isOperations ? 'Record a waybill' : 'Send the first parcel' }}
-                </UiButton>
-              </UiEmptyState>
-            </div>
-          </section>
+          <p class="mt-4 text-[12.5px] text-[#0b1424]/40">
+            Free for one branch · No card required · Works on the phones your staff already carry
+          </p>
         </div>
 
-        <div class="min-w-0 space-y-4">
-          <!-- Daily collections -->
-          <section v-if="canViewReports" class="rounded-lg bg-surface p-4 shadow-card">
-            <div class="flex items-start justify-between gap-3">
-              <div>
-                <h2 class="text-h5 font-medium text-ink">Collections</h2>
-                <p class="mt-0.5 text-label text-ink-64">Payments taken, last 14 days.</p>
-              </div>
-              <NuxtLink to="/reports" class="shrink-0 text-label font-medium text-blue hover:underline">Reports</NuxtLink>
-            </div>
-            <div class="mt-3">
-              <DailyBars :rows="daily" metric="collected" :days="14" />
-            </div>
-          </section>
+        <div class="landing-fade mt-12 sm:mt-16" style="animation-delay: 160ms">
+          <LandingHeroPreview />
+        </div>
 
-          <!-- Exceptions -->
-          <section class="rounded-lg bg-surface p-4 shadow-card">
-            <div class="flex items-center justify-between gap-3">
-              <h2 class="text-h5 font-medium text-ink">Needs attention</h2>
-              <NuxtLink to="/exceptions" class="shrink-0 text-label font-medium text-blue hover:underline">
-                All
-              </NuxtLink>
-            </div>
-            <ul v-if="openExceptions.length" class="mt-2 divide-y divide-line">
-              <li v-for="item in openExceptions.slice(0, 5)" :key="item.id">
-                <NuxtLink :to="`/exceptions/${item.id}`" class="block py-2.5 transition hover:text-blue">
-                  <div class="flex items-start justify-between gap-2">
-                    <p class="min-w-0 truncate text-label font-medium text-ink">{{ item.title }}</p>
-                    <StatusPill :status="item.status" kind="exception" />
-                  </div>
-                  <p class="mt-0.5 truncate text-meta text-ink-40">
-                    {{ item.exception_number }} · {{ item.tracking_number }}
-                  </p>
-                </NuxtLink>
-              </li>
-            </ul>
-            <p v-else class="mt-3 text-label text-ink-64">Nothing reported. Every waybill is moving cleanly.</p>
-          </section>
+        <div class="mt-8 flex flex-wrap items-center justify-center gap-x-7 gap-y-3 text-[12.5px] text-[#0b1424]/45">
+          <span v-for="item in ['Drop-off to hand-over', 'Bags & containers', 'Partial dispatch', 'Branch reconciliation']" :key="item" class="inline-flex items-center gap-1.5">
+            <UiIcon name="check" :size="13" class="text-[#2674da]" />
+            {{ item }}
+          </span>
         </div>
       </div>
+    </section>
 
-      <!-- Branch comparison for the owner -->
-      <section v-if="isOwner && branchRows.length" class="rounded-lg bg-surface p-4 shadow-card">
-        <div class="flex items-end justify-between gap-3">
-          <div>
-            <h2 class="text-h5 font-medium text-ink">Branches</h2>
-            <p class="mt-0.5 text-label text-ink-64">Sent, received and collected per branch.</p>
+    <!-- ── The problem ──────────────────────────────────────────────────── -->
+    <section class="border-y border-[#0b1424]/8 bg-[#f7f8fa]">
+      <div class="mx-auto max-w-[1200px] px-5 py-20 sm:px-8 sm:py-24">
+        <div class="grid gap-10 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)] lg:gap-16">
+          <LandingSectionHeading
+            eyebrow="The gap"
+            title="A logistics business is not hard to run. It is hard to keep track of."
+            lede="Waybills in a book. Dispatch updates in a WhatsApp group. Balances in someone's head. The moment a parcel changes hands, the truth splits into three versions — and the end of the month is spent putting them back together."
+          />
+
+          <div class="space-y-3">
+            <div
+              v-for="item in [
+                {
+                  title: 'The counter and the road disagree',
+                  body: 'A parcel is marked “dispatched” at the branch and “not on board” at the truck. Nobody can say which record is real.',
+                },
+                {
+                  title: 'Money hides in the gaps',
+                  body: 'Part payments, balances collected on delivery and receipts that never make it back to the office books.',
+                },
+                {
+                  title: 'Nothing can be proved after the fact',
+                  body: 'When a customer calls about a missing item, the answer depends on who remembers handing it over.',
+                },
+              ]"
+              :key="item.title"
+              class="rounded-xl border border-[#0b1424]/8 bg-white p-5"
+            >
+              <h3 class="text-[15px] font-medium tracking-[-0.01em] text-[#0b1424]">{{ item.title }}</h3>
+              <p class="mt-1.5 text-[13.5px] leading-[1.65] text-[#0b1424]/55">{{ item.body }}</p>
+            </div>
           </div>
-          <NuxtLink to="/reports" class="shrink-0 text-label font-medium text-blue hover:underline">Full report</NuxtLink>
         </div>
-        <div class="mt-3">
-          <BranchTable :rows="branchRows" />
+      </div>
+    </section>
+
+    <!-- ── How it works ─────────────────────────────────────────────────── -->
+    <section id="how-it-works" class="mx-auto max-w-[1200px] px-5 py-20 sm:px-8 sm:py-28">
+      <LandingSectionHeading
+        eyebrow="How it works"
+        title="Four steps, from the counter to the customer."
+        lede="The same record moves with the parcel. Each hand-over adds an event instead of starting a new document."
+      />
+
+      <ol class="mt-12 grid gap-px overflow-hidden rounded-2xl border border-[#0b1424]/10 bg-[#0b1424]/10 sm:grid-cols-2 lg:grid-cols-4">
+        <li v-for="step in steps" :key="step.n" class="bg-white p-6">
+          <span class="text-[11px] font-semibold tracking-[0.14em] text-[#2674da] tabular-nums">{{ step.n }}</span>
+          <h3 class="mt-4 text-[15.5px] font-medium tracking-[-0.01em] text-[#0b1424]">{{ step.title }}</h3>
+          <p class="mt-2 text-[13.5px] leading-[1.65] text-[#0b1424]/55">{{ step.body }}</p>
+        </li>
+      </ol>
+    </section>
+
+    <!-- ── Partial dispatch ─────────────────────────────────────────────── -->
+    <section id="partial-dispatch" class="border-y border-[#0b1424]/8 bg-[#f7f9fc]">
+      <div class="mx-auto max-w-[1200px] px-5 py-20 sm:px-8 sm:py-28">
+        <div class="max-w-[52rem]">
+          <p class="text-[11px] font-semibold tracking-[0.22em] text-[#2674da] uppercase">
+            Where most systems fall apart
+          </p>
+          <h2
+            class="mt-3 text-[clamp(1.7rem,3.6vw,2.75rem)] leading-[1.08] font-semibold tracking-[-0.035em] text-[#0b1424] text-balance"
+          >
+            One bag. Many parcels. One clean dispatch.
+          </h2>
+          <p class="mt-5 max-w-2xl text-[16.5px] leading-[1.65] text-[#0b1424]/60 text-pretty">
+            The truck is loaded, but three parcels are not ready. Most systems force a choice: hold the whole
+            bag, or lose the parcels that stayed behind. BOL dispatches what is on board and keeps every held
+            parcel exactly where it is — with its own status, its own reason and its own place in the record.
+          </p>
         </div>
-      </section>
-    </template>
+
+        <div class="mt-10">
+          <LandingDispatchVisual />
+        </div>
+
+        <div class="mt-8 grid gap-4 sm:grid-cols-3">
+          <div v-for="item in [
+            { k: 'Whole or part', v: 'A bag can leave with 6 of its 8 parcels and stay a bag.' },
+            { k: 'Nothing collapses', v: 'Held parcels keep their status, balance and branch.' },
+            { k: 'Provable later', v: 'The manifest is the record of what actually moved.' },
+          ]" :key="item.k" class="rounded-xl border border-[#0b1424]/8 bg-white p-4">
+            <p class="text-[12.5px] font-semibold text-[#0b1424]">{{ item.k }}</p>
+            <p class="mt-1 text-[12.5px] leading-[1.6] text-[#0b1424]/50">{{ item.v }}</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Modules ──────────────────────────────────────────────────────── -->
+    <section id="platform" class="mx-auto max-w-[1200px] px-5 py-20 sm:px-8 sm:py-28">
+      <LandingSectionHeading
+        eyebrow="The platform"
+        title="One system, every part of the operation."
+        lede="Not a tracker bolted onto a spreadsheet. Each module writes to the same record, so a parcel never has two versions of the truth."
+      />
+
+      <div class="mt-12 grid gap-px overflow-hidden rounded-2xl border border-[#0b1424]/10 bg-[#0b1424]/10 sm:grid-cols-2 lg:grid-cols-4">
+        <div v-for="module in modules" :key="module.title" class="bg-white p-5">
+          <span class="flex size-9 items-center justify-center rounded-lg bg-[#2674da]/[0.08] text-[#2674da]">
+            <UiIcon :name="module.icon" :size="17" />
+          </span>
+          <h3 class="mt-4 text-[14.5px] font-medium tracking-[-0.01em] text-[#0b1424]">{{ module.title }}</h3>
+          <p class="mt-1.5 text-[13px] leading-[1.6] text-[#0b1424]/55">{{ module.body }}</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Audience ─────────────────────────────────────────────────────── -->
+    <section id="solutions" class="border-y border-[#0b1424]/8 bg-[#f7f8fa]">
+      <div class="mx-auto max-w-[1200px] px-5 py-20 sm:px-8 sm:py-24">
+        <LandingSectionHeading
+          eyebrow="Who it is for"
+          title="Built for the people who move things."
+          lede="If a parcel changes hands more than once before it reaches a customer, this is the system for you."
+          align="center"
+        />
+
+        <div class="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div v-for="audience in audiences" :key="audience.title" class="rounded-xl border border-[#0b1424]/8 bg-white p-5">
+            <h3 class="text-[14.5px] font-medium tracking-[-0.01em] text-[#0b1424]">{{ audience.title }}</h3>
+            <p class="mt-2 text-[13px] leading-[1.65] text-[#0b1424]/55">{{ audience.body }}</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Multi-tenant / white-label ───────────────────────────────────── -->
+    <section id="multi-tenant" class="mx-auto max-w-[1200px] px-5 py-20 sm:px-8 sm:py-28">
+      <div class="grid items-center gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,0.95fr)] lg:gap-16">
+        <div>
+          <LandingSectionHeading
+            eyebrow="Multi-tenant by design"
+            title="Your brand on the front. One engine behind it."
+            lede="BOL runs each business as its own workspace. Your logo, your domain, your branches, your staff roles, your price book — isolated from every other tenant, on infrastructure you do not have to maintain."
+          />
+
+          <ul class="mt-8 space-y-3">
+            <li v-for="line in [
+              'Separate workspace, separate data — down to the branch.',
+              'Your logo and domain on the screens your staff and customers see.',
+              'Roles and permissions set per business, not per user.',
+              'Plans and price books configured for how you actually sell.',
+            ]" :key="line" class="flex gap-3">
+              <span class="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-[#2674da]/10 text-[#2674da]">
+                <UiIcon name="check" :size="11" />
+              </span>
+              <span class="text-[14px] leading-[1.6] text-[#0b1424]/65">{{ line }}</span>
+            </li>
+          </ul>
+
+          <div class="mt-8">
+            <LandingActionLink to="#pricing" variant="secondary">
+              See the Business plan
+              <UiIcon name="arrowRight" :size="15" />
+            </LandingActionLink>
+          </div>
+        </div>
+
+        <!-- Workspace switcher mock -->
+        <div class="rounded-2xl border border-[#0b1424]/10 bg-white p-4 shadow-[0_30px_70px_-45px_rgba(11,20,36,0.45)] sm:p-5">
+          <div class="flex items-center justify-between">
+            <p class="text-[11px] font-semibold tracking-[0.12em] text-[#0b1424]/40 uppercase">Your workspaces</p>
+            <span class="rounded-[4px] border border-[#0b1424]/10 px-1.5 py-0.5 text-[9px] font-medium text-[#0b1424]/40">
+              BOL engine
+            </span>
+          </div>
+
+          <ul class="mt-4 space-y-2">
+            <li
+              v-for="(tenant, index) in tenants"
+              :key="tenant.name"
+              class="flex items-center gap-3 rounded-xl border p-3"
+              :class="index === 0 ? 'border-[#0b1424]/15 bg-[#fafbfc]' : 'border-[#0b1424]/8'"
+            >
+              <span
+                class="flex size-8 shrink-0 items-center justify-center rounded-lg text-[11px] font-semibold text-white"
+                :class="tenant.tone"
+              >
+                {{ tenant.initials }}
+              </span>
+              <div class="min-w-0 flex-1">
+                <p class="truncate text-[12.5px] font-medium text-[#0b1424]">{{ tenant.name }}</p>
+                <p class="truncate text-[10.5px] text-[#0b1424]/40">{{ tenant.branches }} · own pricing</p>
+              </div>
+              <UiIcon v-if="index === 0" name="check" :size="14" class="shrink-0 text-[#2674da]" />
+              <UiIcon v-else name="chevronRight" :size="14" class="shrink-0 text-[#0b1424]/25" />
+            </li>
+          </ul>
+
+          <div class="mt-4 rounded-xl bg-[#f7f8fa] p-3">
+            <p class="text-[10.5px] leading-[1.55] text-[#0b1424]/45">
+              Each workspace keeps its own waybills, staff and balances. Switching does not merge a single
+              record.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Pricing ──────────────────────────────────────────────────────── -->
+    <section id="pricing" class="border-y border-[#0b1424]/8 bg-[#f7f8fa]">
+      <div class="mx-auto max-w-[1200px] px-5 py-20 sm:px-8 sm:py-28">
+        <LandingSectionHeading
+          eyebrow="Pricing"
+          title="Priced per workspace, not per parcel."
+          lede="Start on one counter, add branches when they pay for themselves. Every plan includes the full custody trail — the difference is scale, and how much of the network you run."
+          align="center"
+        />
+
+        <div class="mt-12">
+          <LandingPricingCards />
+        </div>
+      </div>
+    </section>
+
+    <!-- ── FAQ ──────────────────────────────────────────────────────────── -->
+    <section id="faq" class="mx-auto max-w-[1200px] px-5 py-20 sm:px-8 sm:py-28">
+      <div class="grid gap-10 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] lg:gap-16">
+        <LandingSectionHeading
+          eyebrow="Questions"
+          title="The things operators ask first."
+          lede="If your question is not here, the fastest answer is usually to put one branch on it and see."
+        />
+
+        <LandingFaqAccordion />
+      </div>
+    </section>
+
+    <!-- ── Final CTA ────────────────────────────────────────────────────── -->
+    <section class="mx-auto max-w-[1200px] px-5 pb-20 sm:px-8 sm:pb-28">
+      <div class="relative overflow-hidden rounded-[20px] bg-[#0b1424] px-6 py-14 text-center sm:px-12 sm:py-20">
+        <div
+          class="pointer-events-none absolute inset-0 bg-[radial-gradient(600px_320px_at_50%_0%,rgba(38,116,218,0.28),transparent_70%)]"
+          aria-hidden="true"
+        />
+        <div
+          class="pointer-events-none absolute inset-0 opacity-[0.14] [background-image:linear-gradient(to_right,rgba(255,255,255,0.35)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.35)_1px,transparent_1px)] [background-size:56px_56px] [mask-image:radial-gradient(500px_300px_at_50%_0%,black,transparent)]"
+          aria-hidden="true"
+        />
+
+        <div class="relative mx-auto max-w-2xl">
+          <h2
+            class="text-[clamp(1.75rem,4vw,2.9rem)] leading-[1.08] font-semibold tracking-[-0.035em] text-white text-balance"
+          >
+            Put every parcel on the record.
+          </h2>
+          <p class="mx-auto mt-4 max-w-xl text-[15.5px] leading-[1.65] text-white/55 text-pretty">
+            Start with one branch and the parcels you already move. Add the rest of the network when you are
+            ready — the record follows automatically.
+          </p>
+          <div class="mt-8 flex flex-col items-center justify-center gap-2.5 sm:flex-row">
+            <LandingActionLink to="/sign-in" variant="light" size="lg" class="w-full sm:w-auto">
+              Get started free
+              <UiIcon name="arrowRight" :size="16" />
+            </LandingActionLink>
+            <LandingActionLink to="#platform" variant="quiet" size="lg" class="w-full text-white/70 hover:text-white sm:w-auto">
+              Explore the platform
+            </LandingActionLink>
+          </div>
+          <p class="mt-5 text-[12px] text-white/35">No card required. Sign in with the details your admin gave you.</p>
+        </div>
+      </div>
+    </section>
   </div>
 </template>

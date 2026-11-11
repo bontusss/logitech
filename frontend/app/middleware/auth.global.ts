@@ -1,7 +1,7 @@
 import { ApiError } from '~/utils/api'
 
-// Reachable without a session.
-const PUBLIC_ROUTES = new Set(['/sign-in', '/sign-in/admin', '/first-sign-in', '/locked'])
+// Reachable without a session. '/' is the public marketing landing page.
+const PUBLIC_ROUTES = new Set(['/', '/sign-in', '/sign-in/admin', '/first-sign-in', '/locked'])
 
 export default defineNuxtRouteMiddleware(async (to) => {
   const { token, user, fetchMe } = useAuth()
@@ -9,9 +9,7 @@ export default defineNuxtRouteMiddleware(async (to) => {
 
   if (!token.value) {
     if (isPublic) return
-    return navigateTo(
-      to.fullPath === '/' ? '/sign-in' : { path: '/sign-in', query: { redirect: to.fullPath } },
-    )
+    return navigateTo({ path: '/sign-in', query: { redirect: to.fullPath } })
   }
 
   // The token lives in a cookie, so the profile is re-fetched after a reload.
@@ -27,9 +25,9 @@ export default defineNuxtRouteMiddleware(async (to) => {
     }
   }
 
-  if (isPublic) return navigateTo('/')
+  if (isPublic) return navigateTo('/dashboard')
 
   // Pages can limit themselves to certain roles (e.g. owner-only management).
   const roles = to.meta.roles
-  if (roles?.length && !roles.includes(user.value?.role ?? '')) return navigateTo('/')
+  if (roles?.length && !roles.includes(user.value?.role ?? '')) return navigateTo('/dashboard')
 })

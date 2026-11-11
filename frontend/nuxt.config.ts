@@ -1,5 +1,10 @@
 import tailwindcss from '@tailwindcss/vite'
 
+// Public origin of the deployed app. Share previews need absolute URLs, and the
+// generated shell is what a crawler reads before any JavaScript runs, so the
+// Open Graph / Twitter tags are declared here rather than only on the page.
+const SITE_URL = process.env.NUXT_PUBLIC_SITE_URL ?? 'https://logitech-v3un.onrender.com'
+
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   ssr: false,
@@ -25,6 +30,33 @@ export default defineNuxtConfig({
         { name: 'viewport', content: 'width=device-width, initial-scale=1' },
         { name: 'theme-color', content: '#f5f5f2' },
         { name: 'apple-mobile-web-app-title', content: 'Galopin' },
+
+        // Link previews (Open Graph + Twitter). The copy matches the landing
+        // hero, because this is what people see when the link is shared.
+        { property: 'og:type', content: 'website' },
+        { property: 'og:site_name', content: 'based on logistics (BOL)' },
+        { property: 'og:url', content: `${SITE_URL}/` },
+        { property: 'og:title', content: 'Every parcel. Every movement. Accounted for.' },
+        {
+          property: 'og:description',
+          content:
+            'The logistics operating system for courier, haulage and consolidation businesses — waybills, bags and containers, custody between branches, and the money that comes with all of it.',
+        },
+        { property: 'og:image', content: `${SITE_URL}/og-image.png` },
+        { property: 'og:image:type', content: 'image/png' },
+        { property: 'og:image:width', content: '1200' },
+        { property: 'og:image:height', content: '630' },
+        {
+          property: 'og:image:alt',
+          content: 'based on logistics (BOL) — every parcel, every movement, accounted for.',
+        },
+        { name: 'twitter:card', content: 'summary_large_image' },
+        { name: 'twitter:title', content: 'Every parcel. Every movement. Accounted for.' },
+        {
+          name: 'twitter:description',
+          content: 'The logistics operating system for courier, haulage and consolidation businesses.',
+        },
+        { name: 'twitter:image', content: `${SITE_URL}/og-image.png` },
       ],
       // Runs while the page is still parsing, before anything is painted, so a
       // dark device never flashes the light canvas. Mirrors useTheme():

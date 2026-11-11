@@ -47,7 +47,7 @@ async function submit() {
 
     token.value = response.token
     user.value = response.user
-    await navigateTo(typeof route.query.redirect === 'string' ? route.query.redirect : '/')
+    await navigateTo(typeof route.query.redirect === 'string' ? route.query.redirect : '/dashboard')
   } catch (err) {
     if (err instanceof ApiError && err.status === 401) {
       fail('Those credentials are wrong.', 'password')

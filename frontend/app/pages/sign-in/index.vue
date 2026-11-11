@@ -61,7 +61,7 @@ async function submit() {
   submitting.value = true
   try {
     await login({ staffId: staffId.value.trim(), pin: secret.value })
-    await navigateTo(typeof route.query.redirect === 'string' ? route.query.redirect : '/')
+    await navigateTo(typeof route.query.redirect === 'string' ? route.query.redirect : '/dashboard')
   } catch (err) {
     if (err instanceof ApiError && err.needsNewPin) {
       pendingFirstLogin.value = {

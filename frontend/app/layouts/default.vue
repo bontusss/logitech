@@ -21,7 +21,6 @@ const roleLabel = computed(() => {
 const branch = computed(() => branchName(user.value?.branch_id ?? ''))
 
 function isActive(to: string): boolean {
-  if (to === '/') return route.path === '/'
   return route.path === to || route.path.startsWith(`${to}/`)
 }
 
@@ -47,7 +46,7 @@ watch(user, (next) => {
   <div class="min-h-dvh bg-canvas">
     <!-- Desktop sidebar -->
     <aside class="fixed inset-y-0 left-0 z-30 hidden w-[248px] flex-col border-r border-line bg-surface px-4 py-5 md:flex">
-      <NuxtLink to="/" class="flex items-center gap-2 px-1 text-h5 font-semibold text-ink">
+      <NuxtLink to="/dashboard" class="flex items-center gap-2 px-1 text-h5 font-semibold text-ink">
         <img src="/logo.svg" alt="" width="32" height="32" class="size-8 shrink-0" />
         Galopin
       </NuxtLink>
@@ -105,7 +104,7 @@ watch(user, (next) => {
 
     <!-- Mobile top bar -->
     <header class="sticky top-0 z-30 flex h-14 items-center justify-between gap-3 border-b border-line bg-surface/95 px-4 backdrop-blur md:hidden">
-      <NuxtLink to="/" class="flex items-center gap-2 text-p1 font-semibold text-ink">
+      <NuxtLink to="/dashboard" class="flex items-center gap-2 text-p1 font-semibold text-ink">
         <img src="/logo.svg" alt="" width="28" height="28" class="size-7 shrink-0" />
         Galopin
       </NuxtLink>

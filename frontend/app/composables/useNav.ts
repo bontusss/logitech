@@ -10,7 +10,7 @@ export function useNav() {
 
   const sections = computed<Array<{ title: string; items: NavItem[] }>>(() => {
     const operations: NavItem[] = [
-      { label: 'Dashboard', to: '/', icon: 'home' },
+      { label: 'Dashboard', to: '/dashboard', icon: 'home' },
       { label: 'Records', to: '/records', icon: 'package' },
       { label: 'Exceptions', to: '/exceptions', icon: 'alert' },
     ]
@@ -36,7 +36,7 @@ export function useNav() {
 
   const mobileItems = computed<NavItem[]>(() => {
     const items: NavItem[] = [
-      { label: 'Home', to: '/', icon: 'home' },
+      { label: 'Home', to: '/dashboard', icon: 'home' },
       { label: 'Records', to: '/records', icon: 'package' },
       { label: 'Exceptions', to: '/exceptions', icon: 'alert' },
     ]

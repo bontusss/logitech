@@ -68,7 +68,7 @@ async function save() {
       newPin: password.value,
     })
     pending.value = null
-    await navigateTo('/')
+    await navigateTo('/dashboard')
   } catch (err) {
     if (err instanceof ApiError && err.isLocked && pending.value) {
       await navigateTo({
