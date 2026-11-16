@@ -1,8 +1,0 @@
--- Demo data used to live in this migration. It now lives in seeds/demo_data.sql
--- and is opt-in, so a restarted or freshly migrated database never re-inserts
--- demo rows after they have been removed:
---
---   psql "$DATABASE_URL" -f seeds/demo_data.sql
---
--- The migration stays in the chain as a no-op so the recorded schema version
--- and the existing down steps keep working on databases that already ran it.

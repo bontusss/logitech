@@ -2,12 +2,10 @@
 .env.*
 !.env.example
 node_modules
-frontend/.output
 frontend/.nuxt
-backend/internal/web/dist/*
-!backend/internal/web/dist/.gitkeep
+frontend/.output
+frontend/dist
 backend/bin
-photos/
-.run/
+backend/.run
 *.log
-docker-compose.override.yml
+.DS_Store
