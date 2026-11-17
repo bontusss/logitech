@@ -89,6 +89,9 @@ clean: ## remove build artifacts and runtime files
 	@rm -rf backend/bin $(RUN_DIR)
 	@rm -rf backend/internal/web/dist && mkdir -p backend/internal/web/dist && touch backend/internal/web/dist/.gitkeep
 
+test: ## run unit tests and integration tests (TEST_DATABASE_URL required for the latter)
+	@cd backend && TEST_DATABASE_URL=$(TEST_DATABASE_URL) go test ./...
+
 wait-health:
 	@echo -n "==> waiting for /health ."
 	@until curl -sf http://localhost:$(BE_PORT)/health >/dev/null 2>&1; do echo -n "."; sleep 1; done
@@ -101,4 +104,4 @@ help:
 
 .DEFAULT_GOAL := help
 
-.PHONY: s_up s_down db_up db_down m_up m_down run-be run-fe build clean help swagger sqlc wait-health
+.PHONY: s_up s_down db_up db_down m_up m_down run-be run-fe build clean help swagger sqlc test wait-health
