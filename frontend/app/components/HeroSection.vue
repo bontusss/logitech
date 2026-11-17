@@ -1,71 +1,47 @@
 <script setup lang="ts">
-import { ArrowRight, MapPin, ShieldCheck, Sparkles, Truck } from 'lucide-vue-next'
+import { ArrowDown, ShieldCheck, Truck } from 'lucide-vue-next'
 </script>
 
 <template>
-  <section id="top" class="relative overflow-hidden">
+  <section id="top" class="relative overflow-hidden bg-[#f3f5ff]">
     <div aria-hidden="true" class="pointer-events-none absolute inset-0">
-      <div
-        class="absolute inset-0 grid-paper [mask-image:linear-gradient(to_bottom,black,transparent_88%)]"
-      />
-      <div
-        class="absolute -top-40 left-1/2 h-[540px] w-[820px] -translate-x-1/2 rounded-full bg-brand-500/10 blur-[120px]"
-      />
+      <div class="absolute inset-0 grid-paper opacity-60 [mask-image:linear-gradient(to_bottom,black,transparent_90%)]" />
+      <div class="absolute -top-56 right-[-8rem] h-[620px] w-[620px] rounded-full bg-brand-500/15 blur-[120px]" />
+      <div class="absolute bottom-[-18rem] left-[-10rem] h-[500px] w-[500px] rounded-full bg-[#ffc76b]/20 blur-[100px]" />
     </div>
 
-    <div class="relative mx-auto max-w-[1200px] px-5 pt-16 pb-16 sm:px-8 sm:pt-24 sm:pb-20">
-      <div class="mx-auto max-w-3xl text-center">
-        <p
-          class="reveal inline-flex items-center gap-2 rounded-full border border-ink-900/10 bg-white px-3 py-1.5 text-[11.5px] font-medium text-ink-900/65"
-        >
-          <Sparkles :size="13" class="text-brand-600" />
-          A marketplace and operations platform for African logistics
+    <div class="relative mx-auto max-w-[1200px] px-5 pt-14 pb-16 sm:px-8 sm:pt-20 lg:pt-24 lg:pb-24">
+      <div class="mx-auto max-w-[780px] text-center">
+        <p class="reveal inline-flex items-center gap-2 rounded-full border border-brand-500/15 bg-white/80 px-3 py-1.5 text-[11px] font-semibold tracking-[0.12em] text-brand-700 uppercase">
+          <span class="size-1.5 rounded-full bg-brand-500" />
+          Nigeria, one delivery at a time
         </p>
 
-        <h1
-          class="reveal reveal-1 mt-6 text-[clamp(2.4rem,6.2vw,4.35rem)] leading-[0.98] font-semibold tracking-[-0.045em] text-balance"
-        >
-          One platform. Every shipment.
-          <span
-            class="block bg-gradient-to-r from-brand-700 via-brand-500 to-[#7088ff] bg-clip-text text-transparent"
-          >
-            More possibilities.
-          </span>
+        <h1 class="reveal reveal-1 mt-6 text-[clamp(2.8rem,6.2vw,5.2rem)] leading-[0.94] font-semibold tracking-[-0.06em] text-balance">
+          Send it right.
+          <span class="block text-brand-600">Know your options.</span>
         </h1>
 
-        <p
-          class="reveal reveal-2 mx-auto mt-6 max-w-2xl text-[16.5px] leading-[1.65] text-pretty text-ink-900/60"
-        >
-          Discover logistics companies, compare shipping rates and move packages across cities.
-          Or grow your logistics business with tools that bring branches, staff, shipments and
-          customers into one place.
+        <p class="reveal reveal-2 mx-auto mt-6 max-w-[620px] text-[16px] leading-[1.7] text-ink-900/65 sm:text-[17px]">
+          Compare intercity delivery options by price and speed, then choose the service that works for you. No more calling around to figure out where to start.
         </p>
 
-        <div class="reveal reveal-3 mt-8 flex flex-col items-center justify-center gap-2.5 sm:flex-row">
-          <AppButton to="#rate-search" size="lg">
-            Compare Shipping Rates
-            <ArrowRight :size="16" />
-          </AppButton>
-          <AppButton to="#business" variant="secondary" size="lg">
-            For Logistics Businesses
-            <ArrowRight :size="16" />
-          </AppButton>
+        <div class="reveal reveal-3 mt-6 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-[12px] font-medium text-ink-900/60">
+          <span class="inline-flex items-center gap-1.5"><ShieldCheck :size="15" class="text-brand-600" /> Compare with clarity</span>
+          <span class="inline-flex items-center gap-1.5"><Truck :size="15" class="text-brand-600" /> Built for intercity shipping</span>
         </div>
 
-        <div
-          class="reveal reveal-3 mt-6 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-[12px] text-ink-900/50"
-        >
-          <span class="inline-flex items-center gap-1.5"><Truck :size="13" /> Marketplace + operations</span>
-          <span class="inline-flex items-center gap-1.5"><ShieldCheck :size="13" /> Verified provider profiles</span>
-          <span class="inline-flex items-center gap-1.5"><MapPin :size="13" /> Built for Nigerian intercity routes</span>
-        </div>
       </div>
 
-      <div
-        class="reveal reveal-2 mx-auto mt-12 grid max-w-[1050px] gap-4 lg:grid-cols-[minmax(0,420px)_minmax(0,1fr)] lg:items-start"
-      >
+      <div class="reveal reveal-2 mx-auto mt-10 grid max-w-[1080px] gap-4 lg:grid-cols-2 lg:items-start">
         <ShippingRateSearch />
-        <RateComparisonPreview />
+        <div>
+          <RateComparisonPreview />
+          <a href="#how-it-works" class="mt-4 inline-flex items-center gap-2 text-[12.5px] font-semibold text-ink-900/55 transition hover:text-brand-700">
+            How shipping with BOL works
+            <ArrowDown :size="14" />
+          </a>
+        </div>
       </div>
     </div>
   </section>

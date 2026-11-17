@@ -2,34 +2,31 @@
 import { ArrowRight, Linkedin, Instagram, Twitter } from 'lucide-vue-next'
 
 const year = new Date().getFullYear()
-const { demoUrl } = useSiteConfig()
+const { demoUrl, whatsappUrl } = useSiteConfig()
 
 const columns = [
   {
-    title: 'Marketplace',
+    title: 'For shippers',
     links: [
-      { label: 'Compare shipping rates', to: '#rate-search' },
-      { label: 'Browse providers', to: '#marketplace' },
-      { label: 'Book a shipment', to: '#rate-search' },
-      { label: 'Track a shipment', to: '#marketplace' },
+      { label: 'Compare delivery options', to: '/#rate-search' },
+      { label: 'How it works', to: '/#how-it-works' },
+      { label: 'Questions & answers', to: '/#faq' },
     ],
   },
   {
-    title: 'Business platform',
+    title: 'For logistics businesses',
     links: [
-      { label: 'Company profile', to: '#business' },
-      { label: 'Branches and staff', to: '#business' },
-      { label: 'Shipments and manifests', to: '#features' },
-      { label: 'Pricing and rates', to: '#business' },
-      { label: 'Analytics', to: '#features' },
+      { label: 'Explore the platform', to: '/for-logistics-businesses' },
+      { label: 'Branches & staff', to: '/for-logistics-businesses#business' },
+      { label: 'Rates & routes', to: '/for-logistics-businesses#features' },
+      { label: 'Book a demo', to: demoUrl.value },
     ],
   },
   {
     title: 'Company',
     links: [
-      { label: 'How it works', to: '#how-it-works' },
-      { label: 'Pricing', to: '#pricing' },
-      { label: 'Book a demo', to: demoUrl },
+      { label: 'Logistics businesses', to: '/for-logistics-businesses' },
+      { label: 'Sign in', to: '/login' },
       { label: 'Contact', to: 'mailto:hello@basedonlogistics.com' },
     ],
   },
@@ -58,8 +55,7 @@ const socials = [
         <div>
           <AppLogo :size="36" tone="light" />
           <p class="mt-5 max-w-[330px] text-[14.5px] leading-[1.65] text-white/45">
-            A logistics marketplace and operations platform for African intercity transport —
-            connecting the businesses that move goods with the customers who need them moved.
+            A clearer way to find intercity delivery options across Nigeria.
           </p>
 
           <div class="mt-6 space-y-1.5 text-[13.5px] text-white/45">
@@ -72,7 +68,11 @@ const socials = [
               </a>
             </p>
             <p>Lagos, Nigeria</p>
-            <p class="text-white/30">WhatsApp contact is being configured.</p>
+            <p v-if="whatsappUrl">
+              <a :href="whatsappUrl" target="_blank" rel="noopener noreferrer" class="transition hover:text-white">
+                Chat with us on WhatsApp
+              </a>
+            </p>
           </div>
 
           <div class="mt-6 flex gap-2">
@@ -95,12 +95,10 @@ const socials = [
             </p>
             <ul class="mt-4 space-y-2.5">
               <li v-for="link in column.links" :key="link.label">
-                <a
-                  :href="link.to"
-                  class="text-[13.5px] text-white/55 transition hover:text-white"
-                >
-                  {{ link.label }}
-                </a>
+                <NuxtLink
+                  :to="link.to"
+                  class="text-[13px] text-white/55 transition hover:text-white"
+                >{{ link.label }}</NuxtLink>
               </li>
             </ul>
           </div>

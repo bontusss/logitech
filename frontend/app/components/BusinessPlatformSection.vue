@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ArrowRight, MessageCircle } from 'lucide-vue-next'
 
-const { demoUrl, whatsappHref } = useSiteConfig()
+const { demoUrl, whatsappHref, whatsappUrl } = useSiteConfig()
 
 const groups = [
   {
@@ -52,7 +52,7 @@ const groups = [
 </script>
 
 <template>
-  <section id="business" class="border-t border-ink-900/10 bg-white">
+  <section id="business" class="overflow-hidden border-t border-ink-900/10 bg-white">
     <div class="mx-auto max-w-[1200px] px-5 py-20 sm:px-8 sm:py-24">
       <div class="grid gap-8 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
         <SectionHeading
@@ -66,7 +66,7 @@ const groups = [
             Book a Demo
             <ArrowRight :size="16" />
           </AppButton>
-          <AppButton :to="whatsappHref" variant="secondary" size="lg">
+          <AppButton v-if="whatsappUrl" :to="whatsappHref" variant="secondary" size="lg">
             <MessageCircle :size="16" />
             Chat on WhatsApp
           </AppButton>

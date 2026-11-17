@@ -1,113 +1,59 @@
 <script setup lang="ts">
-const active = ref<'customers' | 'businesses'>('customers')
+import { ArrowRight, ClipboardList, Search, Truck } from 'lucide-vue-next'
 
-const tabs = [
-  { id: 'customers' as const, label: 'For customers', hint: 'Compare and ship' },
-  { id: 'businesses' as const, label: 'For logistics businesses', hint: 'Run and grow' },
+const steps = [
+  {
+    icon: ClipboardList,
+    title: 'Tell us about your package',
+    body: 'Add your route, package size and weight so providers can return a relevant option.',
+  },
+  {
+    icon: Search,
+    title: 'Compare your options',
+    body: 'Review the price, estimated delivery time and hand-off type side by side.',
+  },
+  {
+    icon: Truck,
+    title: 'Choose how it gets there',
+    body: 'Select a provider and service, confirm the details and keep track of your shipment.',
+  },
 ]
-
-const steps = {
-  customers: [
-    {
-      title: 'Enter shipment details',
-      body: 'Tell us the pickup city, destination, package weight and category.',
-    },
-    {
-      title: 'Compare logistics companies',
-      body: 'Review providers and compare price, delivery time and service coverage.',
-    },
-    {
-      title: 'Select your preferred service',
-      body: 'Choose the option that fits your budget and how quickly it needs to arrive.',
-    },
-    {
-      title: 'Book and track your shipment',
-      body: 'Confirm the booking and follow the shipment from pickup through to delivery.',
-    },
-  ],
-  businesses: [
-    {
-      title: 'Create your company account',
-      body: 'Set up your logistics business on the platform with your own profile and identity.',
-    },
-    {
-      title: 'Set up branches and staff',
-      body: 'Add terminals, assign roles and give your team access to the parts they need.',
-    },
-    {
-      title: 'Publish your shipping rates',
-      body: 'Define routes, service areas, weight-based pricing and delivery timelines.',
-    },
-    {
-      title: 'Receive bookings and manage shipments',
-      body: 'Handle incoming bookings, manifests, transfers and delivery confirmations.',
-    },
-    {
-      title: 'Grow your customer base',
-      body: 'Be discoverable in the marketplace and reach customers beyond your existing network.',
-    },
-  ],
-}
 </script>
 
 <template>
-  <section id="how-it-works" class="border-t border-ink-900/10 bg-canvas">
+  <section id="how-it-works" class="border-t border-ink-900/10 bg-white">
     <div class="mx-auto max-w-[1200px] px-5 py-20 sm:px-8 sm:py-24">
-      <SectionHeading
-        align="center"
-        eyebrow="How it works"
-        title="Two sides of the same network."
-        lede="Whether you are sending a package or running the operation, the process is designed to be straightforward."
-      />
-
-      <div class="mx-auto mt-8 flex max-w-md rounded-xl border border-ink-900/10 bg-white p-1" role="tablist" aria-label="Choose your path">
-        <button
-          v-for="tab in tabs"
-          :id="`tab-${tab.id}`"
-          :key="tab.id"
-          type="button"
-          role="tab"
-          :aria-selected="active === tab.id"
-          :aria-controls="`panel-${tab.id}`"
-          class="flex-1 rounded-lg px-3 py-2.5 text-center transition"
-          :class="active === tab.id ? 'bg-ink-900 text-white shadow-sm' : 'text-ink-900/55 hover:text-ink-900'"
-          @click="active = tab.id"
-        >
-          <span class="block text-[12.5px] font-semibold">{{ tab.label }}</span>
-          <span
-            class="mt-0.5 block text-[10px]"
-            :class="active === tab.id ? 'text-white/50' : 'text-ink-900/35'"
-          >
-            {{ tab.hint }}
-          </span>
-        </button>
+      <div class="mx-auto max-w-[680px] text-center">
+        <p class="text-[10px] font-bold tracking-[0.18em] text-brand-600 uppercase">Simple by design</p>
+        <h2 class="mt-3 text-[clamp(1.8rem,4vw,2.7rem)] leading-[1.05] font-semibold tracking-[-0.045em]">
+          From “how much?” to “on its way.”
+        </h2>
+        <p class="mt-4 text-[14px] leading-[1.7] text-ink-900/55">
+          Everything a shipper needs to make a better-informed delivery choice, in one place.
+        </p>
       </div>
 
-      <div class="mt-10">
-        <ol
-          :id="`panel-${active}`"
-          role="tabpanel"
-          :aria-labelledby="`tab-${active}`"
-          class="grid gap-4 sm:grid-cols-2"
-          :class="active === 'businesses' ? 'lg:grid-cols-5' : 'lg:grid-cols-4'"
+      <ol class="mt-10 grid gap-3 md:grid-cols-3">
+        <li
+          v-for="(step, index) in steps"
+          :key="step.title"
+          class="relative rounded-2xl border border-ink-900/10 bg-canvas p-6 sm:p-7"
         >
-          <li
-            v-for="(step, index) in steps[active]"
-            :key="step.title"
-            class="relative rounded-xl border border-ink-900/10 bg-white p-5"
-          >
-            <span
-              class="flex size-7 items-center justify-center rounded-md border border-brand-100 bg-brand-50 text-[11.5px] font-semibold text-brand-700"
-            >
-              {{ index + 1 }}
-            </span>
-            <h3 class="mt-3.5 text-[13.5px] leading-snug font-semibold tracking-[-0.01em]">
-              {{ step.title }}
-            </h3>
-            <p class="mt-1.5 text-[12.5px] leading-[1.6] text-ink-900/55">{{ step.body }}</p>
-          </li>
-        </ol>
-      </div>
+          <div class="flex items-center justify-between">
+            <div class="flex size-10 items-center justify-center rounded-xl bg-brand-50 text-brand-600">
+              <component :is="step.icon" :size="18" />
+            </div>
+            <span class="text-[11px] font-semibold tracking-[0.12em] text-ink-900/30">0{{ index + 1 }}</span>
+          </div>
+          <h3 class="mt-6 text-[16px] font-semibold tracking-[-0.02em]">{{ step.title }}</h3>
+          <p class="mt-2 text-[13px] leading-[1.7] text-ink-900/55">{{ step.body }}</p>
+          <ArrowRight
+            v-if="index < steps.length - 1"
+            :size="16"
+            class="absolute top-1/2 -right-2.5 z-10 hidden -translate-y-1/2 text-brand-500 md:block"
+          />
+        </li>
+      </ol>
     </div>
   </section>
 </template>

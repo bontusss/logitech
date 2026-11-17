@@ -1,11 +1,11 @@
 <script setup lang="ts">
 useSeoMeta({
-  title: 'One platform. Every shipment. More possibilities.',
+  title: 'Compare intercity shipping options in Nigeria',
   description:
-    'Discover logistics companies, compare shipping rates and book shipments across Nigeria — or run your logistics business on one connected operations platform.',
-  ogTitle: 'One platform. Every shipment. More possibilities.',
+    'Find a better way to send packages across Nigeria. Compare delivery options by price and speed with BOL.',
+  ogTitle: 'Send it right. Know your options.',
   ogDescription:
-    'A logistics marketplace and business management platform for African intercity logistics.',
+    'A simpler way to compare intercity delivery options across Nigeria.',
 })
 </script>
 
@@ -13,11 +13,7 @@ useSeoMeta({
   <div>
     <HeroSection />
     <TrustSection />
-    <MarketplaceSection />
-    <BusinessPlatformSection />
     <HowItWorksSection />
-    <AfricanLogisticsSection />
-    <PricingSection />
     <FAQSection />
     <FinalCTA />
   </div>

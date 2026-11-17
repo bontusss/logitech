@@ -1,138 +1,166 @@
 <script setup lang="ts">
-import { ArrowLeftRight, ChevronDown, Info, MapPin, Search } from 'lucide-vue-next'
+import { ArrowLeftRight, ArrowRight, MapPin, PackageCheck, Search } from 'lucide-vue-next'
 
 const cities = ['Aba', 'Abuja', 'Enugu', 'Lagos', 'Onitsha', 'Port Harcourt', 'Umuahia']
-const categories = ['Documents', 'Parcels', 'Electronics', 'Furniture', 'Bulk cargo']
+const categories = ['Document', 'Parcel', 'Electronics', 'Fragile goods', 'Bulk cargo']
+const dimensions = [
+  { key: 'length', label: 'Length' },
+  { key: 'width', label: 'Width' },
+  { key: 'height', label: 'Height' },
+] as const
 
 const form = reactive({
-  pickup: 'Aba',
+  origin: 'Aba',
   destination: 'Lagos',
-  weight: 5,
-  category: 'Parcels',
+  weight: 2,
+  length: 20,
+  width: 15,
+  height: 10,
+  category: 'Parcel',
 })
 
-const submitted = ref(false)
+const searched = ref(false)
 
 const fieldClass =
-  'w-full appearance-none rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm font-medium text-ink-900 transition hover:border-slate-400 focus:border-brand-500'
-const labelClass =
-  'mb-1.5 flex items-center gap-1.5 text-[10.5px] font-semibold tracking-[0.12em] text-ink-900/50 uppercase'
+  'w-full rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-[13px] font-medium text-ink-900 transition placeholder:text-ink-900/35 hover:border-slate-300 focus:border-brand-500'
+const labelClass = 'mb-1.5 block text-[11px] font-semibold text-ink-900/55'
 
 function swapCities() {
-  const pickup = form.pickup
-  form.pickup = form.destination
-  form.destination = pickup
+  const origin = form.origin
+  form.origin = form.destination
+  form.destination = origin
 }
 
 function submitSearch() {
-  submitted.value = true
+  searched.value = true
 }
 </script>
 
 <template>
   <div
     id="rate-search"
-    class="rounded-2xl border border-ink-900/10 bg-white p-5 shadow-[0_24px_60px_-40px_rgba(10,18,32,0.45)] sm:p-6"
+    class="w-full max-w-[540px] rounded-[1.4rem] border border-white/80 bg-white p-5 shadow-[0_35px_90px_-45px_rgba(27,40,90,0.42)] sm:p-7"
   >
-    <div class="flex items-start justify-between gap-3">
+    <div class="flex items-start justify-between gap-4">
       <div>
-        <h2 class="text-[15px] font-semibold tracking-[-0.01em]">Compare shipping rates</h2>
-        <p class="mt-1 text-[12.5px] text-ink-900/50">Intercity routes across Nigeria</p>
+        <p class="text-[10px] font-bold tracking-[0.18em] text-brand-600 uppercase">Start here</p>
+        <h2 class="mt-1.5 text-[19px] font-semibold tracking-[-0.03em]">Where are you sending?</h2>
+        <p class="mt-1 text-[12.5px] text-ink-900/50">Enter your shipment to check delivery options.</p>
       </div>
-      <span
-        class="rounded-md border border-brand-200 bg-brand-50 px-2 py-1 text-[10px] font-semibold tracking-[0.12em] text-brand-700 uppercase"
-      >
-        Preview
-      </span>
+      <div class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-600">
+        <PackageCheck :size="19" />
+      </div>
     </div>
 
-    <form class="mt-5 space-y-4" @submit.prevent="submitSearch">
-      <div class="grid gap-2 sm:grid-cols-[1fr_auto_1fr] sm:items-end">
-        <label class="block">
-          <span :class="labelClass"><MapPin :size="12" /> Pickup city</span>
-          <div class="relative">
-            <select v-model="form.pickup" :class="fieldClass">
-              <option v-for="city in cities" :key="city" :value="city">{{ city }}</option>
-            </select>
-            <ChevronDown
-              :size="15"
-              class="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-ink-900/40"
-            />
-          </div>
+    <form class="mt-5 space-y-3.5" @submit.prevent="submitSearch">
+      <div class="grid grid-cols-[1fr_auto_1fr] items-end gap-2">
+        <label class="min-w-0">
+          <span :class="labelClass">Sending from</span>
+          <input
+            v-model="form.origin"
+            :class="fieldClass"
+            list="bol-cities"
+            name="origin"
+            autocomplete="address-level2"
+            placeholder="Pickup city"
+            required
+          />
         </label>
-
         <button
           type="button"
-          class="mx-auto flex size-9 items-center justify-center rounded-lg border border-slate-200 text-ink-900/50 transition hover:border-slate-300 hover:text-ink-900"
-          aria-label="Swap pickup and destination cities"
+          class="mb-1 flex size-9 shrink-0 items-center justify-center rounded-xl border border-slate-200 text-ink-900/50 transition hover:border-brand-200 hover:text-brand-600"
+          aria-label="Swap origin and destination"
           @click="swapCities"
         >
           <ArrowLeftRight :size="15" />
         </button>
-
-        <label class="block">
-          <span :class="labelClass"><MapPin :size="12" /> Destination</span>
-          <div class="relative">
-            <select v-model="form.destination" :class="fieldClass">
-              <option v-for="city in cities" :key="city" :value="city">{{ city }}</option>
-            </select>
-            <ChevronDown
-              :size="15"
-              class="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-ink-900/40"
-            />
-          </div>
+        <label class="min-w-0">
+          <span :class="labelClass">Sending to</span>
+          <input
+            v-model="form.destination"
+            :class="fieldClass"
+            list="bol-cities"
+            name="destination"
+            autocomplete="address-level2"
+            placeholder="Destination city"
+            required
+          />
         </label>
+        <datalist id="bol-cities">
+          <option v-for="city in cities" :key="city" :value="city" />
+        </datalist>
       </div>
 
       <div class="grid grid-cols-2 gap-3">
-        <label class="block">
-          <span :class="labelClass">Weight (kg)</span>
-          <input
-            v-model.number="form.weight"
-            type="number"
-            min="0.5"
-            step="0.5"
-            inputmode="decimal"
-            class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm font-medium text-ink-900 transition hover:border-slate-400 focus:border-brand-500"
-          />
-        </label>
-        <label class="block">
-          <span :class="labelClass">Category</span>
-          <div class="relative">
-            <select v-model="form.category" :class="fieldClass">
-              <option v-for="category in categories" :key="category" :value="category">
-                {{ category }}
-              </option>
-            </select>
-            <ChevronDown
-              :size="15"
-              class="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-ink-900/40"
+        <label>
+          <span :class="labelClass">Package weight</span>
+          <span class="relative block">
+            <input
+              v-model.number="form.weight"
+              :class="fieldClass"
+              type="number"
+              name="weight"
+              min="0.1"
+              max="1000"
+              step="0.1"
+              inputmode="decimal"
+              required
             />
-          </div>
+            <span class="pointer-events-none absolute top-1/2 right-3.5 -translate-y-1/2 text-[11px] text-ink-900/40">kg</span>
+          </span>
+        </label>
+        <label>
+          <span :class="labelClass">Package type</span>
+          <select v-model="form.category" :class="fieldClass" name="category">
+            <option v-for="category in categories" :key="category" :value="category">{{ category }}</option>
+          </select>
         </label>
       </div>
 
+      <details class="group">
+        <summary class="cursor-pointer list-none text-[11.5px] font-semibold text-ink-900/55 marker:hidden [&::-webkit-details-marker]:hidden">
+          Add package dimensions <span class="font-normal text-ink-900/35">(optional)</span>
+        </summary>
+        <div class="mt-3 grid grid-cols-3 gap-2">
+          <label v-for="dimension in dimensions" :key="dimension.key">
+            <span :class="labelClass">{{ dimension.label }} (cm)</span>
+            <input
+              v-model.number="form[dimension.key]"
+              :class="fieldClass"
+              type="number"
+              min="1"
+              step="1"
+              :name="dimension.key"
+            />
+          </label>
+        </div>
+      </details>
+
       <button
         type="submit"
-        class="flex w-full items-center justify-center gap-2 rounded-lg bg-brand-500 px-4 py-3 text-sm font-semibold text-white shadow-[0_10px_28px_-14px_rgba(43,75,255,0.85)] transition hover:bg-brand-600"
+        class="flex w-full items-center justify-center gap-2 rounded-xl bg-brand-500 px-4 py-3.5 text-[14px] font-semibold text-white shadow-[0_14px_28px_-16px_rgba(43,75,255,0.9)] transition hover:bg-brand-600"
       >
         <Search :size="16" />
-        Compare Rates
+        Compare delivery options
+        <ArrowRight :size="15" class="ml-auto" />
       </button>
     </form>
 
-    <p class="mt-3 flex items-start gap-1.5 text-[11.5px] leading-relaxed text-ink-900/45">
-      <Info :size="13" class="mt-0.5 shrink-0" />
-      Illustrative UI with sample routes. Live provider rates will arrive with the marketplace API.
+    <p class="mt-3 text-center text-[10.5px] leading-relaxed text-ink-900/40">
+      No commitment. Review providers and service options before you choose.
     </p>
 
     <div
-      v-if="submitted"
+      v-if="searched"
       role="status"
-      class="mt-3 rounded-lg border border-brand-200 bg-brand-50 px-3 py-2.5 text-[12px] leading-relaxed text-brand-700"
+      aria-live="polite"
+      class="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3.5 text-[12px] leading-relaxed text-amber-900"
     >
-      This is a UI preview and does not request live quotes yet. Once the marketplace API is
-      connected, matching providers for {{ form.pickup }} → {{ form.destination }} will appear here.
+      <p class="font-semibold">{{ form.origin }} → {{ form.destination }} is ready to search.</p>
+      <p class="mt-1 text-amber-900/75">
+        Live provider rates and booking are not connected yet. We won't show you made-up prices.
+        The comparison below is an example of how options will appear.
+      </p>
     </div>
   </div>
 </template>

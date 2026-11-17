@@ -8,9 +8,7 @@ export function useSiteConfig() {
   const demoUrl = computed(() => (config.public.demoUrl as string) || '/book-demo')
   const whatsappUrl = computed(() => (config.public.whatsappUrl as string) || '')
 
-  // Until a verified number is configured, the secondary CTA routes to the
-  // contact block instead of inventing a phone number.
-  const whatsappHref = computed(() => whatsappUrl.value || '#contact')
+  const whatsappHref = computed(() => whatsappUrl.value)
 
   return { demoUrl, whatsappUrl, whatsappHref }
 }

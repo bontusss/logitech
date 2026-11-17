@@ -17,19 +17,22 @@ export default defineNuxtConfig({
       meta: [
         { name: 'viewport', content: 'width=device-width, initial-scale=1' },
         { name: 'theme-color', content: '#fbfbf9' },
+        { name: 'mobile-web-app-capable', content: 'yes' },
+        { name: 'apple-mobile-web-app-capable', content: 'yes' },
+        { name: 'apple-mobile-web-app-status-bar-style', content: 'black-translucent' },
+        { name: 'apple-mobile-web-app-title', content: 'BOL' },
         {
           name: 'description',
           content:
-            'Discover logistics companies, compare shipping rates and book shipments across Nigeria — or run your logistics business on one connected operations platform.',
+            'Find a better way to send packages across Nigeria. Compare intercity delivery options by price and speed with BOL.',
         },
         { property: 'og:type', content: 'website' },
         { property: 'og:site_name', content: 'based on logistics (BOL)' },
         { property: 'og:url', content: `${SITE_URL}/` },
-        { property: 'og:title', content: 'One platform. Every shipment. More possibilities.' },
+        { property: 'og:title', content: 'Send it right. Know your options.' },
         {
           property: 'og:description',
-          content:
-            'A logistics marketplace and business management platform for African intercity logistics.',
+          content: 'A simpler way to compare intercity delivery options across Nigeria.',
         },
         { name: 'twitter:card', content: 'summary_large_image' },
       ],
@@ -47,6 +50,13 @@ export default defineNuxtConfig({
       demoUrl: process.env.NUXT_PUBLIC_DEMO_URL ?? '/book-demo',
       // Full click-to-chat URL (https://wa.me/<number>) once a number is confirmed.
       whatsappUrl: process.env.NUXT_PUBLIC_WHATSAPP_URL ?? '',
+      // Gin API base. Use /api/v1 when the app and API share an origin.
+      apiBase: process.env.NUXT_PUBLIC_API_BASE ?? 'http://localhost:8080/api/v1',
+      // Base domain used to resolve company branding from the left-most host label.
+      appDomain: process.env.NUXT_PUBLIC_APP_DOMAIN ?? 'localhost',
     },
+  },
+  routeRules: {
+    '/sign-in': { redirect: '/login' },
   },
 })
