@@ -11,7 +11,8 @@ CREATE TABLE countries (
   status      text NOT NULL DEFAULT 'active'
               CHECK (status IN ('active', 'retired')),
   created_at  timestamptz NOT NULL DEFAULT now(),
-  updated_at  timestamptz NOT NULL DEFAULT now()
+  updated_at  timestamptz NOT NULL DEFAULT now(),
+  deleted_at  timestamptz
 );
 
 CREATE UNIQUE INDEX countries_code_active_unique ON countries (code) WHERE deleted_at IS NULL;
@@ -27,7 +28,8 @@ CREATE TABLE states (
   status      text NOT NULL DEFAULT 'active'
               CHECK (status IN ('active', 'retired')),
   created_at  timestamptz NOT NULL DEFAULT now(),
-  updated_at  timestamptz NOT NULL DEFAULT now()
+  updated_at  timestamptz NOT NULL DEFAULT now(),
+  deleted_at  timestamptz
 );
 
 CREATE UNIQUE INDEX states_code_country_unique ON states (code, country_id) WHERE deleted_at IS NULL;
@@ -41,7 +43,8 @@ CREATE TABLE cities (
   country_id  uuid NOT NULL REFERENCES countries (id) ON DELETE CASCADE,
   status      text NOT NULL DEFAULT 'active',
   created_at  timestamptz NOT NULL DEFAULT now(),
-  updated_at  timestamptz NOT NULL DEFAULT now()
+  updated_at  timestamptz NOT NULL DEFAULT now(),
+  deleted_at  timestamptz
 );
 
 CREATE UNIQUE INDEX cities_name_state_unique ON cities (name, state_id) WHERE deleted_at IS NULL;
@@ -55,7 +58,8 @@ CREATE TABLE areas (
   city_id     uuid REFERENCES cities (id) ON DELETE SET NULL,
   status      text NOT NULL DEFAULT 'active',
   created_at  timestamptz NOT NULL DEFAULT now(),
-  updated_at  timestamptz NOT NULL DEFAULT now()
+  updated_at  timestamptz NOT NULL DEFAULT now(),
+  deleted_at  timestamptz
 );
 
 CREATE UNIQUE INDEX areas_name_city_unique ON areas (name, city_id) WHERE deleted_at IS NULL;
@@ -65,12 +69,13 @@ CREATE INDEX idx_areas_city ON areas (city_id);
 CREATE TABLE terminals (
   id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   name        text NOT NULL,
-  code        citex NOT NULL,
+  code        citext NOT NULL,
   city_id     uuid REFERENCES cities (id) ON DELETE SET NULL,
   address     text,
   status      text NOT NULL DEFAULT 'active',
   created_at  timestamptz NOT NULL DEFAULT now(),
-  updated_at  timestamptz NOT NULL DEFAULT now()
+  updated_at  timestamptz NOT NULL DEFAULT now(),
+  deleted_at  timestamptz
 );
 
 CREATE UNIQUE INDEX terminals_code_unique ON terminals (code) WHERE deleted_at IS NULL;
@@ -118,7 +123,8 @@ CREATE TABLE shipping_services (
                       CHECK (status IN ('active', 'inactive')),
   is_default          boolean NOT NULL DEFAULT false,
   created_at          timestamptz NOT NULL DEFAULT now(),
-  updated_at          timestamptz NOT NULL DEFAULT now()
+  updated_at          timestamptz NOT NULL DEFAULT now(),
+  deleted_at          timestamptz
 );
 
 CREATE UNIQUE INDEX shipping_services_code_company_unique ON shipping_services (service_code, company_id);
@@ -142,6 +148,7 @@ CREATE TABLE company_routes (
                       CHECK (status IN ('active', 'inactive')),
   created_at          timestamptz NOT NULL DEFAULT now(),
   updated_at          timestamptz NOT NULL DEFAULT now(),
+  deleted_at          timestamptz,
   UNIQUE (company_id, origin_location_type, origin_location_id, destination_location_type, destination_location_id)
 );
 
@@ -167,7 +174,8 @@ CREATE TABLE rate_cards (
   effective_end       timestamptz,
   published_at        timestamptz,
   created_at          timestamptz NOT NULL DEFAULT now(),
-  updated_at          timestamptz NOT NULL DEFAULT now()
+  updated_at          timestamptz NOT NULL DEFAULT now(),
+  deleted_at          timestamptz
 );
 
 CREATE INDEX idx_rate_cards_company ON rate_cards (company_id);
@@ -188,7 +196,9 @@ CREATE TABLE rate_card_versions (
   effective_from      timestamptz NOT NULL DEFAULT now(),
   effective_until     timestamptz,
   created_at          timestamptz NOT NULL DEFAULT now(),
-  created_by          uuid REFERENCES users (id)
+  created_by          uuid REFERENCES users (id),
+  updated_at          timestamptz NOT NULL DEFAULT now(),
+  deleted_at          timestamptz
 );
 
 CREATE UNIQUE INDEX rate_card_versions_unique_version ON rate_card_versions (rate_card_id, version);
@@ -211,7 +221,7 @@ CREATE TABLE pricing_rules (
   fixed_amount        numeric(12,2),
 
   -- Weight-based pricing
-  weight_tier_id      uuid REFERENCES pricing_tiers (id),
+  weight_tier_id      uuid,
 
   -- Per-kg pricing
   per_kg_base_charge  numeric(12,2) NOT NULL DEFAULT 0,
@@ -223,7 +233,7 @@ CREATE TABLE pricing_rules (
   volumetric_divisor  numeric(10,2) NOT NULL DEFAULT 5000,
 
   -- Category pricing
-  category_id         uuid REFERENCES package_categories (id),
+  category_id         uuid,
 
   -- Universal settings for the rule
   applicable_routes   jsonb NOT NULL DEFAULT '[]'::jsonb, -- array of route condition objects
@@ -232,7 +242,8 @@ CREATE TABLE pricing_rules (
   effective_from      timestamptz NOT NULL DEFAULT now(),
   effective_until     timestamptz,
   is_active           boolean NOT NULL DEFAULT true,
-  created_at          timestamptz NOT NULL DEFAULT now()
+  created_at          timestamptz NOT NULL DEFAULT now(),
+  deleted_at          timestamptz
 );
 
 CREATE INDEX idx_pricing_rules_version ON pricing_rules (rate_card_version_id);
@@ -252,6 +263,7 @@ CREATE TABLE pricing_tiers (
   name                text NOT NULL,
   description         text,
   created_at          timestamptz NOT NULL DEFAULT now(),
+  deleted_at          timestamptz,
   UNIQUE (rate_card_version_id, min_weight_kg, max_weight_kg)
 );
 
@@ -268,12 +280,19 @@ CREATE TABLE package_categories (
   sort_order  integer NOT NULL DEFAULT 0,
   is_default  boolean NOT NULL DEFAULT false,
   created_at  timestamptz NOT NULL DEFAULT now(),
-  updated_at  timestamptz NOT NULL DEFAULT now()
+  updated_at  timestamptz NOT NULL DEFAULT now(),
+  deleted_at  timestamptz
 );
 
 CREATE UNIQUE INDEX package_categories_name_unique ON package_categories (name) WHERE deleted_at IS NULL;
 
 -- Actually let me fix this - should be package_categories not packages
+
+ALTER TABLE pricing_rules
+  ADD CONSTRAINT pricing_rules_weight_tier_id_fkey
+  FOREIGN KEY (weight_tier_id) REFERENCES pricing_tiers (id),
+  ADD CONSTRAINT pricing_rules_category_id_fkey
+  FOREIGN KEY (category_id) REFERENCES package_categories (id);
 
 -- ---------------------------------------------------------------------------
 -- Additional Charges
@@ -293,7 +312,8 @@ CREATE TABLE additional_charges (
   applies_to_categories jsonb NOT NULL DEFAULT '[]'::jsonb,
   is_included_in_price boolean NOT NULL DEFAULT false, -- whether included in displayed base price
   created_at          timestamptz NOT NULL DEFAULT now(),
-  updated_at          timestamptz NOT NULL DEFAULT now()
+  updated_at          timestamptz NOT NULL DEFAULT now(),
+  deleted_at          timestamptz
 );
 
 CREATE INDEX idx_additional_charges_version ON additional_charges (rate_card_version_id);
@@ -305,7 +325,7 @@ CREATE INDEX idx_additional_charges_company ON additional_charges (company_id);
 
 CREATE TABLE quote_charges (
   id                  uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  shipping_quote_id   uuid NOT NULL REFERENCES shipping_quotes (id) ON DELETE CASCADE,
+  shipping_quote_id   uuid NOT NULL,
   charge_id           uuid REFERENCES additional_charges (id) ON DELETE SET NULL,
   name                text NOT NULL,
   charge_type         text NOT NULL CHECK (charge_type IN ('fixed', 'percentage')),
@@ -357,6 +377,10 @@ CREATE INDEX idx_shipping_quotes_reference ON shipping_quotes (quote_reference);
 CREATE INDEX idx_shipping_quotes_status ON shipping_quotes (status);
 CREATE INDEX idx_shipping_quotes_expires ON shipping_quotes (expires_at);
 CREATE INDEX idx_shipping_quotes_service ON shipping_quotes (selected_service_id);
+
+ALTER TABLE quote_charges
+  ADD CONSTRAINT quote_charges_shipping_quote_id_fkey
+  FOREIGN KEY (shipping_quote_id) REFERENCES shipping_quotes (id) ON DELETE CASCADE;
 
 -- ---------------------------------------------------------------------------
 -- Rate Card Publishing History
@@ -413,7 +437,6 @@ INSERT INTO states (name, code, country_id, status) VALUES ('Oyo', 'OY', (SELECT
 INSERT INTO states (name, code, country_id, status) VALUES ('Rivers', 'RI', (SELECT id FROM countries WHERE code = 'NG'), 'active');
 INSERT INTO states (name, code, country_id, status) VALUES ('Kaduna', 'KD', (SELECT id FROM countries WHERE code = 'NG'), 'active');
 INSERT INTO states (name, code, country_id, status) VALUES ('Anambra', 'AN', (SELECT id FROM countries WHERE code = 'NG'), 'active');
-INSERT INTO states (name, code, country_id, status) VALUES ('Kano', 'KN', (SELECT id FROM countries WHERE code = 'NG'), 'active');
 INSERT INTO states (name, code, country_id, status) VALUES ('Delta', 'DT', (SELECT id FROM countries WHERE code = 'NG'), 'active');
 INSERT INTO states (name, code, country_id, status) VALUES ('Ondo', 'ON', (SELECT id FROM countries WHERE code = 'NG'), 'active');
 
