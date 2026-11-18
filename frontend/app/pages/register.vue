@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ArrowRight, Building2, ShoppingBag } from 'lucide-vue-next'
+import { isValidNigerianPhone } from '~/utils/nigeria'
 
 definePageMeta({ layout: 'auth' })
 useSeoMeta({
@@ -38,6 +39,10 @@ const businessTypes = [
 
 async function submitCustomer() {
   error.value = ''
+  if (customer.phone && !isValidNigerianPhone(customer.phone)) {
+    error.value = 'Enter a valid Nigerian phone number.'
+    return
+  }
   pending.value = true
   try {
     await registerCustomer({ ...customer })
@@ -51,6 +56,10 @@ async function submitCustomer() {
 
 async function submitCompany() {
   error.value = ''
+  if (!isValidNigerianPhone(company.phone)) {
+    error.value = 'Enter a valid Nigerian phone number.'
+    return
+  }
   pending.value = true
   try {
     await registerCompany({ ...company })
@@ -81,7 +90,7 @@ const labelClass = 'mb-1.5 block text-[11px] font-medium text-ink-900/55'
       <button
         type="button"
         class="flex items-center justify-center gap-2 rounded-lg px-3 py-2.5 text-[12px] font-semibold transition"
-        :class="mode === 'customer' ? 'bg-ink-900 text-white' : 'text-ink-900/55 hover:text-ink-900'"
+        :class="mode === 'customer' ? 'bg-brand-500 text-white' : 'text-ink-900/55 hover:text-ink-900'"
         @click="mode = 'customer'"
       >
         <ShoppingBag :size="14" />
@@ -90,7 +99,7 @@ const labelClass = 'mb-1.5 block text-[11px] font-medium text-ink-900/55'
       <button
         type="button"
         class="flex items-center justify-center gap-2 rounded-lg px-3 py-2.5 text-[12px] font-semibold transition"
-        :class="mode === 'company' ? 'bg-ink-900 text-white' : 'text-ink-900/55 hover:text-ink-900'"
+        :class="mode === 'company' ? 'bg-brand-500 text-white' : 'text-ink-900/55 hover:text-ink-900'"
         @click="mode = 'company'"
       >
         <Building2 :size="14" />
@@ -114,7 +123,7 @@ const labelClass = 'mb-1.5 block text-[11px] font-medium text-ink-900/55'
         </label>
         <label class="block">
           <span :class="labelClass">Phone (optional)</span>
-          <input v-model="customer.phone" type="tel" autocomplete="tel" :class="inputClass" placeholder="+234" />
+          <NigeriaPhoneInput v-model="customer.phone" />
         </label>
       </div>
       <label class="block">
@@ -153,7 +162,7 @@ const labelClass = 'mb-1.5 block text-[11px] font-medium text-ink-900/55'
         </label>
         <label class="block">
           <span :class="labelClass">Phone</span>
-          <input v-model="company.phone" type="tel" required autocomplete="tel" :class="inputClass" placeholder="+234" />
+          <NigeriaPhoneInput v-model="company.phone" required />
         </label>
       </div>
 
@@ -162,16 +171,7 @@ const labelClass = 'mb-1.5 block text-[11px] font-medium text-ink-900/55'
         <input v-model="company.contact_name" type="text" required autocomplete="name" :class="inputClass" placeholder="Owner's full name" />
       </label>
 
-      <div class="grid gap-3 sm:grid-cols-2">
-        <label class="block">
-          <span :class="labelClass">State</span>
-          <input v-model="company.state" type="text" required :class="inputClass" placeholder="Abia" />
-        </label>
-        <label class="block">
-          <span :class="labelClass">City</span>
-          <input v-model="company.city" type="text" required :class="inputClass" placeholder="Aba" />
-        </label>
-      </div>
+      <NigeriaLocationFields v-model:state="company.state" v-model:city="company.city" required />
 
       <label class="block">
         <span :class="labelClass">Business address</span>

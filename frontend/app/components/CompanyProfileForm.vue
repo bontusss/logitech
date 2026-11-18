@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { CircleAlert, Loader2, Save } from 'lucide-vue-next'
 import type { Company, OperatingHours } from '~/types/auth'
+import { isValidNigerianPhone } from '~/utils/nigeria'
 
 const props = defineProps<{
   company: Company
@@ -50,6 +51,10 @@ async function save() {
   error.value = ''
   if (!form.name.trim() || !form.business_email.trim() || !form.phone.trim() || !form.business_type.trim()) {
     error.value = 'Name, business email, phone and business type are required.'
+    return
+  }
+  if (!isValidNigerianPhone(form.phone)) {
+    error.value = 'Enter a valid Nigerian phone number.'
     return
   }
   saving.value = true
@@ -119,13 +124,7 @@ async function save() {
       </label>
       <label class="block">
         <span class="mb-1.5 block text-[11px] font-medium text-ink-900/55">Phone</span>
-        <input
-          v-model="form.phone"
-          type="tel"
-          required
-          :disabled="!canEdit"
-          class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 disabled:bg-slate-50 disabled:text-ink-900/45"
-        />
+        <NigeriaPhoneInput v-model="form.phone" required :disabled="!canEdit" />
       </label>
       <label class="block">
         <span class="mb-1.5 block text-[11px] font-medium text-ink-900/55">Business type</span>
@@ -147,24 +146,12 @@ async function save() {
           class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm uppercase focus:border-brand-500 disabled:bg-slate-50 disabled:text-ink-900/45"
         />
       </label>
-      <label class="block">
-        <span class="mb-1.5 block text-[11px] font-medium text-ink-900/55">State</span>
-        <input
-          v-model="form.state"
-          type="text"
-          :disabled="!canEdit"
-          class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 disabled:bg-slate-50 disabled:text-ink-900/45"
-        />
-      </label>
-      <label class="block">
-        <span class="mb-1.5 block text-[11px] font-medium text-ink-900/55">City</span>
-        <input
-          v-model="form.city"
-          type="text"
-          :disabled="!canEdit"
-          class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 disabled:bg-slate-50 disabled:text-ink-900/45"
-        />
-      </label>
+      <NigeriaLocationFields
+        class="sm:col-span-2"
+        v-model:state="form.state"
+        v-model:city="form.city"
+        :disabled="!canEdit"
+      />
       <label class="block sm:col-span-2">
         <span class="mb-1.5 block text-[11px] font-medium text-ink-900/55">Address</span>
         <input

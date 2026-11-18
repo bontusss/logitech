@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ArrowLeft, ArrowRight, CheckCircle2, Mail } from 'lucide-vue-next'
+import { isValidNigerianPhone } from '~/utils/nigeria'
 
 useSeoMeta({
   title: 'Book a demo',
@@ -24,6 +25,7 @@ const inputClass =
   'w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-ink-900 transition placeholder:text-ink-900/30 hover:border-slate-400 focus:border-brand-500'
 
 function submit() {
+  if (form.phone && !isValidNigerianPhone(form.phone)) return
   sent.value = true
 }
 </script>
@@ -123,7 +125,7 @@ function submit() {
           <div class="grid gap-3 sm:grid-cols-2">
             <label class="block">
               <span class="mb-1.5 block text-[11px] font-medium text-ink-900/55">Phone (optional)</span>
-              <input v-model="form.phone" type="tel" autocomplete="tel" :class="inputClass" placeholder="+234" />
+              <NigeriaPhoneInput v-model="form.phone" />
             </label>
             <label class="block">
               <span class="mb-1.5 block text-[11px] font-medium text-ink-900/55">Branches</span>

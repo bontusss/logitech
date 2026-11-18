@@ -23,8 +23,175 @@ body {
   background-color: var(--color-canvas);
   color: var(--color-ink-900);
   font-family: var(--font-sans);
-  -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+}
+
+html.dark {
+  color-scheme: dark;
+  --color-canvas: #0b1120;
+  --color-ink-950: #050812;
+  --color-ink-900: #e5eaf3;
+  --color-ink-800: #cbd5e1;
+  --color-brand-50: #172554;
+  --color-brand-100: #1e3a8a;
+  --color-brand-200: #93c5fd;
+  --color-brand-500: #2b4bff;
+  --color-brand-600: #1f3ce6;
+  --color-brand-700: #b6c2ff;
+}
+
+html:not(.dark) {
+  color-scheme: light;
+}
+
+html.dark body {
+  background-color: var(--color-canvas);
+}
+
+html.dark [class~="bg-white"] {
+  background-color: #111827 !important;
+}
+
+html.dark [class~="bg-slate-50"] {
+  background-color: #111827 !important;
+}
+
+html.dark [class~="bg-slate-100"] {
+  background-color: #1f2937 !important;
+}
+
+html.dark [class~="bg-[#f3f5ff]"] {
+  background-color: #111827 !important;
+}
+
+html.dark .hero-country-badge {
+  border-color: rgb(165 180 252 / 30%);
+  background-color: #111827;
+  color: #c7d2fe;
+}
+
+html.dark [class~="bg-brand-50"] {
+  background-color: #172554 !important;
+}
+
+html.dark [class~="border-slate-200"],
+html.dark [class~="border-slate-300"],
+html.dark [class~="border-slate-400"] {
+  border-color: #475569 !important;
+}
+
+html.dark [class~="text-slate-400"],
+html.dark [class~="text-slate-500"],
+html.dark [class~="text-slate-600"],
+html.dark [class~="text-slate-700"],
+html.dark [class~="text-slate-800"],
+html.dark [class~="text-slate-900"],
+html.dark [class~="text-slate-950"],
+html.dark [class~="text-gray-400"],
+html.dark [class~="text-gray-500"],
+html.dark [class~="text-gray-600"],
+html.dark [class~="text-gray-700"],
+html.dark [class~="text-gray-800"],
+html.dark [class~="text-gray-900"],
+html.dark [class~="text-gray-950"],
+html.dark [class~="text-zinc-400"],
+html.dark [class~="text-zinc-500"],
+html.dark [class~="text-zinc-600"],
+html.dark [class~="text-zinc-700"],
+html.dark [class~="text-zinc-800"],
+html.dark [class~="text-zinc-900"],
+html.dark [class~="text-zinc-950"],
+html.dark [class~="text-neutral-400"],
+html.dark [class~="text-neutral-500"],
+html.dark [class~="text-neutral-600"],
+html.dark [class~="text-neutral-700"],
+html.dark [class~="text-neutral-800"],
+html.dark [class~="text-neutral-900"],
+html.dark [class~="text-neutral-950"],
+html.dark [class~="text-black"] {
+  color: #cbd5e1 !important;
+}
+
+html.dark [class~="text-brand-600"] {
+  color: #a5b4fc !important;
+}
+
+html.dark [class~="text-brand-700"] {
+  color: #c7d2fe !important;
+}
+
+html.dark [class~="border-brand-100"] {
+  border-color: #3730a3 !important;
+}
+
+html.dark [class~="bg-red-50"] {
+  background-color: #3b1118 !important;
+}
+
+html.dark [class~="border-red-200"] {
+  border-color: #7f1d1d !important;
+}
+
+html.dark [class~="text-red-700"] {
+  color: #fca5a5 !important;
+}
+
+html.dark [class~="bg-amber-50"] {
+  background-color: #3a2608 !important;
+}
+
+html.dark [class~="border-amber-200"] {
+  border-color: #854d0e !important;
+}
+
+html.dark [class~="text-amber-800"],
+html.dark [class~="text-amber-900"] {
+  color: #fcd34d !important;
+}
+
+html.dark [class~="bg-emerald-50"] {
+  background-color: #052e25 !important;
+}
+
+html.dark [class~="border-emerald-200"] {
+  border-color: #065f46 !important;
+}
+
+html.dark [class~="text-emerald-600"],
+html.dark [class~="text-emerald-700"] {
+  color: #6ee7b7 !important;
+}
+
+html.dark input,
+html.dark textarea,
+html.dark select {
+  color-scheme: dark;
+}
+
+html.dark input::placeholder,
+html.dark textarea::placeholder {
+  color: #94a3b8;
+  opacity: 1;
+}
+
+[class*="text-ink-900/2"],
+[class*="text-ink-900/3"],
+[class*="text-ink-900/4"],
+[class*="text-ink-900/5"] {
+  color: color-mix(in srgb, var(--color-ink-900) 72%, transparent) !important;
+}
+
+[class~="text-[9px]"],
+[class~="text-[9.5px]"],
+[class~="text-[10px]"],
+[class~="text-[10.5px]"],
+[class~="text-[11px]"],
+[class~="text-[11.5px]"],
+[class~="text-[12px]"],
+[class~="text-[12.5px]"],
+[class~="text-[13px]"],
+[class~="text-[13.5px]"] {
+  font-size: max(0.875rem, 1em) !important;
 }
 
 [id] {
@@ -47,6 +214,12 @@ body {
     linear-gradient(to right, rgba(10, 18, 32, 0.045) 1px, transparent 1px),
     linear-gradient(to bottom, rgba(10, 18, 32, 0.045) 1px, transparent 1px);
   background-size: 56px 56px;
+}
+
+html.dark .grid-paper {
+  background-image:
+    linear-gradient(to right, rgba(255, 255, 255, 0.045) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.045) 1px, transparent 1px);
 }
 
 .grid-paper-light {

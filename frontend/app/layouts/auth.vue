@@ -48,13 +48,19 @@
         <NuxtLink to="/" aria-label="based on logistics — home">
           <AppLogo :size="32" />
         </NuxtLink>
-        <NuxtLink to="/" class="text-[12.5px] font-medium text-ink-900/50 hover:text-ink-900">
-          Back to site
-        </NuxtLink>
+        <div class="flex items-center gap-2">
+          <ThemeToggle />
+          <NuxtLink to="/" class="text-[12.5px] font-medium text-ink-900/70 hover:text-ink-900">
+            Back to site
+          </NuxtLink>
+        </div>
       </header>
 
       <main class="flex flex-1 items-center justify-center px-5 py-8 sm:px-8">
         <div class="w-full max-w-[440px]">
+          <div class="mb-4 hidden justify-end lg:flex">
+            <ThemeToggle />
+          </div>
           <slot />
         </div>
       </main>

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { CircleAlert, Loader2, Save, X } from 'lucide-vue-next'
 import type { Branch, BranchInput, OperatingHours, StaffMember } from '~/types/auth'
+import { isValidNigerianPhone } from '~/utils/nigeria'
 
 const props = withDefaults(
   defineProps<{
@@ -64,6 +65,10 @@ function submit() {
     error.value = 'Enter a valid branch email address.'
     return
   }
+  if (form.phone && !isValidNigerianPhone(form.phone)) {
+    error.value = 'Enter a valid Nigerian phone number.'
+    return
+  }
   emit('submit', {
     name: form.name.trim(),
     code: form.code.trim().toUpperCase(),
@@ -106,21 +111,19 @@ function submit() {
         <span class="mb-1.5 block text-[11px] font-medium text-ink-900/55">Address</span>
         <input v-model="form.address" required class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500" />
       </label>
-      <label class="block">
-        <span class="mb-1.5 block text-[11px] font-medium text-ink-900/55">City</span>
-        <input v-model="form.city" required class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500" />
-      </label>
-      <label class="block">
-        <span class="mb-1.5 block text-[11px] font-medium text-ink-900/55">State</span>
-        <input v-model="form.state" required class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500" />
-      </label>
+      <NigeriaLocationFields
+        class="sm:col-span-2"
+        v-model:state="form.state"
+        v-model:city="form.city"
+        required
+      />
       <label class="block">
         <span class="mb-1.5 block text-[11px] font-medium text-ink-900/55">Country code</span>
         <input v-model="form.country" maxlength="2" class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm uppercase focus:border-brand-500" />
       </label>
       <label class="block">
-        <span class="mb-1.5 block text-[11px] font-medium text-ink-900/55">Phone</span>
-        <input v-model="form.phone" type="tel" class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500" />
+        <span class="mb-1.5 block text-[11px] font-medium text-ink-900/55">Phone (optional)</span>
+        <NigeriaPhoneInput v-model="form.phone" />
       </label>
       <label class="block">
         <span class="mb-1.5 block text-[11px] font-medium text-ink-900/55">Branch email</span>

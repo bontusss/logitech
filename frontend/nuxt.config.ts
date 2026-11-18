@@ -12,11 +12,17 @@ export default defineNuxtConfig({
   },
   app: {
     head: {
+      script: [
+        {
+          innerHTML:
+            "try{const t=localStorage.getItem('bol-theme');if(t==='dark'||(t!=='light'&&matchMedia('(prefers-color-scheme: dark)').matches))document.documentElement.classList.add('dark')}catch{}",
+        },
+      ],
       htmlAttrs: { lang: 'en' },
       title: 'based on logistics (BOL)',
       meta: [
         { name: 'viewport', content: 'width=device-width, initial-scale=1' },
-        { name: 'theme-color', content: '#fbfbf9' },
+        { name: 'theme-color', content: '#fbfbf9', id: 'theme-color' },
         { name: 'mobile-web-app-capable', content: 'yes' },
         { name: 'apple-mobile-web-app-capable', content: 'yes' },
         { name: 'apple-mobile-web-app-status-bar-style', content: 'black-translucent' },

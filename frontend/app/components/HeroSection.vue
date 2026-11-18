@@ -12,7 +12,7 @@ import { ArrowDown, ShieldCheck, Truck } from 'lucide-vue-next'
 
     <div class="relative mx-auto max-w-[1200px] px-5 pt-14 pb-16 sm:px-8 sm:pt-20 lg:pt-24 lg:pb-24">
       <div class="mx-auto max-w-[780px] text-center">
-        <p class="reveal inline-flex items-center gap-2 rounded-full border border-brand-500/15 bg-white/80 px-3 py-1.5 text-[11px] font-semibold tracking-[0.12em] text-brand-700 uppercase">
+        <p class="hero-country-badge reveal inline-flex items-center gap-2 rounded-full border border-brand-500/15 bg-white/80 px-3 py-1.5 text-[11px] font-semibold tracking-[0.12em] text-brand-700 uppercase">
           <span class="size-1.5 rounded-full bg-brand-500" />
           Nigeria, one delivery at a time
         </p>

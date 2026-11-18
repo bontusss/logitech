@@ -44,6 +44,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
       </nav>
 
       <div class="hidden items-center gap-2 lg:flex">
+        <ThemeToggle />
         <AppButton to="/login" variant="ghost">Sign in</AppButton>
         <AppButton to="/#rate-search">
           Compare rates
@@ -51,17 +52,20 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
         </AppButton>
       </div>
 
-      <button
-        type="button"
-        class="flex size-10 items-center justify-center rounded-xl border border-ink-900/10 text-ink-900 transition hover:bg-ink-900/4 lg:hidden"
-        :aria-expanded="open"
-        aria-controls="mobile-menu"
-        :aria-label="open ? 'Close menu' : 'Open menu'"
-        @click="open = !open"
-      >
-        <X v-if="open" :size="20" />
-        <Menu v-else :size="20" />
-      </button>
+      <div class="flex items-center gap-2 lg:hidden">
+        <ThemeToggle />
+        <button
+          type="button"
+          class="flex size-10 items-center justify-center rounded-xl border border-ink-900/10 text-ink-900 transition hover:bg-ink-900/4"
+          :aria-expanded="open"
+          aria-controls="mobile-menu"
+          :aria-label="open ? 'Close menu' : 'Open menu'"
+          @click="open = !open"
+        >
+          <X v-if="open" :size="20" />
+          <Menu v-else :size="20" />
+        </button>
+      </div>
     </div>
 
     <div v-show="open" id="mobile-menu" class="border-t border-ink-900/8 bg-canvas lg:hidden">

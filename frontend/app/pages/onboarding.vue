@@ -16,6 +16,7 @@ import {
   UserRound,
 } from 'lucide-vue-next'
 import type { CompanyDetail } from '~/types/auth'
+import { isValidNigerianPhone } from '~/utils/nigeria'
 
 definePageMeta({ middleware: 'auth', layout: 'app' })
 useSeoMeta({ title: 'Company onboarding' })
@@ -96,6 +97,10 @@ async function load() {
 }
 
 async function sendWhatsAppCode() {
+  if (!isValidNigerianPhone(form.contact_phone)) {
+    error.value = 'Enter a valid Nigerian phone number before requesting a WhatsApp code.'
+    return
+  }
   sendingWhatsAppCode.value = true
   error.value = ''
   success.value = ''
@@ -139,6 +144,10 @@ async function saveCurrentStep(): Promise<boolean> {
   success.value = ''
   try {
     if (step.value === 0) {
+      if (!isValidNigerianPhone(form.phone)) {
+        error.value = 'Enter a valid Nigerian company phone number.'
+        return false
+      }
       await api('/companies/me', {
         method: 'PATCH',
         body: {
@@ -148,12 +157,20 @@ async function saveCurrentStep(): Promise<boolean> {
         },
       })
     } else if (step.value === 1) {
+      if (!isValidNigerianPhone(form.contact_phone)) {
+        error.value = 'Enter a valid Nigerian contact phone number.'
+        return false
+      }
       await api('/users/me', {
         method: 'PATCH',
         body: { full_name: form.contact_name },
       })
       await fetchMe()
     } else if (step.value === 2) {
+      if (!form.state || !form.city) {
+        error.value = 'Select a state and city or LGA.'
+        return false
+      }
       await api('/companies/me', {
         method: 'PATCH',
         body: {
@@ -318,7 +335,7 @@ const whatsappVerified = computed(() =>
             </label>
             <label class="block">
               <span class="mb-1.5 block text-[11px] font-medium text-ink-900/55">Phone</span>
-              <input v-model="form.phone" type="tel" class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500" />
+              <NigeriaPhoneInput v-model="form.phone" required />
             </label>
             <label class="block sm:col-span-2">
               <span class="mb-1.5 block text-[11px] font-medium text-ink-900/55">Business email</span>
@@ -335,7 +352,7 @@ const whatsappVerified = computed(() =>
             </label>
             <label class="block">
               <span class="mb-1.5 block text-[11px] font-medium text-ink-900/55">Contact phone</span>
-              <input v-model="form.contact_phone" type="tel" autocomplete="tel" placeholder="+2348012345678" class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500" />
+              <NigeriaPhoneInput v-model="form.contact_phone" required />
             </label>
             <div class="sm:col-span-2 rounded-lg border border-ink-900/8 bg-canvas p-3">
               <p class="flex items-center gap-1.5 text-[12px] font-medium">
@@ -348,7 +365,7 @@ const whatsappVerified = computed(() =>
               <div v-if="!whatsappVerified" class="mt-3 flex flex-wrap gap-2">
                 <button
                   type="button"
-                  :disabled="sendingWhatsAppCode || !form.contact_phone"
+                  :disabled="sendingWhatsAppCode || !isValidNigerianPhone(form.contact_phone)"
                   class="rounded-md border border-slate-300 px-3 py-2 text-[11.5px] font-semibold disabled:opacity-50"
                   @click="sendWhatsAppCode"
                 >
@@ -402,14 +419,12 @@ const whatsappVerified = computed(() =>
               <span class="mb-1.5 block text-[11px] font-medium text-ink-900/55">Country</span>
               <input v-model="form.country" type="text" maxlength="2" class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm uppercase focus:border-brand-500" />
             </label>
-            <label class="block">
-              <span class="mb-1.5 block text-[11px] font-medium text-ink-900/55">State</span>
-              <input v-model="form.state" type="text" class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500" placeholder="Abia" />
-            </label>
-            <label class="block">
-              <span class="mb-1.5 block text-[11px] font-medium text-ink-900/55">City</span>
-              <input v-model="form.city" type="text" class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500" placeholder="Aba" />
-            </label>
+            <NigeriaLocationFields
+              class="sm:col-span-2"
+              v-model:state="form.state"
+              v-model:city="form.city"
+              required
+            />
             <label class="block sm:col-span-2">
               <span class="mb-1.5 block text-[11px] font-medium text-ink-900/55">Business address</span>
               <input v-model="form.address" type="text" class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500" placeholder="12 Port Harcourt Road" />

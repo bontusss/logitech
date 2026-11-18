@@ -265,7 +265,9 @@ watch(
             </p>
           </div>
 
-          <div class="relative ml-auto">
+          <ThemeToggle class="ml-auto" />
+
+          <div class="relative">
             <button
               type="button"
               class="flex items-center gap-2 rounded-lg border border-ink-900/10 bg-white px-2 py-1.5 transition hover:border-ink-900/20"
