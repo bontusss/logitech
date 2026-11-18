@@ -74,6 +74,9 @@ func New(cfg *config.Config, svc *service.Service, authManager *auth.Manager, li
 	authed := v1.Group("", api.requireAuth())
 	authed.GET("/users/me", api.getMe)
 	authed.PATCH("/users/me", api.updateMe)
+	authed.POST("/auth/email/resend-verification", api.rateLimit("resend-verification", 3), api.resendEmailVerification)
+	authed.POST("/auth/whatsapp/send-code", api.rateLimit("whatsapp-send-code", 5), api.sendWhatsAppCode)
+	authed.POST("/auth/whatsapp/verify-code", api.rateLimit("whatsapp-verify-code", 10), api.verifyWhatsAppCode)
 
 	company := authed.Group("/companies/me", api.requireCompany())
 	company.GET("", api.getCompany)
@@ -174,28 +177,30 @@ func New(cfg *config.Config, svc *service.Service, authManager *auth.Manager, li
 // ---------------------------------------------------------------------------
 
 type userDTO struct {
-	ID            uuid.UUID  `json:"id"`
-	Email         string     `json:"email"`
-	FullName      string     `json:"full_name"`
-	Phone         *string    `json:"phone"`
-	AccountType   string     `json:"account_type"`
-	PlatformRole  *string    `json:"platform_role"`
-	EmailVerified bool       `json:"email_verified"`
-	CreatedAt     time.Time  `json:"created_at"`
-	LastLoginAt   *time.Time `json:"last_login_at"`
+	ID               uuid.UUID  `json:"id"`
+	Email            string     `json:"email"`
+	FullName         string     `json:"full_name"`
+	Phone            *string    `json:"phone"`
+	WhatsAppVerified bool       `json:"whatsapp_verified"`
+	AccountType      string     `json:"account_type"`
+	PlatformRole     *string    `json:"platform_role"`
+	EmailVerified    bool       `json:"email_verified"`
+	CreatedAt        time.Time  `json:"created_at"`
+	LastLoginAt      *time.Time `json:"last_login_at"`
 }
 
 func toUserDTO(user db.User) userDTO {
 	return userDTO{
-		ID:            user.ID,
-		Email:         user.Email,
-		FullName:      user.FullName,
-		Phone:         user.Phone,
-		AccountType:   user.AccountType,
-		PlatformRole:  user.PlatformRole,
-		EmailVerified: user.EmailVerifiedAt != nil,
-		CreatedAt:     user.CreatedAt,
-		LastLoginAt:   user.LastLoginAt,
+		ID:               user.ID,
+		Email:            user.Email,
+		FullName:         user.FullName,
+		Phone:            user.Phone,
+		WhatsAppVerified: false,
+		AccountType:      user.AccountType,
+		PlatformRole:     user.PlatformRole,
+		EmailVerified:    user.EmailVerifiedAt != nil,
+		CreatedAt:        user.CreatedAt,
+		LastLoginAt:      user.LastLoginAt,
 	}
 }
 
@@ -316,6 +321,18 @@ func (a *API) handleServiceError(c *gin.Context, err error) {
 		fail(c, http.StatusForbidden, "invitation_email_mismatch", "This invitation was sent to a different email address.")
 	case errors.Is(err, service.ErrInvalidInvitationBranch):
 		fail(c, http.StatusConflict, "invitation_branch_invalid", "A branch on this invitation is no longer available.")
+	case errors.Is(err, service.ErrWhatsAppUnavailable):
+		fail(c, http.StatusServiceUnavailable, "whatsapp_unavailable", "WhatsApp verification is not configured. Please try again later.")
+	case errors.Is(err, service.ErrPhoneInvalid):
+		fail(c, http.StatusUnprocessableEntity, "phone_invalid", "Use an international phone number, such as +2348012345678.")
+	case errors.Is(err, service.ErrPhoneCodeCooldown):
+		fail(c, http.StatusTooManyRequests, "whatsapp_code_cooldown", "Wait one minute before requesting another code.")
+	case errors.Is(err, service.ErrPhoneRateLimited):
+		fail(c, http.StatusTooManyRequests, "whatsapp_code_rate_limited", "Too many codes were requested. Try again in an hour.")
+	case errors.Is(err, service.ErrPhoneCodeInvalid):
+		fail(c, http.StatusBadRequest, "whatsapp_code_invalid", "That WhatsApp verification code is incorrect.")
+	case errors.Is(err, service.ErrPhoneCodeExpired):
+		fail(c, http.StatusGone, "whatsapp_code_expired", "That WhatsApp verification code has expired. Request a new one.")
 	default:
 		a.log.Error("request failed", "error", err, "path", c.FullPath())
 		fail(c, http.StatusInternalServerError, "internal_error", "Something went wrong. Please try again.")

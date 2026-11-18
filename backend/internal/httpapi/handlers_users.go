@@ -16,9 +16,15 @@ func (a *API) getMe(c *gin.Context) {
 		a.handleServiceError(c, err)
 		return
 	}
+	userResponse := toUserDTO(user)
+	userResponse.WhatsAppVerified, err = a.svc.IsWhatsAppVerified(c.Request.Context(), user.ID)
+	if err != nil {
+		a.handleServiceError(c, err)
+		return
+	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"user":      toUserDTO(user),
+		"user":      userResponse,
 		"companies": toMembershipDTOs(memberships),
 	})
 }

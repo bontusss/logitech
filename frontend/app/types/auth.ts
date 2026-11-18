@@ -3,6 +3,7 @@ export interface AuthUser {
   email: string
   full_name: string
   phone: string | null
+  whatsapp_verified: boolean
   account_type: 'platform' | 'company' | 'customer'
   platform_role: 'super_admin' | 'admin' | 'support' | null
   email_verified: boolean

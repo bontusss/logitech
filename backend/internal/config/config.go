@@ -11,20 +11,27 @@ import (
 // Config is the runtime configuration for the API. Values come from the
 // environment; cmd/server loads backend/.env in local development.
 type Config struct {
-	Env           string
-	Port          string
-	AppURL        string
-	DatabaseURL   string
-	RedisURL      string
-	JWTSecret     string
-	AccessTTL     time.Duration
-	RefreshTTL    time.Duration
-	CORSOrigins   []string
-	CookieSecure  bool
-	ExposeDevKeys bool
-	UploadDir     string
-	APIPublicURL  string
-	AppDomain     string
+	Env                      string
+	Port                     string
+	AppURL                   string
+	DatabaseURL              string
+	RedisURL                 string
+	JWTSecret                string
+	AccessTTL                time.Duration
+	RefreshTTL               time.Duration
+	CORSOrigins              []string
+	CookieSecure             bool
+	ExposeDevKeys            bool
+	UploadDir                string
+	APIPublicURL             string
+	AppDomain                string
+	PlunkSecretKey           string
+	PlunkFromEmail           string
+	WhatsAppAccessToken      string
+	WhatsAppPhoneNumberID    string
+	WhatsAppGraphAPIVersion  string
+	WhatsAppOTPTemplate      string
+	WhatsAppTemplateLanguage string
 }
 
 const devJWTSecret = "dev-only-jwt-secret-change-before-production"
@@ -33,17 +40,24 @@ func Load() (*Config, error) {
 	env := getenv("APP_ENV", "development")
 
 	cfg := &Config{
-		Env:          env,
-		Port:         getenv("PORT", "8080"),
-		AppURL:       getenv("APP_URL", "http://localhost:3000"),
-		DatabaseURL:  getenv("DATABASE_URL", "postgres://app:app@localhost:5432/appdb?sslmode=disable"),
-		RedisURL:     getenv("REDIS_URL", "redis://localhost:6380/0"),
-		JWTSecret:    os.Getenv("JWT_SECRET"),
-		AccessTTL:    durationEnv("ACCESS_TOKEN_TTL", 15*time.Minute),
-		RefreshTTL:   durationEnv("REFRESH_TOKEN_TTL", 30*24*time.Hour),
-		UploadDir:    getenv("UPLOAD_DIR", "uploads"),
-		APIPublicURL: getenv("API_PUBLIC_URL", "http://localhost:8080"),
-		AppDomain:    getenv("APP_DOMAIN", "localhost"),
+		Env:                      env,
+		Port:                     getenv("PORT", "8080"),
+		AppURL:                   getenv("APP_URL", "http://localhost:3000"),
+		DatabaseURL:              getenv("DATABASE_URL", "postgres://app:app@localhost:5432/appdb?sslmode=disable"),
+		RedisURL:                 getenv("REDIS_URL", "redis://localhost:6380/0"),
+		JWTSecret:                os.Getenv("JWT_SECRET"),
+		AccessTTL:                durationEnv("ACCESS_TOKEN_TTL", 15*time.Minute),
+		RefreshTTL:               durationEnv("REFRESH_TOKEN_TTL", 30*24*time.Hour),
+		UploadDir:                getenv("UPLOAD_DIR", "uploads"),
+		APIPublicURL:             getenv("API_PUBLIC_URL", "http://localhost:8080"),
+		AppDomain:                getenv("APP_DOMAIN", "localhost"),
+		PlunkSecretKey:           os.Getenv("PLUNK_SECRET_KEY"),
+		PlunkFromEmail:           os.Getenv("PLUNK_FROM_EMAIL"),
+		WhatsAppAccessToken:      os.Getenv("WHATSAPP_ACCESS_TOKEN"),
+		WhatsAppPhoneNumberID:    os.Getenv("WHATSAPP_PHONE_NUMBER_ID"),
+		WhatsAppGraphAPIVersion:  getenv("WHATSAPP_GRAPH_API_VERSION", "v23.0"),
+		WhatsAppOTPTemplate:      getenv("WHATSAPP_OTP_TEMPLATE", "bol_phone_verification"),
+		WhatsAppTemplateLanguage: getenv("WHATSAPP_TEMPLATE_LANGUAGE", "en_US"),
 	}
 
 	if cfg.JWTSecret == "" {
@@ -57,6 +71,15 @@ func Load() (*Config, error) {
 	}
 	if cfg.DatabaseURL == "" {
 		return nil, fmt.Errorf("DATABASE_URL is required")
+	}
+	if env == "production" && cfg.PlunkSecretKey == "" {
+		return nil, fmt.Errorf("PLUNK_SECRET_KEY is required in production")
+	}
+	if env == "production" && cfg.PlunkFromEmail == "" {
+		return nil, fmt.Errorf("PLUNK_FROM_EMAIL is required in production")
+	}
+	if (cfg.PlunkSecretKey == "") != (cfg.PlunkFromEmail == "") {
+		return nil, fmt.Errorf("PLUNK_SECRET_KEY and PLUNK_FROM_EMAIL must be configured together")
 	}
 
 	origins := []string{cfg.AppURL, "http://localhost:3000", "http://127.0.0.1:3000"}

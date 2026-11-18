@@ -6,12 +6,16 @@ useSeoMeta({ title: 'Verify email' })
 
 const route = useRoute()
 const { api } = useApi()
+const { user, fetchMe } = useAuth()
 
 const tokenInput = ref(typeof route.query.token === 'string' ? route.query.token : '')
 const state = ref<'idle' | 'pending' | 'success' | 'error'>('idle')
 const message = ref('')
+const resendMessage = ref('')
+const resending = ref(false)
 
-onMounted(() => {
+onMounted(async () => {
+  await fetchMe()
   if (import.meta.client) {
     const stored = localStorage.getItem('bol_dev_verify_token')
     if (!tokenInput.value && stored) tokenInput.value = stored
@@ -30,11 +34,25 @@ async function verify() {
     })
     state.value = 'success'
     if (import.meta.client) localStorage.removeItem('bol_dev_verify_token')
-    const { fetchMe } = useAuth()
     await fetchMe()
   } catch (err) {
     state.value = 'error'
     message.value = apiErrorMessage(err, 'This verification link is invalid or has expired.')
+  }
+}
+
+async function resendVerification() {
+  resending.value = true
+  resendMessage.value = ''
+  try {
+    const response = await api<{ message: string }>('/auth/email/resend-verification', {
+      method: 'POST',
+    })
+    resendMessage.value = response.message
+  } catch (err) {
+    resendMessage.value = apiErrorMessage(err, 'Could not send a verification email.')
+  } finally {
+    resending.value = false
   }
 }
 
@@ -72,8 +90,8 @@ const inputClass =
 
     <template v-else>
       <p class="mt-3 text-[13.5px] leading-relaxed text-ink-900/50">
-        We sent a verification link to your email. Paste the token below if you opened this page
-        manually.
+        Open the verification link in your inbox. You can also paste the token from the email
+        below.
       </p>
 
       <form class="mt-6 space-y-4" @submit.prevent="verify">
@@ -100,9 +118,22 @@ const inputClass =
         </button>
       </form>
 
+      <div v-if="user && !user.email_verified" class="mt-4">
+        <button
+          type="button"
+          :disabled="resending"
+          class="text-[11.5px] font-semibold text-brand-600 underline underline-offset-2 disabled:opacity-50"
+          @click="resendVerification"
+        >
+          {{ resending ? 'Sending…' : 'Resend verification email' }}
+        </button>
+        <p v-if="resendMessage" role="status" class="mt-2 text-[11.5px] text-ink-900/55">
+          {{ resendMessage }}
+        </p>
+      </div>
+
       <p class="mt-5 text-[11.5px] leading-relaxed text-ink-900/40">
-        In this development build, verification and reset links are written to the API log rather
-        than sent by email.
+        If the email does not arrive shortly, check your spam folder or request another link.
       </p>
     </template>
   </div>

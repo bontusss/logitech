@@ -373,6 +373,15 @@ func (a *API) submitVerification(c *gin.Context) {
 		fail(c, http.StatusUnprocessableEntity, "email_unverified", "Verify the owner email before submitting the company for review.")
 		return
 	}
+	whatsAppVerified, err := a.svc.IsWhatsAppVerified(c.Request.Context(), owner.ID)
+	if err != nil {
+		a.handleServiceError(c, err)
+		return
+	}
+	if !whatsAppVerified {
+		fail(c, http.StatusUnprocessableEntity, "whatsapp_unverified", "Verify the owner's WhatsApp number before submitting the company for review.")
+		return
+	}
 	if company.State == nil || company.City == nil || company.Address == nil ||
 		*company.State == "" || *company.City == "" || *company.Address == "" {
 		fail(c, http.StatusUnprocessableEntity, "profile_incomplete", "Add the company location before submitting for review.")
@@ -387,6 +396,9 @@ func (a *API) submitVerification(c *gin.Context) {
 	if err != nil {
 		a.handleServiceError(c, err)
 		return
+	}
+	if err := a.svc.CancelProviderReminders(c.Request.Context(), tenant.CompanyID); err != nil {
+		a.log.Error("could not cancel provider onboarding reminders", "company_id", tenant.CompanyID, "error", err)
 	}
 
 	a.svc.Audit(c.Request.Context(), service.AuditEntry{

@@ -76,6 +76,14 @@ docker exec app_postgres createdb -U app appdb_test
 | `APP_URL` | Frontend origin used in email links and CORS defaults |
 | `CORS_ORIGINS` | Comma-separated allowed browser origins |
 | `COOKIE_SECURE` | Set true behind HTTPS (forced in production) |
+| `PLUNK_SECRET_KEY` | Server-side Plunk secret key used for transactional email |
+| `PLUNK_FROM_EMAIL` | Sender address on a verified Plunk sending domain |
+| `PLUNK_PUBLIC_KEY` | Optional; only needed for browser-side Plunk event tracking |
+| `WHATSAPP_ACCESS_TOKEN` | Meta WhatsApp Cloud API access token |
+| `WHATSAPP_PHONE_NUMBER_ID` | Meta WhatsApp business phone-number ID |
+| `WHATSAPP_GRAPH_API_VERSION` | Graph API version (default `v23.0`) |
+| `WHATSAPP_OTP_TEMPLATE` | Approved WhatsApp authentication template name |
+| `WHATSAPP_TEMPLATE_LANGUAGE` | Template language code (default `en_US`) |
 | `UPLOAD_DIR` | Local directory for logo/cover uploads (default `uploads`) |
 | `API_PUBLIC_URL` | Public API origin used to build uploaded image URLs |
 | `APP_DOMAIN` | Tenant base domain used for host/subdomain resolution |
@@ -99,6 +107,28 @@ to the relative `/api/v1` path. If the API is hosted on a different origin, set
 embedded when the static frontend is generated, so changing only the runtime environment requires
 a rebuild/redeploy.
 
+### Transactional email and WhatsApp verification
+
+The API sends verification, password-reset, invitation, welcome and provider-onboarding
+emails through Plunk, using the sender name **Nnanna from BOL**. Configure a Plunk secret
+key and a sender email whose domain is verified in Plunk. Production startup requires
+`PLUNK_SECRET_KEY` and `PLUNK_FROM_EMAIL`.
+
+Welcome emails are queued for 30 minutes after registration, with separate customer/shipper
+and provider content. Provider onboarding reminders are queued for 24 and 72 hours after
+registration; they are cancelled after the provider submits the profile and skipped if the
+company is no longer incomplete. The queue is stored in PostgreSQL and processed by the API.
+
+WhatsApp verification uses Meta's WhatsApp Cloud API directly. Create an approved
+authentication message template named to match `WHATSAPP_OTP_TEMPLATE`, with one body
+parameter for the six-digit code (for example, `Your BOL verification code is {{1}}. It expires in 10 minutes.`).
+Configure its language, a token with
+`whatsapp_business_messaging` permission, and the business phone-number ID. The provider
+enters their phone in international E.164 format during onboarding. Codes expire after
+10 minutes, can be resent after one minute, and are limited to five per hour. Meta offers a
+test number for development, but production authentication messages may be billable; check
+Meta's current country-specific pricing and messaging requirements.
+
 ## Authentication flow
 
 1. **Registration**
@@ -112,8 +142,9 @@ a rebuild/redeploy.
    previous token; reuse revokes the whole family.
 5. **Logout** revokes the refresh family, denylists the access-token `jti` in Redis for its
    remaining lifetime, and clears both cookies.
-6. **Email verification / password reset** use single-use opaque tokens stored as hashes. The
-   development mailer logs the link and the API returns the token only when `APP_ENV != production`.
+6. **Email verification / password reset** use single-use opaque tokens stored as hashes.
+   Plunk delivers verification links and reset links; only development exposes verification tokens
+   in the API response.
 7. **Invitation tokens** are 256-bit opaque values stored hashed, expire after seven days and are
    claimed atomically so a link can only be accepted once.
 

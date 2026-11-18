@@ -20,6 +20,7 @@ import (
 	"github.com/bol-platform/backend/internal/mailer"
 	"github.com/bol-platform/backend/internal/ratelimit"
 	"github.com/bol-platform/backend/internal/service"
+	"github.com/bol-platform/backend/internal/whatsapp"
 )
 
 func main() {
@@ -64,9 +65,27 @@ func main() {
 		}
 	}
 
-	mail := &mailer.LogMailer{Logger: log, AppURL: cfg.AppURL}
+	var mail mailer.Mailer = &mailer.LogMailer{Logger: log, AppURL: cfg.AppURL}
+	if cfg.PlunkSecretKey != "" {
+		mail = mailer.NewPlunk(cfg.PlunkSecretKey, cfg.PlunkFromEmail, cfg.AppURL)
+	}
 	authManager := auth.NewManager(cfg.JWTSecret, cfg.AccessTTL)
 	svc := service.New(pool, authManager, redisClient, cfg, mail, log)
+	if cfg.WhatsAppAccessToken != "" && cfg.WhatsAppPhoneNumberID != "" {
+		svc.WhatsApp = &whatsapp.MetaClient{
+			AccessToken:   cfg.WhatsAppAccessToken,
+			PhoneNumberID: cfg.WhatsAppPhoneNumberID,
+			APIVersion:    cfg.WhatsAppGraphAPIVersion,
+			Template:      cfg.WhatsAppOTPTemplate,
+			Language:      cfg.WhatsAppTemplateLanguage,
+		}
+	} else if cfg.WhatsAppAccessToken != "" || cfg.WhatsAppPhoneNumberID != "" {
+		log.Warn("WhatsApp Cloud API is only partially configured; number verification will be unavailable")
+	}
+	appCtx, stopApp := context.WithCancel(context.Background())
+	defer stopApp()
+	go svc.RunEmailQueue(appCtx)
+
 	limiter := ratelimit.New(redisClient)
 	router := httpapi.New(cfg, svc, authManager, limiter, log)
 
@@ -90,6 +109,7 @@ func main() {
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)
 	<-stop
+	stopApp()
 
 	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer shutdownCancel()

@@ -37,13 +37,14 @@ var (
 )
 
 type Service struct {
-	DB     *pgxpool.Pool
-	Q      *db.Queries
-	Auth   *auth.Manager
-	Redis  *redis.Client
-	Cfg    *config.Config
-	Mailer mailer.Mailer
-	Log    *slog.Logger
+	DB       *pgxpool.Pool
+	Q        *db.Queries
+	Auth     *auth.Manager
+	Redis    *redis.Client
+	Cfg      *config.Config
+	Mailer   mailer.Mailer
+	WhatsApp WhatsAppSender
+	Log      *slog.Logger
 }
 
 type Session struct {
@@ -103,11 +104,22 @@ func (s *Service) RegisterCustomer(ctx context.Context, fullName, email, passwor
 		return Session{}, err
 	}
 
-	user, err := s.Q.CreateUser(ctx, db.CreateUserParams{
-		Email:        email,
-		PasswordHash: hash, FullName: strings.TrimSpace(fullName),
-		Column4:     strings.TrimSpace(phone),
-		AccountType: "customer",
+	var user db.User
+	err = pgx.BeginFunc(ctx, s.DB, func(tx pgx.Tx) error {
+		var createErr error
+		user, createErr = s.Q.WithTx(tx).CreateUser(ctx, db.CreateUserParams{
+			Email:        email,
+			PasswordHash: hash, FullName: strings.TrimSpace(fullName),
+			Column4:     strings.TrimSpace(phone),
+			AccountType: "customer",
+		})
+		if createErr != nil {
+			return createErr
+		}
+		_, createErr = tx.Exec(ctx, `
+			INSERT INTO email_jobs (user_id, kind, scheduled_at)
+			VALUES ($1, 'welcome_customer', now() + interval '30 minutes')`, user.ID)
+		return createErr
 	})
 	if err != nil {
 		if isUniqueViolation(err) {
@@ -248,6 +260,16 @@ func (s *Service) RegisterCompany(ctx context.Context, input CompanyRegistration
 		if _, txErr = q.CreateCompanyBranding(ctx, company.ID); txErr != nil {
 			return txErr
 		}
+		_, txErr = tx.Exec(ctx, `
+			INSERT INTO email_jobs (user_id, company_id, kind, sequence, scheduled_at)
+			VALUES
+				($1, $2, 'welcome_provider', 0, now() + interval '30 minutes'),
+				($1, $2, 'provider_onboarding', 1, now() + interval '24 hours'),
+				($1, $2, 'provider_onboarding', 2, now() + interval '72 hours')`,
+			user.ID, company.ID)
+		if txErr != nil {
+			return txErr
+		}
 
 		return nil
 	})
@@ -257,7 +279,6 @@ func (s *Service) RegisterCompany(ctx context.Context, input CompanyRegistration
 		}
 		return Session{}, fmt.Errorf("register company: %w", err)
 	}
-
 	s.Audit(ctx, AuditEntry{
 		ActorID:    &user.ID,
 		CompanyID:  &company.ID,
@@ -493,6 +514,24 @@ func (s *Service) createEmailVerification(ctx context.Context, user db.User) (st
 		return "", err
 	}
 	return raw, nil
+}
+
+func (s *Service) ResendEmailVerification(ctx context.Context, userID uuid.UUID) (bool, error) {
+	user, err := s.Q.GetUserByID(ctx, userID)
+	if err != nil {
+		return false, fmt.Errorf("load email verification recipient: %w", err)
+	}
+	if user.EmailVerifiedAt != nil {
+		return true, nil
+	}
+	token, err := s.createEmailVerification(ctx, user)
+	if err != nil {
+		return false, fmt.Errorf("create email verification: %w", err)
+	}
+	if err := s.Mailer.SendVerification(ctx, user.Email, token); err != nil {
+		return false, fmt.Errorf("send email verification: %w", err)
+	}
+	return false, nil
 }
 
 func (s *Service) VerifyEmail(ctx context.Context, rawToken string) error {
@@ -739,6 +778,14 @@ func (s *Service) AcceptInvitation(ctx context.Context, rawToken string, actor *
 				return branchErr
 			}
 		}
+		if newUser {
+			_, txErr = tx.Exec(ctx, `
+				INSERT INTO email_jobs (user_id, kind, scheduled_at)
+				VALUES ($1, 'welcome_provider', now() + interval '30 minutes')`, user.ID)
+			if txErr != nil {
+				return txErr
+			}
+		}
 
 		return nil
 	})
@@ -756,8 +803,12 @@ func (s *Service) AcceptInvitation(ctx context.Context, rawToken string, actor *
 	}
 	if newUser {
 		token, tokenErr := s.createEmailVerification(ctx, user)
-		if tokenErr == nil {
-			_ = s.Mailer.SendVerification(ctx, user.Email, token)
+		if tokenErr != nil {
+			s.Log.Warn("could not create email verification for invited user", "error", tokenErr, "user_id", user.ID)
+		} else {
+			if err := s.Mailer.SendVerification(ctx, user.Email, token); err != nil {
+				s.Log.Warn("could not send verification email to invited user", "error", err, "user_id", user.ID)
+			}
 			if s.Cfg.ExposeDevKeys {
 				session.DevVerificationToken = token
 			}

@@ -9,6 +9,7 @@ import {
   Loader2,
   MailCheck,
   MapPin,
+  MessageCircle,
   Palette,
   Send,
   Building2,
@@ -30,6 +31,9 @@ const error = ref('')
 const success = ref('')
 const step = ref(0)
 const devToken = ref('')
+const whatsappCode = ref('')
+const sendingWhatsAppCode = ref(false)
+const verifyingWhatsAppCode = ref(false)
 
 const steps = [
   { label: 'Business', icon: Building2 },
@@ -59,7 +63,7 @@ onMounted(async () => {
   if (import.meta.client) {
     devToken.value = localStorage.getItem('bol_dev_verify_token') ?? ''
   }
-  if (!user.value) await fetchMe()
+  await fetchMe()
   await load()
 })
 
@@ -91,6 +95,44 @@ async function load() {
   }
 }
 
+async function sendWhatsAppCode() {
+  sendingWhatsAppCode.value = true
+  error.value = ''
+  success.value = ''
+  try {
+    const response = await api<{ verified: boolean; message: string }>('/auth/whatsapp/send-code', {
+      method: 'POST',
+      body: { phone: form.contact_phone },
+    })
+    await fetchMe()
+    success.value = response.message
+  } catch (err) {
+    error.value = apiErrorMessage(err, 'Could not send a WhatsApp verification code.')
+  } finally {
+    sendingWhatsAppCode.value = false
+  }
+}
+
+async function verifyWhatsAppCode() {
+  verifyingWhatsAppCode.value = true
+  error.value = ''
+  success.value = ''
+  try {
+    const response = await api<{ verified: boolean; message: string }>('/auth/whatsapp/verify-code', {
+      method: 'POST',
+      body: { code: whatsappCode.value },
+    })
+    await fetchMe()
+    form.contact_phone = user.value?.phone ?? form.contact_phone
+    whatsappCode.value = ''
+    success.value = response.message
+  } catch (err) {
+    error.value = apiErrorMessage(err, 'Could not verify this WhatsApp number.')
+  } finally {
+    verifyingWhatsAppCode.value = false
+  }
+}
+
 async function saveCurrentStep(): Promise<boolean> {
   saving.value = true
   error.value = ''
@@ -108,7 +150,7 @@ async function saveCurrentStep(): Promise<boolean> {
     } else if (step.value === 1) {
       await api('/users/me', {
         method: 'PATCH',
-        body: { full_name: form.contact_name, phone: form.contact_phone },
+        body: { full_name: form.contact_name },
       })
       await fetchMe()
     } else if (step.value === 2) {
@@ -178,6 +220,9 @@ const verifyLink = computed(() =>
 const statusLabel = computed(() =>
   (detail.value?.company.status ?? 'pending').replace('_', ' '),
 )
+const whatsappVerified = computed(() =>
+  Boolean(user.value?.whatsapp_verified && user.value.phone === form.contact_phone),
+)
 </script>
 
 <template>
@@ -194,6 +239,12 @@ const statusLabel = computed(() =>
           A complete profile is required before your company can publish rates or receive
           marketplace bookings.
         </p>
+      </div>
+      <div class="flex justify-between gap-2">
+        <dt class="text-ink-900/40">WhatsApp</dt>
+        <dd class="font-medium" :class="whatsappVerified ? 'text-emerald-600' : 'text-amber-600'">
+          {{ whatsappVerified ? 'Verified' : 'Unverified' }}
+        </dd>
       </div>
       <span class="rounded-md border border-ink-900/10 bg-white px-2.5 py-1.5 text-[10.5px] font-semibold tracking-[0.08em] capitalize">
         {{ statusLabel }}
@@ -284,8 +335,47 @@ const statusLabel = computed(() =>
             </label>
             <label class="block">
               <span class="mb-1.5 block text-[11px] font-medium text-ink-900/55">Contact phone</span>
-              <input v-model="form.contact_phone" type="tel" class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500" />
+              <input v-model="form.contact_phone" type="tel" autocomplete="tel" placeholder="+2348012345678" class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500" />
             </label>
+            <div class="sm:col-span-2 rounded-lg border border-ink-900/8 bg-canvas p-3">
+              <p class="flex items-center gap-1.5 text-[12px] font-medium">
+                <MessageCircle :size="14" :class="whatsappVerified ? 'text-emerald-600' : 'text-amber-600'" />
+                {{ whatsappVerified ? 'WhatsApp number verified' : 'Verify your WhatsApp number' }}
+              </p>
+              <p class="mt-1 text-[11.5px] leading-relaxed text-ink-900/45">
+                We will send a one-time code to this number. Use international format, including your country code.
+              </p>
+              <div v-if="!whatsappVerified" class="mt-3 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  :disabled="sendingWhatsAppCode || !form.contact_phone"
+                  class="rounded-md border border-slate-300 px-3 py-2 text-[11.5px] font-semibold disabled:opacity-50"
+                  @click="sendWhatsAppCode"
+                >
+                  {{ sendingWhatsAppCode ? 'Sending…' : 'Send WhatsApp code' }}
+                </button>
+                <form class="flex flex-1 gap-2" @submit.prevent="verifyWhatsAppCode">
+                  <input
+                    v-model="whatsappCode"
+                    inputmode="numeric"
+                    autocomplete="one-time-code"
+                    maxlength="6"
+                    pattern="[0-9]{6}"
+                    required
+                    aria-label="WhatsApp verification code"
+                    placeholder="6-digit code"
+                    class="min-w-0 flex-1 rounded-md border border-slate-300 px-3 py-2 text-[11.5px]"
+                  />
+                  <button
+                    type="submit"
+                    :disabled="verifyingWhatsAppCode || whatsappCode.length !== 6"
+                    class="rounded-md bg-brand-500 px-3 py-2 text-[11.5px] font-semibold text-white disabled:opacity-50"
+                  >
+                    {{ verifyingWhatsAppCode ? 'Verifying…' : 'Verify' }}
+                  </button>
+                </form>
+              </div>
+            </div>
             <div class="sm:col-span-2 rounded-lg border border-ink-900/8 bg-canvas p-3">
               <p class="flex items-center gap-1.5 text-[12px] font-medium">
                 <MailCheck :size="14" :class="user?.email_verified ? 'text-emerald-600' : 'text-amber-600'" />

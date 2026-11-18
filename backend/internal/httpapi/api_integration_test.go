@@ -276,7 +276,7 @@ func TestMemberPermissionsAreEnforced(t *testing.T) {
 	require.NotEqual(t, uuid.Nil, memberID)
 }
 
-func TestCompanyVerificationRequiresVerifiedEmail(t *testing.T) {
+func TestCompanyVerificationRequiresVerifiedEmailAndWhatsApp(t *testing.T) {
 	env := newTestEnv(t)
 	owner := registerCompany(t, env, "Verify Freight", "verify@example.com")
 	companyID := owner.Companies[0].CompanyID
@@ -289,6 +289,17 @@ func TestCompanyVerificationRequiresVerifiedEmail(t *testing.T) {
 		"token": owner.DevVerificationToken,
 	})
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
+
+	rec = do(t, env.router, http.MethodPost, "/api/v1/companies/me/submit-verification", owner.AccessToken, companyID, nil)
+	require.Equal(t, http.StatusUnprocessableEntity, rec.Code, rec.Body.String())
+	require.Contains(t, rec.Body.String(), "whatsapp_unverified")
+
+	_, err := env.pool.Exec(t.Context(), `
+		INSERT INTO user_phone_verifications
+			(user_id, phone, token_hash, expires_at, verified_at, last_sent_at, window_started_at)
+		VALUES ($1, '+2348000000000', '', now() + interval '10 minutes', now(), now(), now())`,
+		owner.User.ID)
+	require.NoError(t, err)
 
 	rec = do(t, env.router, http.MethodPost, "/api/v1/companies/me/submit-verification", owner.AccessToken, companyID, nil)
 	require.Equal(t, http.StatusOK, rec.Code, rec.Body.String())
