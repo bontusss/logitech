@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -16,6 +17,7 @@ import (
 	db "github.com/bol-platform/backend/internal/db/sqlc"
 	"github.com/bol-platform/backend/internal/ratelimit"
 	"github.com/bol-platform/backend/internal/service"
+	"github.com/bol-platform/backend/internal/web"
 )
 
 const (
@@ -112,46 +114,59 @@ func New(cfg *config.Config, svc *service.Service, authManager *auth.Manager, li
 	company.DELETE("/roles/:id", api.requirePermission("staff.roles.manage"), api.deleteRole)
 
 	// Rate engine routes
-		company.GET("/countries", api.requirePermission("rates.view"), api.listCountries)
-		company.POST("/countries", api.requirePermission("rates.create"), api.createCountry)
+	company.GET("/countries", api.requirePermission("rates.view"), api.listCountries)
+	company.POST("/countries", api.requirePermission("rates.create"), api.createCountry)
 
-		company.GET("/states", api.requirePermission("rates.view"), api.listStates)
-		company.POST("/states", api.requirePermission("rates.create"), api.createState)
+	company.GET("/states", api.requirePermission("rates.view"), api.listStates)
+	company.POST("/states", api.requirePermission("rates.create"), api.createState)
 
-		company.GET("/cities", api.requirePermission("rates.view"), api.listCities)
-		company.POST("/cities", api.requirePermission("rates.create"), api.createCity)
+	company.GET("/cities", api.requirePermission("rates.view"), api.listCities)
+	company.POST("/cities", api.requirePermission("rates.create"), api.createCity)
 
-		company.GET("/terminals", api.requirePermission("rates.view"), api.listTerminals)
-		company.POST("/terminals", api.requirePermission("rates.create"), api.createTerminal)
+	company.GET("/terminals", api.requirePermission("rates.view"), api.listTerminals)
+	company.POST("/terminals", api.requirePermission("rates.create"), api.createTerminal)
 
-		company.GET("/shipping-services", api.requirePermission("rates.view"), api.listShippingServices)
-		company.POST("/shipping-services", api.requirePermission("rates.create"), api.createShippingService)
+	company.GET("/shipping-services", api.requirePermission("rates.view"), api.listShippingServices)
+	company.POST("/shipping-services", api.requirePermission("rates.create"), api.createShippingService)
 
-		company.GET("/routes", api.requirePermission("rates.view"), api.listCompanyRoutes)
-		company.POST("/routes", api.requirePermission("rates.create"), api.createCompanyRoute)
+	company.GET("/routes", api.requirePermission("rates.view"), api.listCompanyRoutes)
+	company.POST("/routes", api.requirePermission("rates.create"), api.createCompanyRoute)
 
-		company.GET("/rate-cards", api.requirePermission("rates.view"), api.listRateCards)
-		company.POST("/rate-cards", api.requirePermission("rates.create"), api.createRateCard)
-		company.GET("/rate-cards/:id", api.requirePermission("rates.view"), api.getRateCard)
+	company.GET("/rate-cards", api.requirePermission("rates.view"), api.listRateCards)
+	company.POST("/rate-cards", api.requirePermission("rates.create"), api.createRateCard)
+	company.GET("/rate-cards/:id", api.requirePermission("rates.view"), api.getRateCard)
 
-		company.GET("/rate-cards/:id/versions", api.requirePermission("rates.view"), api.listRateCardVersions)
-		company.POST("/rate-cards/:id/versions", api.requirePermission("rates.create"), api.createRateCardVersion)
+	company.GET("/rate-cards/:id/versions", api.requirePermission("rates.view"), api.listRateCardVersions)
+	company.POST("/rate-cards/:id/versions", api.requirePermission("rates.create"), api.createRateCardVersion)
 
-		company.GET("/rate-cards/:id/versions/:version_id/rules", api.requirePermission("rates.view"), api.listPricingRules)
-		company.POST("/rate-cards/:id/versions/:version_id/rules", api.requirePermission("rates.create"), api.createPricingRule)
+	company.GET("/rate-cards/:id/versions/:version_id/rules", api.requirePermission("rates.view"), api.listPricingRules)
+	company.POST("/rate-cards/:id/versions/:version_id/rules", api.requirePermission("rates.create"), api.createPricingRule)
 
-		company.GET("/rate-cards/:id/versions/:version_id/tiers", api.requirePermission("rates.view"), api.listPricingTiers)
-		company.POST("/rate-cards/:id/versions/:version_id/tiers", api.requirePermission("rates.create"), api.createPricingTier)
+	company.GET("/rate-cards/:id/versions/:version_id/tiers", api.requirePermission("rates.view"), api.listPricingTiers)
+	company.POST("/rate-cards/:id/versions/:version_id/tiers", api.requirePermission("rates.create"), api.createPricingTier)
 
-		company.GET("/package-categories", api.requirePermission("rates.view"), api.listPackageCategories)
-		company.POST("/package-categories", api.requirePermission("rates.create"), api.createPackageCategory)
+	company.GET("/package-categories", api.requirePermission("rates.view"), api.listPackageCategories)
+	company.POST("/package-categories", api.requirePermission("rates.create"), api.createPackageCategory)
 
-		company.GET("/additional-charges", api.requirePermission("rates.view"), api.listAdditionalCharges)
-		company.POST("/additional-charges", api.requirePermission("rates.create"), api.createAdditionalCharge)
+	company.GET("/additional-charges", api.requirePermission("rates.view"), api.listAdditionalCharges)
+	company.POST("/additional-charges", api.requirePermission("rates.create"), api.createAdditionalCharge)
 
-		company.POST("/quotes", api.requirePermission("rates.create"), api.createShippingQuote)
+	company.POST("/quotes", api.requirePermission("rates.create"), api.createShippingQuote)
 
-		return r
+	staticHandler := web.Handler()
+	r.NoRoute(func(c *gin.Context) {
+		requestPath := c.Request.URL.Path
+		if requestPath == "/api" || strings.HasPrefix(requestPath, "/api/") ||
+			requestPath == "/health" || strings.HasPrefix(requestPath, "/health/") ||
+			requestPath == "/uploads" || strings.HasPrefix(requestPath, "/uploads/") {
+			c.String(http.StatusNotFound, "404 page not found")
+			return
+		}
+
+		staticHandler.ServeHTTP(c.Writer, c.Request)
+	})
+
+	return r
 }
 
 // ---------------------------------------------------------------------------

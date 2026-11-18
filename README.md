@@ -86,6 +86,12 @@ docker exec app_postgres createdb -U app appdb_test
 `JWT_SECRET` falls back to a documented development value only when
 `APP_ENV != production`; production startup fails without it.
 
+## Container deployment
+
+The root `Dockerfile` generates the Nuxt site, embeds its static output in the Go server, and
+serves both the frontend and `/api/v1` from one web service. Deploy it as a Render Web Service
+using the repository's Dockerfile; the server listens on Render's `PORT` environment variable.
+
 ## Authentication flow
 
 1. **Registration**
