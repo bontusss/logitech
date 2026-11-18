@@ -69,6 +69,7 @@ docker exec app_postgres createdb -U app appdb_test
 | --- | --- |
 | `DATABASE_URL` | PostgreSQL connection string |
 | `REDIS_URL` | Redis URL (host port **6380** by default to avoid collisions) |
+| `APP_ENV` | Set to `production` for production deployments |
 | `JWT_SECRET` | HS256 signing key, minimum 32 characters; required in production |
 | `ACCESS_TOKEN_TTL` | Access token lifetime (default `15m`) |
 | `REFRESH_TOKEN_TTL` | Refresh family lifetime (default `720h`) |
@@ -91,6 +92,12 @@ docker exec app_postgres createdb -U app appdb_test
 The root `Dockerfile` generates the Nuxt site, embeds its static output in the Go server, and
 serves both the frontend and `/api/v1` from one web service. Deploy it as a Render Web Service
 using the repository's Dockerfile; the server listens on Render's `PORT` environment variable.
+For this same-origin deployment, set `APP_ENV=production`, `APP_URL` to the public HTTPS
+frontend URL, and `CORS_ORIGINS` to that URL (without a trailing slash). The frontend defaults
+to the relative `/api/v1` path. If the API is hosted on a different origin, set
+`NUXT_PUBLIC_API_BASE` to its public API URL in the frontend build environment; this value is
+embedded when the static frontend is generated, so changing only the runtime environment requires
+a rebuild/redeploy.
 
 ## Authentication flow
 

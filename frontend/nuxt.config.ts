@@ -51,7 +51,7 @@ export default defineNuxtConfig({
       // Full click-to-chat URL (https://wa.me/<number>) once a number is confirmed.
       whatsappUrl: process.env.NUXT_PUBLIC_WHATSAPP_URL ?? '',
       // Gin API base. Use /api/v1 when the app and API share an origin.
-      apiBase: process.env.NUXT_PUBLIC_API_BASE ?? 'http://localhost:8080/api/v1',
+      apiBase: process.env.NUXT_PUBLIC_API_BASE ?? '/api/v1',
       // Base domain used to resolve company branding from the left-most host label.
       appDomain: process.env.NUXT_PUBLIC_APP_DOMAIN ?? 'localhost',
     },
