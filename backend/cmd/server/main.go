@@ -71,6 +71,14 @@ func main() {
 	}
 	authManager := auth.NewManager(cfg.JWTSecret, cfg.AccessTTL)
 	svc := service.New(pool, authManager, redisClient, cfg, mail, log)
+	bootstrapCtx, bootstrapCancel := context.WithTimeout(context.Background(), 10*time.Second)
+	created, bootstrapErr := svc.EnsureSuperAdmin(bootstrapCtx, cfg.SuperAdminEmail, cfg.SuperAdminPassword)
+	bootstrapCancel()
+	if bootstrapErr != nil {
+		log.Warn("could not bootstrap the platform super admin", "error", bootstrapErr)
+	} else if created {
+		log.Info("platform super admin created", "email", cfg.SuperAdminEmail)
+	}
 	if cfg.WhatsAppAccessToken != "" && cfg.WhatsAppPhoneNumberID != "" {
 		svc.WhatsApp = &whatsapp.MetaClient{
 			AccessToken:   cfg.WhatsAppAccessToken,

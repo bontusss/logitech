@@ -26,6 +26,7 @@ type AdditionalCharge struct {
 	IsIncludedInPrice   bool           `json:"is_included_in_price"`
 	CreatedAt           time.Time      `json:"created_at"`
 	UpdatedAt           time.Time      `json:"updated_at"`
+	DeletedAt           *time.Time     `json:"deleted_at"`
 }
 
 type Area struct {
@@ -35,6 +36,7 @@ type Area struct {
 	Status    string     `json:"status"`
 	CreatedAt time.Time  `json:"created_at"`
 	UpdatedAt time.Time  `json:"updated_at"`
+	DeletedAt *time.Time `json:"deleted_at"`
 }
 
 type AuditLog struct {
@@ -83,6 +85,7 @@ type City struct {
 	Status    string     `json:"status"`
 	CreatedAt time.Time  `json:"created_at"`
 	UpdatedAt time.Time  `json:"updated_at"`
+	DeletedAt *time.Time `json:"deleted_at"`
 }
 
 type Company struct {
@@ -92,6 +95,7 @@ type Company struct {
 	BusinessEmail    string     `json:"business_email"`
 	Phone            string     `json:"phone"`
 	BusinessType     string     `json:"business_type"`
+	CacBusinessName  *string    `json:"cac_business_name"`
 	Country          string     `json:"country"`
 	State            *string    `json:"state"`
 	City             *string    `json:"city"`
@@ -150,16 +154,17 @@ type CompanyMember struct {
 }
 
 type CompanyRoute struct {
-	ID                      uuid.UUID `json:"id"`
-	CompanyID               uuid.UUID `json:"company_id"`
-	OriginLocationType      string    `json:"origin_location_type"`
-	OriginLocationID        uuid.UUID `json:"origin_location_id"`
-	DestinationLocationType string    `json:"destination_location_type"`
-	DestinationLocationID   uuid.UUID `json:"destination_location_id"`
-	IsRoundTrip             bool      `json:"is_round_trip"`
-	Status                  string    `json:"status"`
-	CreatedAt               time.Time `json:"created_at"`
-	UpdatedAt               time.Time `json:"updated_at"`
+	ID                      uuid.UUID  `json:"id"`
+	CompanyID               uuid.UUID  `json:"company_id"`
+	OriginLocationType      string     `json:"origin_location_type"`
+	OriginLocationID        uuid.UUID  `json:"origin_location_id"`
+	DestinationLocationType string     `json:"destination_location_type"`
+	DestinationLocationID   uuid.UUID  `json:"destination_location_id"`
+	IsRoundTrip             bool       `json:"is_round_trip"`
+	Status                  string     `json:"status"`
+	CreatedAt               time.Time  `json:"created_at"`
+	UpdatedAt               time.Time  `json:"updated_at"`
+	DeletedAt               *time.Time `json:"deleted_at"`
 }
 
 type CompanyServiceArea struct {
@@ -195,13 +200,29 @@ type CompanySubdomain struct {
 }
 
 type Country struct {
-	ID          uuid.UUID `json:"id"`
-	Name        string    `json:"name"`
-	Code        string    `json:"code"`
-	NumericCode int32     `json:"numeric_code"`
-	Status      string    `json:"status"`
-	CreatedAt   time.Time `json:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at"`
+	ID          uuid.UUID  `json:"id"`
+	Name        string     `json:"name"`
+	Code        string     `json:"code"`
+	NumericCode int32      `json:"numeric_code"`
+	Status      string     `json:"status"`
+	CreatedAt   time.Time  `json:"created_at"`
+	UpdatedAt   time.Time  `json:"updated_at"`
+	DeletedAt   *time.Time `json:"deleted_at"`
+}
+
+type EmailJob struct {
+	ID          uuid.UUID  `json:"id"`
+	UserID      uuid.UUID  `json:"user_id"`
+	CompanyID   *uuid.UUID `json:"company_id"`
+	Kind        string     `json:"kind"`
+	Sequence    int16      `json:"sequence"`
+	Status      string     `json:"status"`
+	ScheduledAt time.Time  `json:"scheduled_at"`
+	ClaimedAt   *time.Time `json:"claimed_at"`
+	SentAt      *time.Time `json:"sent_at"`
+	Attempts    int16      `json:"attempts"`
+	LastError   *string    `json:"last_error"`
+	CreatedAt   time.Time  `json:"created_at"`
 }
 
 type EmailVerification struct {
@@ -224,13 +245,14 @@ type MemberRole struct {
 }
 
 type PackageCategory struct {
-	ID          uuid.UUID `json:"id"`
-	Name        string    `json:"name"`
-	Description *string   `json:"description"`
-	SortOrder   int32     `json:"sort_order"`
-	IsDefault   bool      `json:"is_default"`
-	CreatedAt   time.Time `json:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at"`
+	ID          uuid.UUID  `json:"id"`
+	Name        string     `json:"name"`
+	Description *string    `json:"description"`
+	SortOrder   int32      `json:"sort_order"`
+	IsDefault   bool       `json:"is_default"`
+	CreatedAt   time.Time  `json:"created_at"`
+	UpdatedAt   time.Time  `json:"updated_at"`
+	DeletedAt   *time.Time `json:"deleted_at"`
 }
 
 type PasswordReset struct {
@@ -270,6 +292,7 @@ type PricingRule struct {
 	EffectiveUntil       *time.Time     `json:"effective_until"`
 	IsActive             bool           `json:"is_active"`
 	CreatedAt            time.Time      `json:"created_at"`
+	DeletedAt            *time.Time     `json:"deleted_at"`
 }
 
 type PricingTier struct {
@@ -281,6 +304,7 @@ type PricingTier struct {
 	Name              string         `json:"name"`
 	Description       *string        `json:"description"`
 	CreatedAt         time.Time      `json:"created_at"`
+	DeletedAt         *time.Time     `json:"deleted_at"`
 }
 
 type QuoteCharge struct {
@@ -309,6 +333,7 @@ type RateCard struct {
 	PublishedAt    *time.Time `json:"published_at"`
 	CreatedAt      time.Time  `json:"created_at"`
 	UpdatedAt      time.Time  `json:"updated_at"`
+	DeletedAt      *time.Time `json:"deleted_at"`
 }
 
 type RateCardHistory struct {
@@ -335,6 +360,8 @@ type RateCardVersion struct {
 	EffectiveUntil        *time.Time `json:"effective_until"`
 	CreatedAt             time.Time  `json:"created_at"`
 	CreatedBy             *uuid.UUID `json:"created_by"`
+	UpdatedAt             time.Time  `json:"updated_at"`
+	DeletedAt             *time.Time `json:"deleted_at"`
 }
 
 type RefreshToken struct {
@@ -410,16 +437,18 @@ type ShippingService struct {
 	IsDefault         bool           `json:"is_default"`
 	CreatedAt         time.Time      `json:"created_at"`
 	UpdatedAt         time.Time      `json:"updated_at"`
+	DeletedAt         *time.Time     `json:"deleted_at"`
 }
 
 type State struct {
-	ID        uuid.UUID `json:"id"`
-	Name      string    `json:"name"`
-	Code      *string   `json:"code"`
-	CountryID uuid.UUID `json:"country_id"`
-	Status    string    `json:"status"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	ID        uuid.UUID  `json:"id"`
+	Name      string     `json:"name"`
+	Code      *string    `json:"code"`
+	CountryID uuid.UUID  `json:"country_id"`
+	Status    string     `json:"status"`
+	CreatedAt time.Time  `json:"created_at"`
+	UpdatedAt time.Time  `json:"updated_at"`
+	DeletedAt *time.Time `json:"deleted_at"`
 }
 
 type Terminal struct {
@@ -431,6 +460,7 @@ type Terminal struct {
 	Status    string     `json:"status"`
 	CreatedAt time.Time  `json:"created_at"`
 	UpdatedAt time.Time  `json:"updated_at"`
+	DeletedAt *time.Time `json:"deleted_at"`
 }
 
 type User struct {
@@ -447,4 +477,17 @@ type User struct {
 	CreatedAt       time.Time  `json:"created_at"`
 	UpdatedAt       time.Time  `json:"updated_at"`
 	DeletedAt       *time.Time `json:"deleted_at"`
+}
+
+type UserPhoneVerification struct {
+	UserID          uuid.UUID  `json:"user_id"`
+	Phone           string     `json:"phone"`
+	TokenHash       string     `json:"token_hash"`
+	ExpiresAt       time.Time  `json:"expires_at"`
+	VerifiedAt      *time.Time `json:"verified_at"`
+	LastSentAt      time.Time  `json:"last_sent_at"`
+	WindowStartedAt time.Time  `json:"window_started_at"`
+	SendsInWindow   int16      `json:"sends_in_window"`
+	Attempts        int16      `json:"attempts"`
+	CreatedAt       time.Time  `json:"created_at"`
 }

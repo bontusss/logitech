@@ -76,6 +76,8 @@ docker exec app_postgres createdb -U app appdb_test
 | `APP_URL` | Frontend origin used in email links and CORS defaults |
 | `CORS_ORIGINS` | Comma-separated allowed browser origins |
 | `COOKIE_SECURE` | Set true behind HTTPS (forced in production) |
+| `SUPER_ADMIN_EMAIL` | Bootstrap platform super administrator email; created at startup if absent |
+| `SUPER_ADMIN_PASSWORD` | Bootstrap super administrator password; change before deploying |
 | `PLUNK_SECRET_KEY` | Server-side Plunk secret key used for transactional email |
 | `PLUNK_FROM_EMAIL` | Sender address on a verified Plunk sending domain |
 | `PLUNK_PUBLIC_KEY` | Optional; only needed for browser-side Plunk event tracking |
@@ -222,6 +224,18 @@ the HttpOnly access cookie. Company routes accept `X-Company-Id`.
 | GET | `/public/companies/:subdomain` | public company profile |
 | GET | `/public/manifest` | company-branded PWA manifest |
 
+### Platform administration
+
+Platform routes require a signed-in account whose `account_type` is `platform`. `admin` and
+`super_admin` can approve providers; `support` is read-only. Creating admin accounts is
+restricted to `super_admin`.
+
+| Method | Path | Purpose |
+| --- | --- | --- |
+| GET | `/admin/overview` | customers, provider companies and admin accounts |
+| POST | `/admin/providers/:id/approve` | verify a provider company |
+| POST | `/admin/admins` | create an `admin` or `support` account (super admin only) |
+
 ### Company workspace
 
 | Method | Path | Permission |
@@ -272,7 +286,9 @@ database for compatibility; new endpoints use the granular keys.
 ## Frontend
 
 - `/login`, `/register` (customer or logistics company), `/forgot-password`, `/verify-email`
-- `/onboarding` — company profile, contact, location, branding and submission
+- `/admin/login` — platform administrator sign-in
+- `/admin` — customers, provider approvals and admin account creation
+- `/onboarding` — company profile, contact, location, branding and CAC business name
 - `/dashboard` — account/company status and onboarding checklist
 - `/dashboard/company` — profile, operating hours and verification
 - `/dashboard/company/branches` — search/filter, create, activate/deactivate
@@ -284,7 +300,15 @@ database for compatibility; new endpoints use the granular keys.
 - `/invitations/[token]` — public invitation preview and acceptance
 
 The workspace is client-authenticated against the API using HttpOnly cookies; no tokens are stored
-in `localStorage`. Success, error, loading and empty states are shared through `useWorkspace`,
+in `localStorage`.
+
+### Platform administration
+
+Sign in at **`/admin/login`**. On API startup the server creates the super administrator from
+`SUPER_ADMIN_EMAIL` / `SUPER_ADMIN_PASSWORD` (see `.env.example`) if that email does not exist yet;
+an existing account is never overwritten. The dashboard lists customers and provider companies,
+lets an admin approve a provider, and lets the super admin create additional `admin` or
+`support` accounts. Success, error, loading and empty states are shared through `useWorkspace`,
 `ToastHost` and `ConfirmDialog`.
 
 ### Branding and PWA
@@ -327,8 +351,9 @@ Integration coverage includes:
 - Uploaded images are stored on the local filesystem (`UPLOAD_DIR`). A storage provider and image
   processing pipeline are not configured.
 - Subdomain DNS and wildcard TLS are deployment concerns and are not provisioned by the app.
-- Verification document upload/review, platform administration, shipments, rate engine, manifests
-  and marketplace booking are out of scope for this stage.
+- Provider verification collects the registered CAC business name; document uploads and automated
+  CAC lookups are not implemented, so an administrator checks the name manually before approving.
+- Shipments, rate engine, manifests and marketplace booking are out of scope for this stage.
 
 ## Recommended next task
 

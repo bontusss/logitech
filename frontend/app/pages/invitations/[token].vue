@@ -176,7 +176,13 @@ async function useAnotherAccount() {
         </label>
         <label class="mt-3 block">
           <span class="mb-1.5 block text-[11px] font-medium text-ink-900/55">Password</span>
-          <input v-model="password" type="password" required minlength="8" class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500" placeholder="At least 8 characters" />
+          <PasswordInput
+            v-model="password"
+            required
+            :minlength="8"
+            input-class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500"
+            placeholder="At least 8 characters"
+          />
         </label>
         <button
           type="submit"

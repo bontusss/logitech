@@ -34,6 +34,7 @@ var (
 	ErrInvitationNeedsLogin    = errors.New("service: invitation requires the invited account to sign in")
 	ErrInvitationEmailMismatch = errors.New("service: signed-in account does not match the invitation")
 	ErrInvalidInvitationBranch = errors.New("service: invitation contains a branch outside the company")
+	ErrInvalidPlatformRole     = errors.New("service: platform role must be admin or support")
 )
 
 type Service struct {
@@ -826,6 +827,84 @@ func (s *Service) AcceptInvitation(ctx context.Context, rawToken string, actor *
 		UserAgent:  ua,
 	})
 	return session, nil
+}
+
+// ---------------------------------------------------------------------------
+// Platform administration
+// ---------------------------------------------------------------------------
+
+// EnsureSuperAdmin creates the bootstrap super administrator when it does not
+// exist yet. It never changes an existing account, so rotating the env
+// password does not silently overwrite a password set in the app.
+func (s *Service) EnsureSuperAdmin(ctx context.Context, email, password string) (bool, error) {
+	email = normalizeEmail(email)
+	if email == "" || password == "" {
+		return false, nil
+	}
+
+	existing, err := s.Q.GetUserByEmail(ctx, email)
+	if err == nil {
+		if existing.AccountType != "platform" || existing.PlatformRole == nil || *existing.PlatformRole != "super_admin" {
+			return false, fmt.Errorf("SUPER_ADMIN_EMAIL is already used by an account that is not a super administrator")
+		}
+		return false, nil
+	}
+	if !errors.Is(err, pgx.ErrNoRows) {
+		return false, err
+	}
+
+	hash, err := auth.HashPassword(password)
+	if err != nil {
+		return false, err
+	}
+	now := time.Now()
+	role := "super_admin"
+	if _, err := s.Q.CreateUser(ctx, db.CreateUserParams{
+		Email:           email,
+		PasswordHash:    hash,
+		FullName:        "Platform super admin",
+		AccountType:     "platform",
+		PlatformRole:    &role,
+		EmailVerifiedAt: &now,
+	}); err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
+type PlatformAdminInput struct {
+	Email    string
+	FullName string
+	Password string
+	Role     string
+}
+
+func (s *Service) CreatePlatformAdmin(ctx context.Context, input PlatformAdminInput) (db.User, error) {
+	role := strings.TrimSpace(input.Role)
+	if role != "admin" && role != "support" {
+		return db.User{}, ErrInvalidPlatformRole
+	}
+	hash, err := auth.HashPassword(input.Password)
+	if err != nil {
+		return db.User{}, err
+	}
+	now := time.Now()
+	user, err := s.Q.CreateUser(ctx, db.CreateUserParams{
+		Email:           normalizeEmail(input.Email),
+		PasswordHash:    hash,
+		FullName:        strings.TrimSpace(input.FullName),
+		AccountType:     "platform",
+		PlatformRole:    &role,
+		EmailVerifiedAt: &now,
+	})
+	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+			return db.User{}, ErrEmailTaken
+		}
+		return db.User{}, err
+	}
+	return user, nil
 }
 
 // ---------------------------------------------------------------------------

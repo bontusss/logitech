@@ -25,6 +25,8 @@ type Config struct {
 	UploadDir                string
 	APIPublicURL             string
 	AppDomain                string
+	SuperAdminEmail          string
+	SuperAdminPassword       string
 	PlunkSecretKey           string
 	PlunkFromEmail           string
 	WhatsAppAccessToken      string
@@ -51,6 +53,8 @@ func Load() (*Config, error) {
 		UploadDir:                getenv("UPLOAD_DIR", "uploads"),
 		APIPublicURL:             getenv("API_PUBLIC_URL", "http://localhost:8080"),
 		AppDomain:                getenv("APP_DOMAIN", "localhost"),
+		SuperAdminEmail:          os.Getenv("SUPER_ADMIN_EMAIL"),
+		SuperAdminPassword:       os.Getenv("SUPER_ADMIN_PASSWORD"),
 		PlunkSecretKey:           os.Getenv("PLUNK_SECRET_KEY"),
 		PlunkFromEmail:           os.Getenv("PLUNK_FROM_EMAIL"),
 		WhatsAppAccessToken:      os.Getenv("WHATSAPP_ACCESS_TOKEN"),

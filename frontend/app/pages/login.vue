@@ -16,7 +16,11 @@ async function submit() {
   error.value = ''
   pending.value = true
   try {
-    await login(email.value, password.value)
+    const session = await login(email.value, password.value)
+    if (session.user.platform_role) {
+      await navigateTo('/admin')
+      return
+    }
     const next = typeof route.query.next === 'string' ? route.query.next : '/dashboard'
     await navigateTo(next)
   } catch (err) {
@@ -57,12 +61,10 @@ async function submit() {
             Forgot password?
           </NuxtLink>
         </span>
-        <input
+        <PasswordInput
           v-model="password"
-          type="password"
           required
           autocomplete="current-password"
-          class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm transition hover:border-slate-400 focus:border-brand-500"
           placeholder="Your password"
         />
       </label>

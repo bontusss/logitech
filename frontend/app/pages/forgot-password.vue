@@ -84,7 +84,7 @@ const inputClass =
       <form class="mt-6 space-y-4" @submit.prevent="resetPassword">
         <label class="block">
           <span class="mb-1.5 block text-[11.5px] font-medium text-ink-900/60">New password</span>
-          <input v-model="password" type="password" required minlength="8" autocomplete="new-password" :class="inputClass" placeholder="At least 8 characters" />
+          <PasswordInput v-model="password" required :minlength="8" autocomplete="new-password" :input-class="inputClass" placeholder="At least 8 characters" />
         </label>
 
         <p v-if="error" role="alert" class="rounded-lg border border-red-200 bg-red-50 px-3 py-2.5 text-[12px] text-red-700">

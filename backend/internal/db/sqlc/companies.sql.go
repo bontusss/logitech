@@ -66,7 +66,7 @@ INSERT INTO companies (
 ) VALUES (
   $1, $2, $3, $4, $5, $6, NULLIF($7::text, ''), NULLIF($8::text, ''), NULLIF($9::text, ''), $10
 )
-RETURNING id, name, slug, business_email, phone, business_type, country, state, city, address, status, onboarding_status, owner_user_id, verified_at, created_at, updated_at, deleted_at, description, cover_image_url, operating_hours
+RETURNING id, name, slug, business_email, phone, business_type, cac_business_name, country, state, city, address, status, onboarding_status, owner_user_id, verified_at, created_at, updated_at, deleted_at, description, cover_image_url, operating_hours
 `
 
 type CreateCompanyParams struct {
@@ -103,6 +103,7 @@ func (q *Queries) CreateCompany(ctx context.Context, arg CreateCompanyParams) (C
 		&i.BusinessEmail,
 		&i.Phone,
 		&i.BusinessType,
+		&i.CacBusinessName,
 		&i.Country,
 		&i.State,
 		&i.City,
@@ -314,7 +315,7 @@ func (q *Queries) GetCompanyBranding(ctx context.Context, companyID uuid.UUID) (
 }
 
 const getCompanyByID = `-- name: GetCompanyByID :one
-SELECT id, name, slug, business_email, phone, business_type, country, state, city, address, status, onboarding_status, owner_user_id, verified_at, created_at, updated_at, deleted_at, description, cover_image_url, operating_hours FROM companies
+SELECT id, name, slug, business_email, phone, business_type, cac_business_name, country, state, city, address, status, onboarding_status, owner_user_id, verified_at, created_at, updated_at, deleted_at, description, cover_image_url, operating_hours FROM companies
 WHERE id = $1 AND deleted_at IS NULL
 `
 
@@ -328,6 +329,7 @@ func (q *Queries) GetCompanyByID(ctx context.Context, id uuid.UUID) (Company, er
 		&i.BusinessEmail,
 		&i.Phone,
 		&i.BusinessType,
+		&i.CacBusinessName,
 		&i.Country,
 		&i.State,
 		&i.City,
@@ -711,7 +713,7 @@ SET name = $2,
     operating_hours = $12,
     updated_at = now()
 WHERE id = $1 AND deleted_at IS NULL
-RETURNING id, name, slug, business_email, phone, business_type, country, state, city, address, status, onboarding_status, owner_user_id, verified_at, created_at, updated_at, deleted_at, description, cover_image_url, operating_hours
+RETURNING id, name, slug, business_email, phone, business_type, cac_business_name, country, state, city, address, status, onboarding_status, owner_user_id, verified_at, created_at, updated_at, deleted_at, description, cover_image_url, operating_hours
 `
 
 type UpdateCompanyParams struct {
@@ -752,6 +754,7 @@ func (q *Queries) UpdateCompany(ctx context.Context, arg UpdateCompanyParams) (C
 		&i.BusinessEmail,
 		&i.Phone,
 		&i.BusinessType,
+		&i.CacBusinessName,
 		&i.Country,
 		&i.State,
 		&i.City,
@@ -826,6 +829,48 @@ func (q *Queries) UpdateCompanyBranding(ctx context.Context, arg UpdateCompanyBr
 	return i, err
 }
 
+const updateCompanyCACName = `-- name: UpdateCompanyCACName :one
+UPDATE companies
+SET cac_business_name = NULLIF($2::text, ''),
+    updated_at = now()
+WHERE id = $1 AND deleted_at IS NULL
+RETURNING id, name, slug, business_email, phone, business_type, cac_business_name, country, state, city, address, status, onboarding_status, owner_user_id, verified_at, created_at, updated_at, deleted_at, description, cover_image_url, operating_hours
+`
+
+type UpdateCompanyCACNameParams struct {
+	ID              uuid.UUID `json:"id"`
+	CacBusinessName string    `json:"cac_business_name"`
+}
+
+func (q *Queries) UpdateCompanyCACName(ctx context.Context, arg UpdateCompanyCACNameParams) (Company, error) {
+	row := q.db.QueryRow(ctx, updateCompanyCACName, arg.ID, arg.CacBusinessName)
+	var i Company
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Slug,
+		&i.BusinessEmail,
+		&i.Phone,
+		&i.BusinessType,
+		&i.CacBusinessName,
+		&i.Country,
+		&i.State,
+		&i.City,
+		&i.Address,
+		&i.Status,
+		&i.OnboardingStatus,
+		&i.OwnerUserID,
+		&i.VerifiedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.DeletedAt,
+		&i.Description,
+		&i.CoverImageUrl,
+		&i.OperatingHours,
+	)
+	return i, err
+}
+
 const updateCompanySettings = `-- name: UpdateCompanySettings :one
 UPDATE company_settings
 SET timezone = $2,
@@ -877,7 +922,7 @@ SET status = $2,
     verified_at = $4,
     updated_at = now()
 WHERE id = $1 AND deleted_at IS NULL
-RETURNING id, name, slug, business_email, phone, business_type, country, state, city, address, status, onboarding_status, owner_user_id, verified_at, created_at, updated_at, deleted_at, description, cover_image_url, operating_hours
+RETURNING id, name, slug, business_email, phone, business_type, cac_business_name, country, state, city, address, status, onboarding_status, owner_user_id, verified_at, created_at, updated_at, deleted_at, description, cover_image_url, operating_hours
 `
 
 type UpdateCompanyVerificationParams struct {
@@ -902,6 +947,7 @@ func (q *Queries) UpdateCompanyVerification(ctx context.Context, arg UpdateCompa
 		&i.BusinessEmail,
 		&i.Phone,
 		&i.BusinessType,
+		&i.CacBusinessName,
 		&i.Country,
 		&i.State,
 		&i.City,

@@ -27,6 +27,13 @@ SET name = $2,
 WHERE id = $1 AND deleted_at IS NULL
 RETURNING *;
 
+-- name: UpdateCompanyCACName :one
+UPDATE companies
+SET cac_business_name = NULLIF(sqlc.arg(cac_business_name)::text, ''),
+    updated_at = now()
+WHERE id = $1 AND deleted_at IS NULL
+RETURNING *;
+
 -- name: UpdateCompanyVerification :one
 UPDATE companies
 SET status = $2,

@@ -42,6 +42,7 @@ type companyDTO struct {
 	BusinessEmail    string          `json:"business_email"`
 	Phone            string          `json:"phone"`
 	BusinessType     string          `json:"business_type"`
+	CACBusinessName  *string         `json:"cac_business_name"`
 	Country          string          `json:"country"`
 	State            *string         `json:"state"`
 	City             *string         `json:"city"`
@@ -63,6 +64,7 @@ func toCompanyDTO(company db.Company) companyDTO {
 		BusinessEmail:    company.BusinessEmail,
 		Phone:            company.Phone,
 		BusinessType:     company.BusinessType,
+		CACBusinessName:  company.CacBusinessName,
 		Country:          company.Country,
 		State:            company.State,
 		City:             company.City,
@@ -145,16 +147,17 @@ func (a *API) updateCompany(c *gin.Context) {
 	}
 
 	var req struct {
-		Name           *string         `json:"name" binding:"omitempty,min=2,max=160"`
-		BusinessEmail  *string         `json:"business_email" binding:"omitempty,email"`
-		Phone          *string         `json:"phone" binding:"omitempty,max=30"`
-		BusinessType   *string         `json:"business_type" binding:"omitempty,max=80"`
-		Country        *string         `json:"country" binding:"omitempty,max=2"`
-		State          *string         `json:"state" binding:"omitempty,max=80"`
-		City           *string         `json:"city" binding:"omitempty,max=80"`
-		Address        *string         `json:"address" binding:"omitempty,max=240"`
-		Description    *string         `json:"description" binding:"omitempty,max=2000"`
-		OperatingHours json.RawMessage `json:"operating_hours"`
+		Name            *string         `json:"name" binding:"omitempty,min=2,max=160"`
+		BusinessEmail   *string         `json:"business_email" binding:"omitempty,email"`
+		Phone           *string         `json:"phone" binding:"omitempty,max=30"`
+		BusinessType    *string         `json:"business_type" binding:"omitempty,max=80"`
+		CACBusinessName *string         `json:"cac_business_name" binding:"omitempty,max=200"`
+		Country         *string         `json:"country" binding:"omitempty,max=2"`
+		State           *string         `json:"state" binding:"omitempty,max=80"`
+		City            *string         `json:"city" binding:"omitempty,max=80"`
+		Address         *string         `json:"address" binding:"omitempty,max=240"`
+		Description     *string         `json:"description" binding:"omitempty,max=2000"`
+		OperatingHours  json.RawMessage `json:"operating_hours"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		fail(c, http.StatusBadRequest, "invalid_input", "Check the company details you entered.")
@@ -185,6 +188,13 @@ func (a *API) updateCompany(c *gin.Context) {
 		return
 	}
 
+	if req.CACBusinessName != nil && strings.TrimSpace(*req.CACBusinessName) != "" {
+		if len(strings.TrimSpace(*req.CACBusinessName)) < 2 {
+			fail(c, http.StatusUnprocessableEntity, "invalid_cac_name", "Enter the business name exactly as it appears on your CAC certificate.")
+			return
+		}
+	}
+
 	company, err := a.svc.Q.UpdateCompany(c.Request.Context(), db.UpdateCompanyParams{
 		ID:             tenant.CompanyID,
 		Name:           strings.TrimSpace(name),
@@ -206,6 +216,17 @@ func (a *API) updateCompany(c *gin.Context) {
 		}
 		a.handleServiceError(c, err)
 		return
+	}
+
+	if req.CACBusinessName != nil {
+		company, err = a.svc.Q.UpdateCompanyCACName(c.Request.Context(), db.UpdateCompanyCACNameParams{
+			ID:              tenant.CompanyID,
+			CacBusinessName: strings.TrimSpace(*req.CACBusinessName),
+		})
+		if err != nil {
+			a.handleServiceError(c, err)
+			return
+		}
 	}
 
 	a.svc.Audit(c.Request.Context(), service.AuditEntry{
@@ -385,6 +406,10 @@ func (a *API) submitVerification(c *gin.Context) {
 	if company.State == nil || company.City == nil || company.Address == nil ||
 		*company.State == "" || *company.City == "" || *company.Address == "" {
 		fail(c, http.StatusUnprocessableEntity, "profile_incomplete", "Add the company location before submitting for review.")
+		return
+	}
+	if company.CacBusinessName == nil || strings.TrimSpace(*company.CacBusinessName) == "" {
+		fail(c, http.StatusUnprocessableEntity, "cac_required", "Add the business name registered with the CAC before submitting for review.")
 		return
 	}
 

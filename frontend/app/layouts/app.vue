@@ -9,6 +9,7 @@ import {
   MapPin,
   Menu,
   Palette,
+  Send,
   Settings,
   ShieldCheck,
   UserRound,
@@ -25,10 +26,14 @@ const mobileOpen = ref(false)
 const companyOpen = ref(false)
 const profileOpen = ref(false)
 
-const navigation = [
+const isCustomer = computed(() => user.value?.account_type === 'customer')
+
+const navigation = computed(() => [
   { label: 'Overview', to: '/dashboard', icon: LayoutDashboard },
-  { label: 'Onboarding', to: '/onboarding', icon: ClipboardList },
-]
+  ...(isCustomer.value
+    ? [{ label: 'Send a package', to: '/#rate-search', icon: Send }]
+    : [{ label: 'Onboarding', to: '/onboarding', icon: ClipboardList }]),
+])
 
 const companyNavigation = [
   { label: 'Company profile', to: '/dashboard/company', icon: Building2, permission: 'company.view' },
@@ -72,6 +77,7 @@ function isActive(to: string) {
 }
 
 const pageTitle = computed(() => {
+  if (isCustomer.value) return 'Marketplace dashboard'
   if (route.path.startsWith('/onboarding')) return 'Company onboarding'
   const companyItem = companyNavigation.find((item) => isActive(item.to))
   if (companyItem) return companyItem.label
@@ -130,7 +136,7 @@ watch(
         </button>
       </div>
 
-      <div class="relative px-3 pt-3">
+      <div v-if="!isCustomer" class="relative px-3 pt-3">
         <button
           type="button"
           class="flex w-full items-center gap-2.5 rounded-lg border border-ink-900/10 bg-canvas px-3 py-2.5 text-left transition hover:border-ink-900/20"
@@ -197,42 +203,44 @@ watch(
           </li>
         </ul>
 
-        <p class="mt-6 px-2 text-[9.5px] font-semibold tracking-[0.18em] text-ink-900/35 uppercase">
-          Company
-        </p>
-        <ul class="mt-2 space-y-0.5">
-          <li v-for="item in visibleCompanyNavigation" :key="item.to">
-            <NuxtLink
-              :to="item.to"
-              class="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] font-medium transition"
-              :class="
-                isActive(item.to)
-                  ? 'bg-brand-50 text-brand-700'
-                  : 'text-ink-900/60 hover:bg-ink-900/[0.03] hover:text-ink-900'
-              "
+        <template v-if="!isCustomer">
+          <p class="mt-6 px-2 text-[9.5px] font-semibold tracking-[0.18em] text-ink-900/35 uppercase">
+            Company
+          </p>
+          <ul class="mt-2 space-y-0.5">
+            <li v-for="item in visibleCompanyNavigation" :key="item.to">
+              <NuxtLink
+                :to="item.to"
+                class="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] font-medium transition"
+                :class="
+                  isActive(item.to)
+                    ? 'bg-brand-50 text-brand-700'
+                    : 'text-ink-900/60 hover:bg-ink-900/[0.03] hover:text-ink-900'
+                "
+              >
+                <component :is="item.icon" :size="15" />
+                {{ item.label }}
+              </NuxtLink>
+            </li>
+          </ul>
+
+          <p class="mt-6 px-2 text-[9.5px] font-semibold tracking-[0.18em] text-ink-900/35 uppercase">
+            Coming next
+          </p>
+          <ul class="mt-2 space-y-0.5">
+            <li
+              v-for="item in upcoming"
+              :key="item.label"
+              class="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] text-ink-900/30"
             >
               <component :is="item.icon" :size="15" />
               {{ item.label }}
-            </NuxtLink>
-          </li>
-        </ul>
-
-        <p class="mt-6 px-2 text-[9.5px] font-semibold tracking-[0.18em] text-ink-900/35 uppercase">
-          Coming next
-        </p>
-        <ul class="mt-2 space-y-0.5">
-          <li
-            v-for="item in upcoming"
-            :key="item.label"
-            class="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] text-ink-900/30"
-          >
-            <component :is="item.icon" :size="15" />
-            {{ item.label }}
-            <span class="ml-auto rounded border border-ink-900/10 px-1.5 py-0.5 text-[8.5px] tracking-wide uppercase">
-              Soon
-            </span>
-          </li>
-        </ul>
+              <span class="ml-auto rounded border border-ink-900/10 px-1.5 py-0.5 text-[8.5px] tracking-wide uppercase">
+                Soon
+              </span>
+            </li>
+          </ul>
+        </template>
       </nav>
 
       <div class="border-t border-ink-900/8 p-3">
@@ -261,7 +269,7 @@ watch(
           <div class="min-w-0">
             <p class="truncate text-[13px] font-semibold tracking-[-0.01em]">{{ pageTitle }}</p>
             <p class="truncate text-[10.5px] text-ink-900/40">
-              {{ currentCompany?.company_name ?? 'BOL account' }}
+              {{ isCustomer ? 'Customer account' : (currentCompany?.company_name ?? 'BOL account') }}
             </p>
           </div>
 

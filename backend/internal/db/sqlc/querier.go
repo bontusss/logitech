@@ -16,6 +16,7 @@ type Querier interface {
 	AddMemberBranch(ctx context.Context, arg AddMemberBranchParams) error
 	AddMemberRole(ctx context.Context, arg AddMemberRoleParams) error
 	AddRolePermission(ctx context.Context, arg AddRolePermissionParams) error
+	ApproveCompany(ctx context.Context, id uuid.UUID) (Company, error)
 	ClaimInvitation(ctx context.Context, arg ClaimInvitationParams) (CompanyInvitation, error)
 	ConsumeEmailVerification(ctx context.Context, id uuid.UUID) error
 	ConsumePasswordReset(ctx context.Context, id uuid.UUID) error
@@ -84,14 +85,17 @@ type Querier interface {
 	ListCompanyMembers(ctx context.Context, companyID uuid.UUID) ([]ListCompanyMembersRow, error)
 	ListCompanyRoutes(ctx context.Context, companyID uuid.UUID) ([]CompanyRoute, error)
 	ListCountries(ctx context.Context) ([]Country, error)
+	ListCustomerAccounts(ctx context.Context) ([]ListCustomerAccountsRow, error)
 	ListInvitationBranchIDs(ctx context.Context, invitationID uuid.UUID) ([]uuid.UUID, error)
 	ListMemberBranchIDs(ctx context.Context, arg ListMemberBranchIDsParams) ([]uuid.UUID, error)
 	ListMemberBranches(ctx context.Context, arg ListMemberBranchesParams) ([]ListMemberBranchesRow, error)
 	ListMemberRoles(ctx context.Context, memberID uuid.UUID) ([]string, error)
 	ListPackageCategories(ctx context.Context) ([]PackageCategory, error)
 	ListPermissions(ctx context.Context) ([]ListPermissionsRow, error)
+	ListPlatformAdmins(ctx context.Context) ([]ListPlatformAdminsRow, error)
 	ListPricingRules(ctx context.Context, rateCardVersionID uuid.UUID) ([]PricingRule, error)
 	ListPricingTiers(ctx context.Context, rateCardVersionID uuid.UUID) ([]PricingTier, error)
+	ListProviderCompanies(ctx context.Context) ([]ListProviderCompaniesRow, error)
 	ListRateCardVersions(ctx context.Context, rateCardID uuid.UUID) ([]RateCardVersion, error)
 	ListRateCards(ctx context.Context, companyID uuid.UUID) ([]RateCard, error)
 	ListRolePermissionKeys(ctx context.Context, roleID uuid.UUID) ([]string, error)
@@ -119,6 +123,7 @@ type Querier interface {
 	UpdateBranch(ctx context.Context, arg UpdateBranchParams) (Branch, error)
 	UpdateCompany(ctx context.Context, arg UpdateCompanyParams) (Company, error)
 	UpdateCompanyBranding(ctx context.Context, arg UpdateCompanyBrandingParams) (CompanyBranding, error)
+	UpdateCompanyCACName(ctx context.Context, arg UpdateCompanyCACNameParams) (Company, error)
 	UpdateCompanyRole(ctx context.Context, arg UpdateCompanyRoleParams) (Role, error)
 	UpdateCompanySettings(ctx context.Context, arg UpdateCompanySettingsParams) (CompanySetting, error)
 	UpdateCompanyVerification(ctx context.Context, arg UpdateCompanyVerificationParams) (Company, error)

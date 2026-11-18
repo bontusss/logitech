@@ -5,13 +5,13 @@ import {
   Check,
   CircleAlert,
   CircleCheck,
-  FileText,
   Loader2,
   MailCheck,
   MapPin,
   MessageCircle,
   Palette,
   Send,
+  ShieldCheck,
   Building2,
   UserRound,
 } from 'lucide-vue-next'
@@ -41,12 +41,13 @@ const steps = [
   { label: 'Contact', icon: UserRound },
   { label: 'Location', icon: MapPin },
   { label: 'Branding', icon: Palette },
-  { label: 'Documents', icon: FileText },
+  { label: 'CAC', icon: ShieldCheck },
 ]
 
 const form = reactive({
   name: '',
   business_type: '',
+  cac_business_name: '',
   business_email: '',
   phone: '',
   contact_name: '',
@@ -77,6 +78,7 @@ async function load() {
     Object.assign(form, {
       name: data.company.name,
       business_type: data.company.business_type,
+      cac_business_name: data.company.cac_business_name ?? '',
       business_email: data.company.business_email,
       phone: data.company.phone,
       contact_name: user.value?.full_name ?? '',
@@ -180,6 +182,15 @@ async function saveCurrentStep(): Promise<boolean> {
           address: form.address,
         },
       })
+    } else if (step.value === 4) {
+      if (form.cac_business_name.trim().length < 2) {
+        error.value = 'Enter the business name exactly as it is registered with the CAC.'
+        return false
+      }
+      await api('/companies/me', {
+        method: 'PATCH',
+        body: { cac_business_name: form.cac_business_name.trim() },
+      })
     } else if (step.value === 3) {
       await api('/companies/me/branding', {
         method: 'PATCH',
@@ -213,6 +224,8 @@ function back() {
 }
 
 async function submitForReview() {
+  if (step.value === steps.length - 1 && !(await saveCurrentStep())) return
+
   saving.value = true
   error.value = ''
   success.value = ''
@@ -467,31 +480,35 @@ const whatsappVerified = computed(() =>
             </div>
           </div>
 
-          <!-- Step 5: documents -->
+          <!-- Step 5: CAC registration -->
           <div v-else class="mt-5 space-y-4">
-            <div class="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 text-[12px] leading-relaxed text-amber-800">
-              Document upload and review are not enabled yet. Prepare the interface now; the
-              verification workflow will be connected in a later task.
-            </div>
-
-            <div
-              v-for="doc in ['CAC / business registration', 'Proof of business address', 'Owner identification']"
-              :key="doc"
-              class="flex items-center justify-between gap-3 rounded-lg border border-dashed border-ink-900/15 px-3 py-3"
-            >
-              <div>
-                <p class="text-[12.5px] font-medium">{{ doc }}</p>
-                <p class="mt-0.5 text-[10.5px] text-ink-900/40">PDF or image · upload coming next</p>
-              </div>
-              <button type="button" disabled class="rounded-md border border-ink-900/10 px-2.5 py-1.5 text-[10.5px] text-ink-900/35">
-                Upload
-              </button>
-            </div>
+            <label class="block">
+              <span class="mb-1.5 block text-[11px] font-medium text-ink-900/55">
+                Registered CAC business name
+              </span>
+              <input
+                v-model="form.cac_business_name"
+                type="text"
+                maxlength="200"
+                required
+                autocomplete="organization"
+                class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500"
+                placeholder="e.g. Aba Freight Logistics Limited"
+              />
+              <span class="mt-1.5 block text-[11px] leading-relaxed text-ink-900/45">
+                Enter the business name exactly as it appears on your CAC certificate. Our team
+                checks this against the CAC register before approving your company.
+              </span>
+            </label>
 
             <div class="rounded-lg border border-ink-900/8 bg-canvas p-3">
-              <p class="text-[12px] font-medium">Ready to submit?</p>
+              <p class="flex items-center gap-1.5 text-[12px] font-medium">
+                <ShieldCheck :size="14" class="text-brand-600" />
+                What we review
+              </p>
               <p class="mt-1 text-[11.5px] leading-relaxed text-ink-900/45">
-                We will review the company profile. You can update details after submitting.
+                A platform administrator reviews your company profile and CAC business name. Once
+                approved, you can publish rates and receive marketplace bookings.
               </p>
             </div>
           </div>
@@ -581,7 +598,7 @@ const whatsappVerified = computed(() =>
         <div class="rounded-xl border border-ink-900/10 bg-canvas p-4">
           <p class="text-[11.5px] font-semibold">What happens next?</p>
           <ol class="mt-2 space-y-2 text-[11.5px] leading-relaxed text-ink-900/50">
-            <li>1. We review your company profile and documents.</li>
+            <li>1. We review your company profile and CAC business name.</li>
             <li>2. Once verified, you can publish rates and receive bookings.</li>
             <li>3. Shipment tools arrive in the next development stage.</li>
           </ol>

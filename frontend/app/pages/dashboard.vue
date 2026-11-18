@@ -14,11 +14,16 @@ import {
 import type { CompanyDetail, Membership } from '~/types/auth'
 
 definePageMeta({ middleware: 'auth', layout: 'app' })
-useSeoMeta({ title: 'Workspace overview' })
 
 const { api } = useApi()
 const { user } = useAuth()
 const { currentCompany, companies, selectCompany } = useCompany()
+
+useSeoMeta({
+  title: () => (user.value?.account_type === 'customer' ? 'Marketplace dashboard' : 'Workspace overview'),
+})
+
+const isCustomer = computed(() => user.value?.account_type === 'customer')
 
 const detail = ref<CompanyDetail | null>(null)
 const loading = ref(false)
@@ -27,7 +32,7 @@ const error = ref('')
 onMounted(load)
 
 async function load() {
-  if (!currentCompany.value) {
+  if (isCustomer.value || !currentCompany.value) {
     detail.value = null
     return
   }
@@ -102,7 +107,9 @@ const statusTone = computed(() => {
 </script>
 
 <template>
-  <div>
+  <CustomerDashboard v-if="isCustomer" />
+
+  <div v-else>
     <div class="flex flex-wrap items-start justify-between gap-4">
       <div>
         <p class="text-[10.5px] font-semibold tracking-[0.2em] text-brand-600 uppercase">

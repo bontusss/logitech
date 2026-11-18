@@ -128,7 +128,7 @@ const labelClass = 'mb-1.5 block text-[11px] font-medium text-ink-900/55'
       </div>
       <label class="block">
         <span :class="labelClass">Password</span>
-        <input v-model="customer.password" type="password" required minlength="8" autocomplete="new-password" :class="inputClass" placeholder="At least 8 characters" />
+        <PasswordInput v-model="customer.password" required :minlength="8" autocomplete="new-password" :input-class="inputClass" placeholder="At least 8 characters" />
       </label>
 
       <button
@@ -180,7 +180,7 @@ const labelClass = 'mb-1.5 block text-[11px] font-medium text-ink-900/55'
 
       <label class="block">
         <span :class="labelClass">Password</span>
-        <input v-model="company.password" type="password" required minlength="8" autocomplete="new-password" :class="inputClass" placeholder="At least 8 characters" />
+        <PasswordInput v-model="company.password" required :minlength="8" autocomplete="new-password" :input-class="inputClass" placeholder="At least 8 characters" />
       </label>
 
       <button

@@ -97,6 +97,40 @@ func (a *API) requireAuth() gin.HandlerFunc {
 	}
 }
 
+// requirePlatformAdmin allows any platform account (super_admin, admin or
+// support). Individual handlers decide whether support may mutate data.
+func (a *API) requirePlatformAdmin() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		user, ok := currentUser(c)
+		if !ok {
+			fail(c, http.StatusUnauthorized, "unauthenticated", "Sign in to continue.")
+			return
+		}
+		if user.AccountType != "platform" || user.PlatformRole == nil {
+			fail(c, http.StatusForbidden, "platform_admin_required", "This area is for platform administrators.")
+			return
+		}
+		c.Next()
+	}
+}
+
+// requireSuperAdmin narrows a platform route to the bootstrap super
+// administrator.
+func (a *API) requireSuperAdmin() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		user, ok := currentUser(c)
+		if !ok {
+			fail(c, http.StatusUnauthorized, "unauthenticated", "Sign in to continue.")
+			return
+		}
+		if user.AccountType != "platform" || user.PlatformRole == nil || *user.PlatformRole != "super_admin" {
+			fail(c, http.StatusForbidden, "super_admin_required", "Only a super administrator can do that.")
+			return
+		}
+		c.Next()
+	}
+}
+
 // requireCompany resolves the active tenant from X-Company-Id. A company id
 // supplied by the client is never trusted on its own: it must match an active
 // membership unless the user holds an explicit platform administration role.

@@ -52,6 +52,7 @@ export interface Company {
   business_email: string
   phone: string
   business_type: string
+  cac_business_name: string | null
   country: string
   state: string | null
   city: string | null

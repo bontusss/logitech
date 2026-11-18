@@ -42,6 +42,7 @@ CREATE TABLE companies (
   business_email    citext NOT NULL,
   phone             text NOT NULL,
   business_type     text NOT NULL,
+  cac_business_name text,
   country           text NOT NULL DEFAULT 'NG',
   state             text,
   city              text,

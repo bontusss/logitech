@@ -14,7 +14,7 @@ import (
 )
 
 const createAdditionalCharge = `-- name: CreateAdditionalCharge :one
-INSERT INTO additional_charges (rate_card_version_id, company_id, name, charge_type, amount_cents, percentage, is_mandatory, is_included_in_price) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id, rate_card_version_id, company_id, name, charge_type, amount_cents, percentage, is_mandatory, applies_to_routes, applies_to_services, applies_to_categories, is_included_in_price, created_at, updated_at
+INSERT INTO additional_charges (rate_card_version_id, company_id, name, charge_type, amount_cents, percentage, is_mandatory, is_included_in_price) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id, rate_card_version_id, company_id, name, charge_type, amount_cents, percentage, is_mandatory, applies_to_routes, applies_to_services, applies_to_categories, is_included_in_price, created_at, updated_at, deleted_at
 `
 
 type CreateAdditionalChargeParams struct {
@@ -55,12 +55,13 @@ func (q *Queries) CreateAdditionalCharge(ctx context.Context, arg CreateAddition
 		&i.IsIncludedInPrice,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.DeletedAt,
 	)
 	return i, err
 }
 
 const createCity = `-- name: CreateCity :one
-INSERT INTO cities (name, state_id, country_id, status) VALUES ($1, $2, $3, $4) RETURNING id, name, state_id, country_id, status, created_at, updated_at
+INSERT INTO cities (name, state_id, country_id, status) VALUES ($1, $2, $3, $4) RETURNING id, name, state_id, country_id, status, created_at, updated_at, deleted_at
 `
 
 type CreateCityParams struct {
@@ -86,12 +87,13 @@ func (q *Queries) CreateCity(ctx context.Context, arg CreateCityParams) (City, e
 		&i.Status,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.DeletedAt,
 	)
 	return i, err
 }
 
 const createCompanyRoute = `-- name: CreateCompanyRoute :one
-INSERT INTO company_routes (company_id, origin_location_type, origin_location_id, destination_location_type, destination_location_id, is_round_trip, status) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id, company_id, origin_location_type, origin_location_id, destination_location_type, destination_location_id, is_round_trip, status, created_at, updated_at
+INSERT INTO company_routes (company_id, origin_location_type, origin_location_id, destination_location_type, destination_location_id, is_round_trip, status) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id, company_id, origin_location_type, origin_location_id, destination_location_type, destination_location_id, is_round_trip, status, created_at, updated_at, deleted_at
 `
 
 type CreateCompanyRouteParams struct {
@@ -126,12 +128,13 @@ func (q *Queries) CreateCompanyRoute(ctx context.Context, arg CreateCompanyRoute
 		&i.Status,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.DeletedAt,
 	)
 	return i, err
 }
 
 const createCountry = `-- name: CreateCountry :one
-INSERT INTO countries (name, code, numeric_code, status) VALUES ($1, $2, $3, $4) RETURNING id, name, code, numeric_code, status, created_at, updated_at
+INSERT INTO countries (name, code, numeric_code, status) VALUES ($1, $2, $3, $4) RETURNING id, name, code, numeric_code, status, created_at, updated_at, deleted_at
 `
 
 type CreateCountryParams struct {
@@ -157,12 +160,13 @@ func (q *Queries) CreateCountry(ctx context.Context, arg CreateCountryParams) (C
 		&i.Status,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.DeletedAt,
 	)
 	return i, err
 }
 
 const createPackageCategory = `-- name: CreatePackageCategory :one
-INSERT INTO package_categories (name, description, sort_order, is_default) VALUES ($1, $2, $3, $4) RETURNING id, name, description, sort_order, is_default, created_at, updated_at
+INSERT INTO package_categories (name, description, sort_order, is_default) VALUES ($1, $2, $3, $4) RETURNING id, name, description, sort_order, is_default, created_at, updated_at, deleted_at
 `
 
 type CreatePackageCategoryParams struct {
@@ -188,12 +192,13 @@ func (q *Queries) CreatePackageCategory(ctx context.Context, arg CreatePackageCa
 		&i.IsDefault,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.DeletedAt,
 	)
 	return i, err
 }
 
 const createPricingRule = `-- name: CreatePricingRule :one
-INSERT INTO pricing_rules (rate_card_version_id, rule_type, name, description, fixed_amount, per_kg_base_charge, per_kg_rate, per_kg_minimum, per_kg_maximum, volumetric_divisor, category_id, applicable_routes, applicable_services, applicable_categories, effective_from, effective_until, is_active) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17) RETURNING id, rate_card_version_id, rule_type, name, description, fixed_amount, weight_tier_id, per_kg_base_charge, per_kg_rate, per_kg_minimum, per_kg_maximum, volumetric_divisor, category_id, applicable_routes, applicable_services, applicable_categories, effective_from, effective_until, is_active, created_at
+INSERT INTO pricing_rules (rate_card_version_id, rule_type, name, description, fixed_amount, per_kg_base_charge, per_kg_rate, per_kg_minimum, per_kg_maximum, volumetric_divisor, category_id, applicable_routes, applicable_services, applicable_categories, effective_from, effective_until, is_active) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17) RETURNING id, rate_card_version_id, rule_type, name, description, fixed_amount, weight_tier_id, per_kg_base_charge, per_kg_rate, per_kg_minimum, per_kg_maximum, volumetric_divisor, category_id, applicable_routes, applicable_services, applicable_categories, effective_from, effective_until, is_active, created_at, deleted_at
 `
 
 type CreatePricingRuleParams struct {
@@ -258,12 +263,13 @@ func (q *Queries) CreatePricingRule(ctx context.Context, arg CreatePricingRulePa
 		&i.EffectiveUntil,
 		&i.IsActive,
 		&i.CreatedAt,
+		&i.DeletedAt,
 	)
 	return i, err
 }
 
 const createPricingTier = `-- name: CreatePricingTier :one
-INSERT INTO pricing_tiers (rate_card_version_id, min_weight_kg, max_weight_kg, price_cents, name, description) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, rate_card_version_id, min_weight_kg, max_weight_kg, price_cents, name, description, created_at
+INSERT INTO pricing_tiers (rate_card_version_id, min_weight_kg, max_weight_kg, price_cents, name, description) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, rate_card_version_id, min_weight_kg, max_weight_kg, price_cents, name, description, created_at, deleted_at
 `
 
 type CreatePricingTierParams struct {
@@ -294,12 +300,13 @@ func (q *Queries) CreatePricingTier(ctx context.Context, arg CreatePricingTierPa
 		&i.Name,
 		&i.Description,
 		&i.CreatedAt,
+		&i.DeletedAt,
 	)
 	return i, err
 }
 
 const createRateCard = `-- name: CreateRateCard :one
-INSERT INTO rate_cards (company_id, name, description, status) VALUES ($1, $2, $3, $4) RETURNING id, company_id, name, description, currency, status, is_published, effective_start, effective_end, published_at, created_at, updated_at
+INSERT INTO rate_cards (company_id, name, description, status) VALUES ($1, $2, $3, $4) RETURNING id, company_id, name, description, currency, status, is_published, effective_start, effective_end, published_at, created_at, updated_at, deleted_at
 `
 
 type CreateRateCardParams struct {
@@ -330,12 +337,13 @@ func (q *Queries) CreateRateCard(ctx context.Context, arg CreateRateCardParams) 
 		&i.PublishedAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.DeletedAt,
 	)
 	return i, err
 }
 
 const createRateCardVersion = `-- name: CreateRateCardVersion :one
-INSERT INTO rate_card_versions (rate_card_id, version, is_active, effective_from, effective_until, created_by) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, rate_card_id, version, pricing_json, additional_charges_json, is_active, effective_from, effective_until, created_at, created_by
+INSERT INTO rate_card_versions (rate_card_id, version, is_active, effective_from, effective_until, created_by) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, rate_card_id, version, pricing_json, additional_charges_json, is_active, effective_from, effective_until, created_at, created_by, updated_at, deleted_at
 `
 
 type CreateRateCardVersionParams struct {
@@ -368,6 +376,8 @@ func (q *Queries) CreateRateCardVersion(ctx context.Context, arg CreateRateCardV
 		&i.EffectiveUntil,
 		&i.CreatedAt,
 		&i.CreatedBy,
+		&i.UpdatedAt,
+		&i.DeletedAt,
 	)
 	return i, err
 }
@@ -456,7 +466,7 @@ func (q *Queries) CreateShippingQuote(ctx context.Context, arg CreateShippingQuo
 }
 
 const createShippingService = `-- name: CreateShippingService :one
-INSERT INTO shipping_services (company_id, name, description, service_code, delivery_type, estimated_duration, min_weight_kg, max_weight_kg, max_dimension_cm, volumetric_divisor, status) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING id, company_id, name, description, service_code, delivery_type, estimated_duration, min_weight_kg, max_weight_kg, max_dimension_cm, volumetric_divisor, status, is_default, created_at, updated_at
+INSERT INTO shipping_services (company_id, name, description, service_code, delivery_type, estimated_duration, min_weight_kg, max_weight_kg, max_dimension_cm, volumetric_divisor, status) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING id, company_id, name, description, service_code, delivery_type, estimated_duration, min_weight_kg, max_weight_kg, max_dimension_cm, volumetric_divisor, status, is_default, created_at, updated_at, deleted_at
 `
 
 type CreateShippingServiceParams struct {
@@ -504,12 +514,13 @@ func (q *Queries) CreateShippingService(ctx context.Context, arg CreateShippingS
 		&i.IsDefault,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.DeletedAt,
 	)
 	return i, err
 }
 
 const createState = `-- name: CreateState :one
-INSERT INTO states (name, code, country_id, status) VALUES ($1, $2, $3, $4) RETURNING id, name, code, country_id, status, created_at, updated_at
+INSERT INTO states (name, code, country_id, status) VALUES ($1, $2, $3, $4) RETURNING id, name, code, country_id, status, created_at, updated_at, deleted_at
 `
 
 type CreateStateParams struct {
@@ -535,12 +546,13 @@ func (q *Queries) CreateState(ctx context.Context, arg CreateStateParams) (State
 		&i.Status,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.DeletedAt,
 	)
 	return i, err
 }
 
 const createTerminal = `-- name: CreateTerminal :one
-INSERT INTO terminals (name, code, city_id, address, status) VALUES ($1, $2, $3, $4, $5) RETURNING id, name, code, city_id, address, status, created_at, updated_at
+INSERT INTO terminals (name, code, city_id, address, status) VALUES ($1, $2, $3, $4, $5) RETURNING id, name, code, city_id, address, status, created_at, updated_at, deleted_at
 `
 
 type CreateTerminalParams struct {
@@ -569,12 +581,13 @@ func (q *Queries) CreateTerminal(ctx context.Context, arg CreateTerminalParams) 
 		&i.Status,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.DeletedAt,
 	)
 	return i, err
 }
 
 const listAdditionalCharges = `-- name: ListAdditionalCharges :many
-SELECT id, rate_card_version_id, company_id, name, charge_type, amount_cents, percentage, is_mandatory, applies_to_routes, applies_to_services, applies_to_categories, is_included_in_price, created_at, updated_at FROM additional_charges WHERE rate_card_version_id = $1 AND company_id = $2 AND deleted_at IS NULL
+SELECT id, rate_card_version_id, company_id, name, charge_type, amount_cents, percentage, is_mandatory, applies_to_routes, applies_to_services, applies_to_categories, is_included_in_price, created_at, updated_at, deleted_at FROM additional_charges WHERE rate_card_version_id = $1 AND company_id = $2 AND deleted_at IS NULL
 `
 
 type ListAdditionalChargesParams struct {
@@ -606,6 +619,7 @@ func (q *Queries) ListAdditionalCharges(ctx context.Context, arg ListAdditionalC
 			&i.IsIncludedInPrice,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.DeletedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -618,7 +632,7 @@ func (q *Queries) ListAdditionalCharges(ctx context.Context, arg ListAdditionalC
 }
 
 const listCitiesByState = `-- name: ListCitiesByState :many
-SELECT id, name, state_id, country_id, status, created_at, updated_at FROM cities WHERE state_id = $1 AND deleted_at IS NULL
+SELECT id, name, state_id, country_id, status, created_at, updated_at, deleted_at FROM cities WHERE state_id = $1 AND deleted_at IS NULL
 `
 
 func (q *Queries) ListCitiesByState(ctx context.Context, stateID *uuid.UUID) ([]City, error) {
@@ -638,6 +652,7 @@ func (q *Queries) ListCitiesByState(ctx context.Context, stateID *uuid.UUID) ([]
 			&i.Status,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.DeletedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -650,7 +665,7 @@ func (q *Queries) ListCitiesByState(ctx context.Context, stateID *uuid.UUID) ([]
 }
 
 const listCompanyRoutes = `-- name: ListCompanyRoutes :many
-SELECT id, company_id, origin_location_type, origin_location_id, destination_location_type, destination_location_id, is_round_trip, status, created_at, updated_at FROM company_routes WHERE company_id = $1 AND deleted_at IS NULL
+SELECT id, company_id, origin_location_type, origin_location_id, destination_location_type, destination_location_id, is_round_trip, status, created_at, updated_at, deleted_at FROM company_routes WHERE company_id = $1 AND deleted_at IS NULL
 `
 
 func (q *Queries) ListCompanyRoutes(ctx context.Context, companyID uuid.UUID) ([]CompanyRoute, error) {
@@ -673,6 +688,7 @@ func (q *Queries) ListCompanyRoutes(ctx context.Context, companyID uuid.UUID) ([
 			&i.Status,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.DeletedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -685,7 +701,7 @@ func (q *Queries) ListCompanyRoutes(ctx context.Context, companyID uuid.UUID) ([
 }
 
 const listCountries = `-- name: ListCountries :many
-SELECT id, name, code, numeric_code, status, created_at, updated_at FROM countries WHERE deleted_at IS NULL
+SELECT id, name, code, numeric_code, status, created_at, updated_at, deleted_at FROM countries WHERE deleted_at IS NULL
 `
 
 func (q *Queries) ListCountries(ctx context.Context) ([]Country, error) {
@@ -705,6 +721,7 @@ func (q *Queries) ListCountries(ctx context.Context) ([]Country, error) {
 			&i.Status,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.DeletedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -717,7 +734,7 @@ func (q *Queries) ListCountries(ctx context.Context) ([]Country, error) {
 }
 
 const listPackageCategories = `-- name: ListPackageCategories :many
-SELECT id, name, description, sort_order, is_default, created_at, updated_at FROM package_categories WHERE deleted_at IS NULL
+SELECT id, name, description, sort_order, is_default, created_at, updated_at, deleted_at FROM package_categories WHERE deleted_at IS NULL
 `
 
 func (q *Queries) ListPackageCategories(ctx context.Context) ([]PackageCategory, error) {
@@ -737,6 +754,7 @@ func (q *Queries) ListPackageCategories(ctx context.Context) ([]PackageCategory,
 			&i.IsDefault,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.DeletedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -749,7 +767,7 @@ func (q *Queries) ListPackageCategories(ctx context.Context) ([]PackageCategory,
 }
 
 const listPricingRules = `-- name: ListPricingRules :many
-SELECT id, rate_card_version_id, rule_type, name, description, fixed_amount, weight_tier_id, per_kg_base_charge, per_kg_rate, per_kg_minimum, per_kg_maximum, volumetric_divisor, category_id, applicable_routes, applicable_services, applicable_categories, effective_from, effective_until, is_active, created_at FROM pricing_rules WHERE rate_card_version_id = $1 AND deleted_at IS NULL
+SELECT id, rate_card_version_id, rule_type, name, description, fixed_amount, weight_tier_id, per_kg_base_charge, per_kg_rate, per_kg_minimum, per_kg_maximum, volumetric_divisor, category_id, applicable_routes, applicable_services, applicable_categories, effective_from, effective_until, is_active, created_at, deleted_at FROM pricing_rules WHERE rate_card_version_id = $1 AND deleted_at IS NULL
 `
 
 func (q *Queries) ListPricingRules(ctx context.Context, rateCardVersionID uuid.UUID) ([]PricingRule, error) {
@@ -782,6 +800,7 @@ func (q *Queries) ListPricingRules(ctx context.Context, rateCardVersionID uuid.U
 			&i.EffectiveUntil,
 			&i.IsActive,
 			&i.CreatedAt,
+			&i.DeletedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -794,7 +813,7 @@ func (q *Queries) ListPricingRules(ctx context.Context, rateCardVersionID uuid.U
 }
 
 const listPricingTiers = `-- name: ListPricingTiers :many
-SELECT id, rate_card_version_id, min_weight_kg, max_weight_kg, price_cents, name, description, created_at FROM pricing_tiers WHERE rate_card_version_id = $1 AND deleted_at IS NULL
+SELECT id, rate_card_version_id, min_weight_kg, max_weight_kg, price_cents, name, description, created_at, deleted_at FROM pricing_tiers WHERE rate_card_version_id = $1 AND deleted_at IS NULL
 `
 
 func (q *Queries) ListPricingTiers(ctx context.Context, rateCardVersionID uuid.UUID) ([]PricingTier, error) {
@@ -815,6 +834,7 @@ func (q *Queries) ListPricingTiers(ctx context.Context, rateCardVersionID uuid.U
 			&i.Name,
 			&i.Description,
 			&i.CreatedAt,
+			&i.DeletedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -827,7 +847,7 @@ func (q *Queries) ListPricingTiers(ctx context.Context, rateCardVersionID uuid.U
 }
 
 const listRateCardVersions = `-- name: ListRateCardVersions :many
-SELECT id, rate_card_id, version, pricing_json, additional_charges_json, is_active, effective_from, effective_until, created_at, created_by FROM rate_card_versions WHERE rate_card_id = $1 AND deleted_at IS NULL
+SELECT id, rate_card_id, version, pricing_json, additional_charges_json, is_active, effective_from, effective_until, created_at, created_by, updated_at, deleted_at FROM rate_card_versions WHERE rate_card_id = $1 AND deleted_at IS NULL
 `
 
 func (q *Queries) ListRateCardVersions(ctx context.Context, rateCardID uuid.UUID) ([]RateCardVersion, error) {
@@ -850,6 +870,8 @@ func (q *Queries) ListRateCardVersions(ctx context.Context, rateCardID uuid.UUID
 			&i.EffectiveUntil,
 			&i.CreatedAt,
 			&i.CreatedBy,
+			&i.UpdatedAt,
+			&i.DeletedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -862,7 +884,7 @@ func (q *Queries) ListRateCardVersions(ctx context.Context, rateCardID uuid.UUID
 }
 
 const listRateCards = `-- name: ListRateCards :many
-SELECT id, company_id, name, description, currency, status, is_published, effective_start, effective_end, published_at, created_at, updated_at FROM rate_cards WHERE company_id = $1 AND deleted_at IS NULL
+SELECT id, company_id, name, description, currency, status, is_published, effective_start, effective_end, published_at, created_at, updated_at, deleted_at FROM rate_cards WHERE company_id = $1 AND deleted_at IS NULL
 `
 
 func (q *Queries) ListRateCards(ctx context.Context, companyID uuid.UUID) ([]RateCard, error) {
@@ -887,6 +909,7 @@ func (q *Queries) ListRateCards(ctx context.Context, companyID uuid.UUID) ([]Rat
 			&i.PublishedAt,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.DeletedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -955,7 +978,7 @@ func (q *Queries) ListShippingQuotes(ctx context.Context, arg ListShippingQuotes
 }
 
 const listShippingServices = `-- name: ListShippingServices :many
-SELECT id, company_id, name, description, service_code, delivery_type, estimated_duration, min_weight_kg, max_weight_kg, max_dimension_cm, volumetric_divisor, status, is_default, created_at, updated_at FROM shipping_services WHERE company_id = $1 AND deleted_at IS NULL
+SELECT id, company_id, name, description, service_code, delivery_type, estimated_duration, min_weight_kg, max_weight_kg, max_dimension_cm, volumetric_divisor, status, is_default, created_at, updated_at, deleted_at FROM shipping_services WHERE company_id = $1 AND deleted_at IS NULL
 `
 
 func (q *Queries) ListShippingServices(ctx context.Context, companyID uuid.UUID) ([]ShippingService, error) {
@@ -983,6 +1006,7 @@ func (q *Queries) ListShippingServices(ctx context.Context, companyID uuid.UUID)
 			&i.IsDefault,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.DeletedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -995,7 +1019,7 @@ func (q *Queries) ListShippingServices(ctx context.Context, companyID uuid.UUID)
 }
 
 const listStatesByCountry = `-- name: ListStatesByCountry :many
-SELECT id, name, code, country_id, status, created_at, updated_at FROM states WHERE country_id = $1 AND deleted_at IS NULL
+SELECT id, name, code, country_id, status, created_at, updated_at, deleted_at FROM states WHERE country_id = $1 AND deleted_at IS NULL
 `
 
 func (q *Queries) ListStatesByCountry(ctx context.Context, countryID uuid.UUID) ([]State, error) {
@@ -1015,6 +1039,7 @@ func (q *Queries) ListStatesByCountry(ctx context.Context, countryID uuid.UUID) 
 			&i.Status,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.DeletedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -1027,7 +1052,7 @@ func (q *Queries) ListStatesByCountry(ctx context.Context, countryID uuid.UUID) 
 }
 
 const listTerminalsByCity = `-- name: ListTerminalsByCity :many
-SELECT id, name, code, city_id, address, status, created_at, updated_at FROM terminals WHERE city_id = $1 AND deleted_at IS NULL
+SELECT id, name, code, city_id, address, status, created_at, updated_at, deleted_at FROM terminals WHERE city_id = $1 AND deleted_at IS NULL
 `
 
 func (q *Queries) ListTerminalsByCity(ctx context.Context, cityID *uuid.UUID) ([]Terminal, error) {
@@ -1048,6 +1073,7 @@ func (q *Queries) ListTerminalsByCity(ctx context.Context, cityID *uuid.UUID) ([
 			&i.Status,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.DeletedAt,
 		); err != nil {
 			return nil, err
 		}

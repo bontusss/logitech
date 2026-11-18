@@ -78,6 +78,11 @@ func New(cfg *config.Config, svc *service.Service, authManager *auth.Manager, li
 	authed.POST("/auth/whatsapp/send-code", api.rateLimit("whatsapp-send-code", 5), api.sendWhatsAppCode)
 	authed.POST("/auth/whatsapp/verify-code", api.rateLimit("whatsapp-verify-code", 10), api.verifyWhatsAppCode)
 
+	admin := authed.Group("/admin", api.requirePlatformAdmin())
+	admin.GET("/overview", api.adminOverview)
+	admin.POST("/providers/:id/approve", api.approveProvider)
+	admin.POST("/admins", api.requireSuperAdmin(), api.createPlatformAdmin)
+
 	company := authed.Group("/companies/me", api.requireCompany())
 	company.GET("", api.getCompany)
 	company.PATCH("", api.requirePermission("company.update"), api.updateCompany)
@@ -333,6 +338,8 @@ func (a *API) handleServiceError(c *gin.Context, err error) {
 		fail(c, http.StatusBadRequest, "whatsapp_code_invalid", "That WhatsApp verification code is incorrect.")
 	case errors.Is(err, service.ErrPhoneCodeExpired):
 		fail(c, http.StatusGone, "whatsapp_code_expired", "That WhatsApp verification code has expired. Request a new one.")
+	case errors.Is(err, service.ErrInvalidPlatformRole):
+		fail(c, http.StatusBadRequest, "invalid_platform_role", "Choose the admin or support role.")
 	default:
 		a.log.Error("request failed", "error", err, "path", c.FullPath())
 		fail(c, http.StatusInternalServerError, "internal_error", "Something went wrong. Please try again.")
