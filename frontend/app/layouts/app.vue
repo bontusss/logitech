@@ -2,6 +2,7 @@
 import {
   ArrowLeftRight,
   Building2,
+  CalendarCheck,
   ChevronDown,
   ClipboardList,
   LayoutDashboard,
@@ -40,6 +41,7 @@ const companyNavigation = [
   { label: 'Branches', to: '/dashboard/company/branches', icon: MapPin, permission: 'branches.view' },
   { label: 'Staff', to: '/dashboard/company/staff', icon: Users, permission: 'staff.view' },
   { label: 'Roles & permissions', to: '/dashboard/company/roles', icon: ShieldCheck, permission: 'staff.roles.manage' },
+  { label: 'Booking page', to: '/dashboard/company/booking', icon: CalendarCheck, permission: 'bookings.manage' },
   { label: 'Branding', to: '/dashboard/company/branding', icon: Palette, permission: 'branding.manage' },
   { label: 'Settings', to: '/dashboard/company/settings', icon: Settings, permission: 'company.settings.manage' },
 ]

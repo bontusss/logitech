@@ -68,6 +68,7 @@ func New(cfg *config.Config, svc *service.Service, authManager *auth.Manager, li
 	v1.GET("/public/branding", api.publicBranding)
 	v1.GET("/public/manifest", api.publicManifest)
 	v1.GET("/public/companies/:subdomain", api.publicCompany)
+	v1.GET("/public/book/:slug", api.rateLimit("public-booking-page", 60), api.publicBookingPage)
 	v1.GET("/invitations/:token", api.rateLimit("invitation-preview", 30), api.previewInvitation)
 	v1.POST("/invitations/:token/accept", api.rateLimit("invitation-accept", 10), api.acceptInvitation)
 
@@ -95,6 +96,9 @@ func New(cfg *config.Config, svc *service.Service, authManager *auth.Manager, li
 	company.GET("/subdomain", api.requirePermission("subdomain.manage"), api.getCompanySubdomain)
 	company.GET("/subdomain/availability", api.requirePermission("subdomain.manage"), api.checkSubdomain)
 	company.PUT("/subdomain", api.requirePermission("subdomain.manage"), api.updateSubdomain)
+
+	company.GET("/booking-page", api.requirePermission("bookings.manage"), api.getBookingPage)
+	company.PUT("/booking-page", api.requirePermission("bookings.manage"), api.upsertBookingPage)
 
 	company.GET("/branches", api.requirePermission("branches.view"), api.listBranches)
 	company.POST("/branches", api.requirePermission("branches.create"), api.createBranch)

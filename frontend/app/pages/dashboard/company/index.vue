@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import {
   ArrowRight,
+  CalendarCheck,
   CheckCircle2,
   CircleAlert,
   Loader2,
@@ -28,6 +29,7 @@ const links = computed(() => [
   { label: 'Branches', description: 'Locations, managers and staff assignments', to: '/dashboard/company/branches', icon: MapPin, permission: 'branches.view' },
   { label: 'Staff', description: 'Invite, assign and suspend team members', to: '/dashboard/company/staff', icon: Users, permission: 'staff.view' },
   { label: 'Roles & permissions', description: 'Granular access for every company function', to: '/dashboard/company/roles', icon: ShieldCheck, permission: 'staff.roles.manage' },
+  { label: 'Booking page', description: 'A public page where customers can reach you', to: '/dashboard/company/booking', icon: CalendarCheck, permission: 'bookings.manage' },
   { label: 'Branding', description: 'Colours, logo and company subdomain', to: '/dashboard/company/branding', icon: Palette, permission: 'branding.manage' },
   { label: 'Settings', description: 'Timezone, currency and notifications', to: '/dashboard/company/settings', icon: Settings, permission: 'company.settings.manage' },
 ].filter((link) => can(link.permission)))

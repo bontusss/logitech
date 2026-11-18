@@ -17,6 +17,7 @@ type Querier interface {
 	AddMemberRole(ctx context.Context, arg AddMemberRoleParams) error
 	AddRolePermission(ctx context.Context, arg AddRolePermissionParams) error
 	ApproveCompany(ctx context.Context, id uuid.UUID) (Company, error)
+	BookingPageSlugExists(ctx context.Context, slug string) (bool, error)
 	ClaimInvitation(ctx context.Context, arg ClaimInvitationParams) (CompanyInvitation, error)
 	ConsumeEmailVerification(ctx context.Context, id uuid.UUID) error
 	ConsumePasswordReset(ctx context.Context, id uuid.UUID) error
@@ -56,6 +57,7 @@ type Querier interface {
 	DeleteRolePermissions(ctx context.Context, roleID uuid.UUID) error
 	GetActiveCompanyMember(ctx context.Context, arg GetActiveCompanyMemberParams) (CompanyMember, error)
 	GetAnyCompanyMember(ctx context.Context, arg GetAnyCompanyMemberParams) (CompanyMember, error)
+	GetBookingPageByCompany(ctx context.Context, companyID uuid.UUID) (BookingPage, error)
 	GetBranch(ctx context.Context, arg GetBranchParams) (Branch, error)
 	GetCompanyBranding(ctx context.Context, companyID uuid.UUID) (CompanyBranding, error)
 	GetCompanyByID(ctx context.Context, id uuid.UUID) (Company, error)
@@ -69,6 +71,7 @@ type Querier interface {
 	GetInvitationByToken(ctx context.Context, tokenHash string) (CompanyInvitation, error)
 	GetInvitationDetails(ctx context.Context, tokenHash string) (GetInvitationDetailsRow, error)
 	GetPasswordResetByHash(ctx context.Context, tokenHash string) (PasswordReset, error)
+	GetPublicBookingPage(ctx context.Context, slug string) (GetPublicBookingPageRow, error)
 	GetPublicCompanyBySubdomain(ctx context.Context, subdomain string) (GetPublicCompanyBySubdomainRow, error)
 	GetRefreshTokenByHash(ctx context.Context, tokenHash string) (RefreshToken, error)
 	GetRoleByCompanyAndKey(ctx context.Context, arg GetRoleByCompanyAndKeyParams) (Role, error)
@@ -132,6 +135,7 @@ type Querier interface {
 	UpdateMemberStatus(ctx context.Context, arg UpdateMemberStatusParams) error
 	UpdateUserPassword(ctx context.Context, arg UpdateUserPasswordParams) error
 	UpdateUserProfile(ctx context.Context, arg UpdateUserProfileParams) (User, error)
+	UpsertBookingPage(ctx context.Context, arg UpsertBookingPageParams) (BookingPage, error)
 	UpsertSubdomain(ctx context.Context, arg UpsertSubdomainParams) (CompanySubdomain, error)
 	UserHasPermission(ctx context.Context, arg UserHasPermissionParams) (bool, error)
 }

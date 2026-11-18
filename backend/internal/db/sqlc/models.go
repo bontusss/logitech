@@ -52,6 +52,17 @@ type AuditLog struct {
 	CreatedAt   time.Time  `json:"created_at"`
 }
 
+type BookingPage struct {
+	ID          uuid.UUID `json:"id"`
+	CompanyID   uuid.UUID `json:"company_id"`
+	Slug        string    `json:"slug"`
+	Headline    *string   `json:"headline"`
+	Description *string   `json:"description"`
+	IsPublished bool      `json:"is_published"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
+}
+
 type Branch struct {
 	ID              uuid.UUID   `json:"id"`
 	CompanyID       uuid.UUID   `json:"company_id"`
