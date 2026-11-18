@@ -104,7 +104,11 @@ async function submitVerification() {
             ? 'Verified companies can publish rates and receive marketplace bookings.'
             : 'Verification is required before public rates and unrestricted bookings.' }}
         </p>
-        <NuxtLink to="/onboarding" class="ml-auto inline-flex items-center gap-1 text-[11.5px] font-semibold text-brand-600 hover:text-brand-700">
+        <NuxtLink
+          v-if="detail.company.status !== 'verified'"
+          to="/onboarding"
+          class="ml-auto inline-flex items-center gap-1 text-[11.5px] font-semibold text-brand-600 hover:text-brand-700"
+        >
           Onboarding <ArrowRight :size="13" />
         </NuxtLink>
       </div>

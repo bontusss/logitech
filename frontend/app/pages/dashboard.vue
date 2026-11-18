@@ -88,6 +88,7 @@ const checklist = computed(() => {
   ]
 })
 
+const isVerified = computed(() => detail.value?.company.status === 'verified')
 const completed = computed(() => checklist.value.filter((item) => item.done).length)
 const progress = computed(() => Math.round((completed.value / checklist.value.length) * 100))
 
@@ -120,11 +121,13 @@ const statusTone = computed(() => {
         </h1>
         <p class="mt-2 max-w-xl text-[13.5px] leading-relaxed text-ink-900/50">
           {{ currentCompany
-            ? 'Your account is set up. Finish onboarding to unlock marketplace visibility.'
+            ? isVerified
+              ? 'Your company is verified and visible to customers.'
+              : 'Your account is set up. Finish onboarding to unlock marketplace visibility.'
             : 'Your BOL account is ready. Marketplace booking tools are the next stage.' }}
         </p>
       </div>
-      <AppButton v-if="currentCompany" to="/onboarding" size="md">
+      <AppButton v-if="currentCompany && !isVerified" to="/onboarding" size="md">
         Continue onboarding
         <ArrowRight :size="15" />
       </AppButton>
@@ -156,12 +159,24 @@ const statusTone = computed(() => {
         </div>
 
         <div class="rounded-xl border border-ink-900/10 bg-white p-4">
-          <p class="text-[9.5px] font-semibold tracking-[0.16em] text-ink-900/40 uppercase">Onboarding</p>
-          <p class="mt-2 text-[20px] font-semibold tracking-[-0.03em]">{{ progress }}%</p>
-          <div class="mt-2 h-1.5 overflow-hidden rounded-full bg-ink-900/8">
-            <div class="h-full rounded-full bg-brand-500 transition-all" :style="{ width: `${progress}%` }" />
-          </div>
-          <p class="mt-2 text-[10.5px] text-ink-900/40">{{ completed }} of {{ checklist.length }} steps complete</p>
+          <p class="text-[9.5px] font-semibold tracking-[0.16em] text-ink-900/40 uppercase">
+            {{ isVerified ? 'Verification' : 'Onboarding' }}
+          </p>
+          <template v-if="isVerified">
+            <p class="mt-2 flex items-center gap-1.5 text-[16px] font-semibold tracking-[-0.03em] text-emerald-600">
+              <ShieldCheck :size="17" /> Verified
+            </p>
+            <p class="mt-2 text-[10.5px] leading-relaxed text-ink-900/40">
+              Your company has been approved by the BOL team.
+            </p>
+          </template>
+          <template v-else>
+            <p class="mt-2 text-[20px] font-semibold tracking-[-0.03em]">{{ progress }}%</p>
+            <div class="mt-2 h-1.5 overflow-hidden rounded-full bg-ink-900/8">
+              <div class="h-full rounded-full bg-brand-500 transition-all" :style="{ width: `${progress}%` }" />
+            </div>
+            <p class="mt-2 text-[10.5px] text-ink-900/40">{{ completed }} of {{ checklist.length }} steps complete</p>
+          </template>
         </div>
 
         <div class="rounded-xl border border-ink-900/10 bg-white p-4">
@@ -175,37 +190,60 @@ const statusTone = computed(() => {
 
       <div class="mt-5 grid gap-5 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
         <div class="rounded-xl border border-ink-900/10 bg-white p-5">
-          <div class="flex items-center justify-between gap-3">
-            <h2 class="text-[14px] font-semibold">Onboarding checklist</h2>
-            <span class="rounded-md bg-ink-900/5 px-2 py-1 text-[10px] font-medium text-ink-900/50">
-              {{ progress }}%
-            </span>
-          </div>
+          <template v-if="isVerified">
+            <div class="flex items-center gap-2 text-emerald-600">
+              <ShieldCheck :size="17" />
+              <h2 class="text-[14px] font-semibold">Company verified</h2>
+            </div>
+            <p class="mt-2 max-w-md text-[12px] leading-relaxed text-ink-900/50">
+              Your business has passed verification. You can publish rates, receive marketplace
+              bookings and share your booking page with customers.
+            </p>
+            <div class="mt-4 flex flex-wrap gap-2">
+              <AppButton to="/dashboard/company" size="sm" variant="secondary">
+                Company profile
+                <ArrowRight :size="14" />
+              </AppButton>
+              <AppButton to="/dashboard/company/booking" size="sm">
+                Booking page
+                <ArrowRight :size="14" />
+              </AppButton>
+            </div>
+          </template>
 
-          <ul class="mt-4 divide-y divide-ink-900/8">
-            <li v-for="item in checklist" :key="item.label" class="flex items-start gap-3 py-3">
-              <span
-                class="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full border"
-                :class="item.done ? 'border-emerald-200 bg-emerald-50 text-emerald-600' : 'border-ink-900/15 text-ink-900/25'"
-              >
-                <Check v-if="item.done" :size="11" :stroke-width="3" />
-                <CircleDot v-else :size="9" />
+          <template v-else>
+            <div class="flex items-center justify-between gap-3">
+              <h2 class="text-[14px] font-semibold">Onboarding checklist</h2>
+              <span class="rounded-md bg-ink-900/5 px-2 py-1 text-[10px] font-medium text-ink-900/50">
+                {{ progress }}%
               </span>
-              <div class="min-w-0 flex-1">
-                <p class="text-[12.5px] font-medium" :class="item.done ? 'text-ink-900/45' : ''">
-                  {{ item.label }}
-                </p>
-                <p class="mt-0.5 text-[11px] leading-relaxed text-ink-900/40">{{ item.body }}</p>
-              </div>
-              <NuxtLink
-                v-if="!item.done"
-                :to="item.to"
-                class="mt-0.5 shrink-0 text-[10.5px] font-semibold text-brand-600 hover:text-brand-700"
-              >
-                Start
-              </NuxtLink>
-            </li>
-          </ul>
+            </div>
+
+            <ul class="mt-4 divide-y divide-ink-900/8">
+              <li v-for="item in checklist" :key="item.label" class="flex items-start gap-3 py-3">
+                <span
+                  class="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full border"
+                  :class="item.done ? 'border-emerald-200 bg-emerald-50 text-emerald-600' : 'border-ink-900/15 text-ink-900/25'"
+                >
+                  <Check v-if="item.done" :size="11" :stroke-width="3" />
+                  <CircleDot v-else :size="9" />
+                </span>
+                <div class="min-w-0 flex-1">
+                  <p class="text-[12.5px] font-medium" :class="item.done ? 'text-ink-900/45' : ''">
+                    {{ item.label }}
+                  </p>
+                  <p class="mt-0.5 text-[11px] leading-relaxed text-ink-900/40">{{ item.body }}</p>
+                </div>
+                <NuxtLink
+                  v-if="!item.done"
+                  :to="item.to"
+                  class="mt-0.5 shrink-0 text-[10.5px] font-semibold text-brand-600 hover:text-brand-700"
+                >
+                  Start
+                </NuxtLink>
+              </li>
+            </ul>
+          </template>
         </div>
 
         <div class="space-y-4">

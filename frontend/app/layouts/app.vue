@@ -28,12 +28,17 @@ const companyOpen = ref(false)
 const profileOpen = ref(false)
 
 const isCustomer = computed(() => user.value?.account_type === 'customer')
+const isVerified = computed(
+  () => (workspaceDetail.value?.company.status ?? currentCompany.value?.status) === 'verified',
+)
 
 const navigation = computed(() => [
   { label: 'Overview', to: '/dashboard', icon: LayoutDashboard },
   ...(isCustomer.value
     ? [{ label: 'Send a package', to: '/#rate-search', icon: Send }]
-    : [{ label: 'Onboarding', to: '/onboarding', icon: ClipboardList }]),
+    : isVerified.value
+      ? []
+      : [{ label: 'Onboarding', to: '/onboarding', icon: ClipboardList }]),
 ])
 
 const companyNavigation = [

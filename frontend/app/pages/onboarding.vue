@@ -74,6 +74,10 @@ async function load() {
   error.value = ''
   try {
     const data = await api<CompanyDetail>('/companies/me')
+    if (data.company.status === 'verified') {
+      await navigateTo('/dashboard', { replace: true })
+      return
+    }
     detail.value = data
     Object.assign(form, {
       name: data.company.name,
