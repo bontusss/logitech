@@ -19,6 +19,7 @@ type Mailer interface {
 	SendInvitation(ctx context.Context, to, companyName, token string) error
 	SendWelcome(ctx context.Context, to, fullName string, provider bool) error
 	SendOnboardingReminder(ctx context.Context, to, fullName, companyName string, reminder int) error
+	SendProviderApproved(ctx context.Context, to, fullName, companyName string) error
 }
 
 type LogMailer struct {
@@ -55,6 +56,11 @@ func (m *LogMailer) SendWelcome(_ context.Context, to, fullName string, provider
 func (m *LogMailer) SendOnboardingReminder(_ context.Context, to, fullName, companyName string, reminder int) error {
 	m.Logger.Info("provider onboarding reminder scheduled",
 		"to", to, "name", fullName, "company", companyName, "reminder", reminder)
+	return nil
+}
+
+func (m *LogMailer) SendProviderApproved(_ context.Context, to, fullName, companyName string) error {
+	m.Logger.Info("provider approval email", "to", to, "name", fullName, "company", companyName)
 	return nil
 }
 
@@ -114,6 +120,13 @@ func (m *PlunkMailer) SendOnboardingReminder(ctx context.Context, to, fullName, 
 		body = fmt.Sprintf(`<p>Hi %s,</p><p>Your provider profile for <strong>%s</strong> is still waiting for a few details. You can pick up where you left off whenever you are ready.</p><p><a href="%s/onboarding">Finish provider onboarding</a></p><p>— Nnanna from BOL</p>`, name, company, m.AppURL)
 	}
 	return m.send(ctx, to, subject, body)
+}
+
+func (m *PlunkMailer) SendProviderApproved(ctx context.Context, to, fullName, companyName string) error {
+	name := html.EscapeString(fullName)
+	company := html.EscapeString(companyName)
+	return m.send(ctx, to, company+" is approved on BOL",
+		fmt.Sprintf(`<p>Hi %s,</p><p>Good news — <strong>%s</strong> has been verified and is now live on the BOL marketplace.</p><p>Shippers can find your company, and you can publish rates and receive bookings from your workspace.</p><p><a href="%s/dashboard/company">Open your provider dashboard</a></p><p>— Nnanna from BOL</p>`, name, company, m.AppURL))
 }
 
 func (m *PlunkMailer) send(ctx context.Context, to, subject, body string) error {

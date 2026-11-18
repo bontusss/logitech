@@ -40,5 +40,6 @@ func TestPlunkMailerUsesConfiguredSenderForEveryMessage(t *testing.T) {
 	require.NoError(t, mailer.SendWelcome(ctx, "person@example.com", "Ada", false))
 	require.NoError(t, mailer.SendWelcome(ctx, "person@example.com", "Ada", true))
 	require.NoError(t, mailer.SendOnboardingReminder(ctx, "person@example.com", "Ada", "Aba Freight", 1))
-	require.Equal(t, 6, requests)
+	require.NoError(t, mailer.SendProviderApproved(ctx, "person@example.com", "Ada", "Aba Freight"))
+	require.Equal(t, 7, requests)
 }

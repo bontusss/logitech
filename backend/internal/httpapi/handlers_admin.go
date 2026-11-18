@@ -56,6 +56,12 @@ func (a *API) approveProvider(c *gin.Context) {
 		return
 	}
 
+	if owner, err := a.svc.Q.GetUserByID(c.Request.Context(), company.OwnerUserID); err != nil {
+		a.svc.Log.Warn("could not load the provider owner for the approval email", "company_id", company.ID, "error", err)
+	} else if err := a.svc.Mailer.SendProviderApproved(c.Request.Context(), owner.Email, owner.FullName, company.Name); err != nil {
+		a.svc.Log.Warn("could not send the provider approval email", "company_id", company.ID, "error", err)
+	}
+
 	a.svc.Audit(c.Request.Context(), service.AuditEntry{
 		ActorID:   actorID(c),
 		CompanyID: &company.ID,
