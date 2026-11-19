@@ -42,9 +42,14 @@ func newHandler(files fs.FS) http.Handler {
 			return
 		}
 
+		fallbackPath := "/"
+		if _, err := fs.Stat(files, "200.html"); err == nil {
+			fallbackPath = "/200.html"
+		}
+
 		fallback := r.Clone(r.Context())
 		fallbackURL := *r.URL
-		fallbackURL.Path = "/"
+		fallbackURL.Path = fallbackPath
 		fallback.URL = &fallbackURL
 		fileServer.ServeHTTP(w, fallback)
 	})

@@ -12,6 +12,7 @@ import (
 func TestHandlerServesGeneratedFilesAndFallsBackForAppRoutes(t *testing.T) {
 	handler := newHandler(fstest.MapFS{
 		"index.html":       &fstest.MapFile{Data: []byte("home")},
+		"200.html":         &fstest.MapFile{Data: []byte("spa shell")},
 		"_nuxt/app.js":     &fstest.MapFile{Data: []byte("asset")},
 		"login/index.html": &fstest.MapFile{Data: []byte("login")},
 	})
@@ -25,7 +26,8 @@ func TestHandlerServesGeneratedFilesAndFallsBackForAppRoutes(t *testing.T) {
 		{name: "root page", path: "/", wantStatus: http.StatusOK, wantBody: "home"},
 		{name: "generated page", path: "/login/", wantStatus: http.StatusOK, wantBody: "login"},
 		{name: "frontend asset", path: "/_nuxt/app.js", wantStatus: http.StatusOK, wantBody: "asset"},
-		{name: "client route", path: "/invitations/token", wantStatus: http.StatusOK, wantBody: "home"},
+		{name: "client route", path: "/invitations/token", wantStatus: http.StatusOK, wantBody: "spa shell"},
+		{name: "dynamic booking route", path: "/book/2seconds", wantStatus: http.StatusOK, wantBody: "spa shell"},
 		{name: "missing asset", path: "/sw.js", wantStatus: http.StatusNotFound, wantBody: "404 page not found\n"},
 	}
 
@@ -37,6 +39,18 @@ func TestHandlerServesGeneratedFilesAndFallsBackForAppRoutes(t *testing.T) {
 			require.Equal(t, tt.wantBody, recorder.Body.String())
 		})
 	}
+}
+
+func TestHandlerFallsBackToHomeWhenSpaFallbackIsMissing(t *testing.T) {
+	handler := newHandler(fstest.MapFS{
+		"index.html": &fstest.MapFile{Data: []byte("home")},
+	})
+
+	recorder := httptest.NewRecorder()
+	handler.ServeHTTP(recorder, httptest.NewRequest(http.MethodGet, "/client-route", nil))
+
+	require.Equal(t, http.StatusOK, recorder.Code)
+	require.Equal(t, "home", recorder.Body.String())
 }
 
 func TestHandlerRejectsNonReadMethods(t *testing.T) {
