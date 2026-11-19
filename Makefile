@@ -55,7 +55,7 @@ run-be: ## run the go server alone (foreground)
 	cd backend && PORT=$(BE_PORT) DATABASE_URL=$(DATABASE_URL) go run ./cmd/server
 
 run-fe: ## run the nuxt dev server alone (foreground)
-	cd frontend && npm run dev -- --port $(FE_PORT) --host 0.0.0.0
+	cd frontend && npm run dev -- --dotenv ../.env --port $(FE_PORT) --host 0.0.0.0
 
 ## ---- build (embed) ---------------------------------------------------------
 

@@ -4,10 +4,12 @@ Multi-tenant logistics platform: a public marketplace landing page, a company op
 workspace, and the backend foundation for authentication, company onboarding and company
 management.
 
-This stage implements **authentication, onboarding and company management**: profiles, branches,
+The platform implements **authentication, onboarding and company management**: profiles, branches,
 staff invitations and acceptance, granular roles and permissions, branding, subdomains and
-company-branded PWA metadata. Shipments, pricing, manifests, the rate engine and the public
-marketplace API are not built yet.
+company-branded PWA metadata. Providers can create drivers with private, passwordless portal links
+and record deliveries with contacts, addresses, declared value, price, payment details and optional
+driver assignment. Live driver GPS, delivery progress updates, proof of delivery, dispatch-board
+workflows, manifests, the rate engine and the public marketplace API are not built yet.
 
 ## Stack
 
@@ -55,6 +57,9 @@ make run-be        # API on http://localhost:8080
 make run-fe        # Nuxt on http://localhost:3000
 ```
 
+`make run-fe` loads the repository-root `.env`, including `NUXT_PUBLIC_API_BASE`, so
+frontend requests go to the local API at `http://localhost:8080` during development.
+
 Health check: `curl http://localhost:8080/health`.
 
 Create the integration-test database once:
@@ -93,6 +98,14 @@ docker exec app_postgres createdb -U app appdb_test
 | `NUXT_PUBLIC_APP_DOMAIN` | Frontend copy of the tenant base domain |
 | `NUXT_PUBLIC_DEMO_URL` | Booking CTA destination |
 | `NUXT_PUBLIC_WHATSAPP_URL` | Full `https://wa.me/<number>` chat URL |
+| `NUXT_PUBLIC_MAPBOX_ACCESS_TOKEN` | Public Mapbox token for delivery address lookup and map previews |
+| `NUXT_PUBLIC_CLOUDINARY_CLOUD_NAME` | Cloudinary cloud name for optional booking-page package photos |
+| `NUXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET` | Cloudinary unsigned upload preset for package photos |
+
+Public booking pages use Mapbox autocomplete/reverse geocoding for verified location pins.
+Optional package photos use Cloudinary's unsigned image upload; configure the preset to allow
+images only and cap file size (the booking form accepts files up to 10 MB). If Cloudinary is not
+configured, customers can still submit bookings without a photo.
 
 `JWT_SECRET` falls back to a documented development value only when
 `APP_ENV != production`; production startup fails without it.

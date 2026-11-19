@@ -306,7 +306,9 @@ func (q *Queries) CreatePricingTier(ctx context.Context, arg CreatePricingTierPa
 }
 
 const createRateCard = `-- name: CreateRateCard :one
-INSERT INTO rate_cards (company_id, name, description, status) VALUES ($1, $2, $3, $4) RETURNING id, company_id, name, description, currency, status, is_published, effective_start, effective_end, published_at, created_at, updated_at, deleted_at
+INSERT INTO rate_cards (company_id, name, description, status, is_published, published_at)
+VALUES ($1, $2, $3, $4, $4 = 'published', CASE WHEN $4 = 'published' THEN now() END)
+RETURNING id, company_id, name, description, currency, status, is_published, effective_start, effective_end, published_at, created_at, updated_at, deleted_at
 `
 
 type CreateRateCardParams struct {

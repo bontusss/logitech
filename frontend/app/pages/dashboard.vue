@@ -3,21 +3,29 @@ import {
   ArrowRight,
   Building2,
   Check,
+  CheckCircle2,
   CircleAlert,
   CircleDot,
   ClipboardList,
+  Copy,
+  Download,
+  ExternalLink,
   Loader2,
   MailCheck,
+  Share2,
   ShieldCheck,
   Sparkles,
+  Users,
 } from 'lucide-vue-next'
-import type { CompanyDetail, Membership } from '~/types/auth'
+import * as QRCode from 'qrcode'
+import type { CompanyDetail } from '~/types/auth'
 
 definePageMeta({ middleware: 'auth', layout: 'app' })
 
 const { api } = useApi()
 const { user } = useAuth()
-const { currentCompany, companies, selectCompany } = useCompany()
+const { currentCompany } = useCompany()
+const route = useRoute()
 
 useSeoMeta({
   title: () => (user.value?.account_type === 'customer' ? 'Marketplace dashboard' : 'Workspace overview'),
@@ -26,10 +34,35 @@ useSeoMeta({
 const isCustomer = computed(() => user.value?.account_type === 'customer')
 
 const detail = ref<CompanyDetail | null>(null)
+interface BookingPage {
+  slug: string
+  is_published: boolean
+}
+
+interface Driver {
+  id: string
+  full_name: string
+  status: string
+}
+
+const bookingPage = ref<BookingPage | null>(null)
+const drivers = ref<Driver[]>([])
 const loading = ref(false)
 const error = ref('')
+const bookingPageError = ref('')
+const driverError = ref('')
+const copiedBookingLink = ref(false)
+const bookingShareError = ref('')
+const qrCode = ref('')
+const generatingQr = ref(false)
+const origin = useRequestURL().origin
+const bookingPageURL = computed(() =>
+  bookingPage.value ? `${origin}/book/${bookingPage.value.slug}` : '',
+)
 
-onMounted(load)
+onMounted(() => {
+  if (route.path === '/dashboard') load()
+})
 
 async function load() {
   if (isCustomer.value || !currentCompany.value) {
@@ -38,8 +71,30 @@ async function load() {
   }
   loading.value = true
   error.value = ''
+  bookingPageError.value = ''
+  driverError.value = ''
   try {
     detail.value = await api<CompanyDetail>('/companies/me')
+    bookingPage.value = null
+    if (
+      detail.value.company.status === 'verified' &&
+      detail.value.membership.permissions.includes('bookings.manage')
+    ) {
+      try {
+        const result = await api<{ booking_page: BookingPage | null }>('/companies/me/booking-page')
+        bookingPage.value = result.booking_page
+      } catch (err) {
+        bookingPageError.value = apiErrorMessage(err, 'Could not load your booking page.')
+      }
+      if (detail.value.membership.permissions.includes('staff.view')) {
+        try {
+          const result = await api<{ drivers: Driver[] }>('/companies/me/drivers')
+          drivers.value = result.drivers
+        } catch (err) {
+          driverError.value = apiErrorMessage(err, 'Could not load your driver list.')
+        }
+      }
+    }
   } catch (err) {
     error.value = apiErrorMessage(err, 'Could not load your workspace.')
   } finally {
@@ -47,9 +102,54 @@ async function load() {
   }
 }
 
-function chooseCompany(company: Membership) {
-  selectCompany(company.company_id)
-  window.location.reload()
+async function copyBookingLink() {
+  bookingShareError.value = ''
+  try {
+    await navigator.clipboard.writeText(bookingPageURL.value)
+    copiedBookingLink.value = true
+    window.setTimeout(() => (copiedBookingLink.value = false), 1800)
+  } catch {
+    bookingShareError.value = 'Could not copy the link. Copy it from the address shown instead.'
+  }
+}
+
+async function shareBookingLink() {
+  bookingShareError.value = ''
+  if (navigator.share) {
+    try {
+      await navigator.share({
+        title: `Book with ${detail.value?.company.name ?? 'us'}`,
+        text: 'Book your next delivery with us.',
+        url: bookingPageURL.value,
+      })
+      return
+    } catch (err) {
+      if (err instanceof DOMException && err.name === 'AbortError') return
+      bookingShareError.value = 'Could not open the share menu. You can copy the link instead.'
+      return
+    }
+  }
+  await copyBookingLink()
+}
+
+async function generateBookingQrCode() {
+  bookingShareError.value = ''
+  generatingQr.value = true
+  try {
+    qrCode.value = await QRCode.toDataURL(bookingPageURL.value, { width: 256, margin: 2 })
+  } catch {
+    bookingShareError.value = 'Could not create the QR code. Please try again.'
+  } finally {
+    generatingQr.value = false
+  }
+}
+
+function downloadBookingQrCode() {
+  if (!qrCode.value || !bookingPage.value) return
+  const link = document.createElement('a')
+  link.href = qrCode.value
+  link.download = `${bookingPage.value.slug}-booking-page.png`
+  link.click()
 }
 
 const checklist = computed(() => {
@@ -92,135 +192,309 @@ const isVerified = computed(() => detail.value?.company.status === 'verified')
 const completed = computed(() => checklist.value.filter((item) => item.done).length)
 const progress = computed(() => Math.round((completed.value / checklist.value.length) * 100))
 
-const statusTone = computed(() => {
-  switch (detail.value?.company.status) {
-    case 'verified':
-      return 'border-emerald-200 bg-emerald-50 text-emerald-700'
-    case 'under_review':
-      return 'border-brand-200 bg-brand-50 text-brand-700'
-    case 'rejected':
-    case 'suspended':
-      return 'border-red-200 bg-red-50 text-red-700'
-    default:
-      return 'border-amber-200 bg-amber-50 text-amber-700'
-  }
-})
+function formatCurrency(amount: number) {
+  const currency = detail.value?.settings.currency?.trim() || 'NGN'
+  return `${currency} ${amount.toLocaleString('en-NG')}`
+}
+
+const financialMetrics = computed(() => [
+  { label: 'Earned today', value: formatCurrency(0), detail: 'From deliveries completed today' },
+  { label: 'Collected today', value: formatCurrency(0), detail: 'Payments received today' },
+  { label: 'Amount owed', value: formatCurrency(0), detail: 'Outstanding delivery payments' },
+  { label: 'Cash with drivers', value: formatCurrency(0), detail: 'Cash awaiting reconciliation' },
+])
+
+const bookingMetrics = [
+  { label: 'Bookings created today', value: 0 },
+  { label: 'In progress', value: 0 },
+  { label: 'Waiting for drivers', value: 0 },
+  { label: 'Booking requests', value: 0 },
+]
+
+const analyticsDays = computed(() =>
+  Array.from({ length: 7 }, (_, index) => {
+    const date = new Date()
+    date.setDate(date.getDate() - 6 + index)
+    return date.toLocaleDateString('en-NG', { weekday: 'short' })
+  }),
+)
 </script>
 
 <template>
-  <CustomerDashboard v-if="isCustomer" />
+  <NuxtPage v-if="route.path !== '/dashboard'" />
 
-  <div v-else>
-    <div class="flex flex-wrap items-start justify-between gap-4">
+  <CustomerDashboard v-else-if="isCustomer" />
+
+  <div v-else class="dashboard-overview">
+    <div class="overview-hero relative overflow-hidden rounded-2xl border p-5 sm:p-6">
+      <div class="pointer-events-none absolute -top-16 right-10 size-44 rounded-full bg-fuchsia-400/15 blur-3xl" />
+      <div class="pointer-events-none absolute -right-8 -bottom-24 size-52 rounded-full bg-cyan-400/15 blur-3xl" />
+      <div class="relative flex flex-wrap items-start justify-between gap-4">
       <div>
-        <p class="text-[10.5px] font-semibold tracking-[0.2em] text-brand-600 uppercase">
-          {{ user?.account_type === 'customer' ? 'Marketplace account' : 'Company workspace' }}
+        <p class="inline-flex items-center gap-1.5 rounded-full bg-white/70 px-2.5 py-1 text-[10px] font-semibold tracking-wide text-brand-700 dark:bg-slate-950/30 dark:text-indigo-200">
+          <Sparkles :size="12" /> TODAY AT A GLANCE
         </p>
-        <h1 class="mt-2 text-[clamp(1.6rem,3vw,2.1rem)] leading-tight font-semibold tracking-[-0.035em]">
-          Welcome, {{ user?.full_name?.split(' ')[0] || 'there' }}
-        </h1>
-        <p class="mt-2 max-w-xl text-[13.5px] leading-relaxed text-ink-900/50">
-          {{ currentCompany
-            ? isVerified
-              ? 'Your company is verified and visible to customers.'
-              : 'Your account is set up. Finish onboarding to unlock marketplace visibility.'
-            : 'Your BOL account is ready. Marketplace booking tools are the next stage.' }}
+        <div class="mt-3 flex flex-wrap items-center gap-2.5">
+          <h1 class="text-[clamp(1.45rem,2.5vw,1.8rem)] leading-tight font-semibold tracking-[-0.04em]">
+            Welcome, {{ user?.full_name?.split(' ')[0] || 'there' }}
+          </h1>
+          <span
+            v-if="currentCompany && isVerified"
+            class="inline-flex items-center gap-1 rounded-full border border-emerald-300/60 bg-emerald-100/70 px-2.5 py-1 text-[10px] font-semibold text-emerald-800 dark:border-emerald-400/25 dark:bg-emerald-400/10 dark:text-emerald-200"
+          >
+            <ShieldCheck :size="13" /> Verified
+          </span>
+        </div>
+        <p class="mt-2 max-w-xl text-[12.5px] leading-relaxed text-ink-900/65">
+          {{ isVerified
+            ? 'A quick snapshot of your delivery business. Let’s make today a good one.'
+            : 'Finish setting up your company to unlock your provider workspace.' }}
         </p>
       </div>
-      <AppButton v-if="currentCompany && !isVerified" to="/onboarding" size="md">
+      <AppButton v-if="currentCompany && !isVerified" to="/onboarding" size="sm">
         Continue onboarding
         <ArrowRight :size="15" />
       </AppButton>
+      </div>
     </div>
 
-    <div v-if="loading" class="mt-8 flex items-center gap-2 rounded-xl border border-ink-900/10 bg-white p-6 text-[13px] text-ink-900/50">
+    <div v-if="loading" class="overview-card mt-5 flex items-center gap-2 rounded-xl border p-5 text-[12px] text-ink-900/50">
       <Loader2 :size="16" class="animate-spin" /> Loading workspace…
     </div>
 
-    <p v-else-if="error" role="alert" class="mt-8 flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 p-4 text-[12.5px] text-red-700">
+    <p v-else-if="error" role="alert" class="mt-5 flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 p-4 text-[12px] text-red-700">
       <CircleAlert :size="16" class="mt-0.5 shrink-0" />
       {{ error }}
     </p>
 
     <template v-else-if="detail">
-      <div class="mt-7 grid gap-4 sm:grid-cols-3">
-        <div class="rounded-xl border border-ink-900/10 bg-white p-4">
-          <p class="text-[9.5px] font-semibold tracking-[0.16em] text-ink-900/40 uppercase">Company status</p>
-          <div class="mt-2 flex items-center gap-2">
-            <span class="rounded-md border px-2 py-1 text-[11px] font-semibold capitalize" :class="statusTone">
-              {{ detail.company.status.replace('_', ' ') }}
+      <section v-if="isVerified" class="mt-5 space-y-5" aria-label="Company operations overview">
+        <section
+          v-if="detail.membership.permissions.includes('staff.invite') && detail.membership.permissions.includes('staff.view') && !driverError && drivers.filter((driver) => driver.status === 'active').length === 0"
+          class="overview-nudge flex flex-col gap-4 rounded-xl border p-4 sm:flex-row sm:items-center sm:justify-between"
+          aria-labelledby="first-driver-title"
+        >
+          <div class="flex items-start gap-3">
+            <span class="flex size-9 shrink-0 items-center justify-center rounded-lg bg-white text-amber-700 dark:text-amber-200">
+              <Users :size="17" />
             </span>
+            <div>
+              <h2 id="first-driver-title" class="text-[13px] font-semibold">
+                Add your first driver
+              </h2>
+              <p class="mt-1 max-w-2xl text-[11.5px] leading-relaxed opacity-75">
+                Create a driver portal so your team is ready when you start assigning deliveries.
+              </p>
+            </div>
           </div>
-          <p class="mt-2 text-[10.5px] leading-relaxed text-ink-900/40">
-            {{ detail.company.status === 'verified'
-              ? 'Marketplace publishing unlocked.'
-              : 'Profile review is required before publishing rates.' }}
-          </p>
+          <NuxtLink
+            :to="{ path: '/dashboard/company/drivers', query: { create: '1' } }"
+            class="inline-flex min-h-9 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-amber-900 px-3.5 py-2 text-[11px] font-semibold text-white transition hover:bg-amber-950 dark:bg-amber-300 dark:text-amber-950 dark:hover:bg-amber-200"
+          >
+            Create first driver <ArrowRight :size="14" />
+          </NuxtLink>
+        </section>
+        <p v-if="driverError" role="alert" class="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-[11px] text-red-700">
+          {{ driverError }}
+        </p>
+
+        <section
+          v-if="detail.membership.permissions.includes('bookings.manage')"
+          class="overview-share overflow-hidden rounded-2xl border"
+          aria-labelledby="booking-share-title"
+        >
+          <div class="grid gap-5 p-4 sm:p-5 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
+            <div class="min-w-0">
+              <div class="flex flex-wrap items-center gap-2">
+                <h2 class="text-[15px] font-semibold tracking-[-0.02em]">
+                  {{ bookingPage?.is_published ? 'Your booking page is live' : 'Your booking page isn’t live yet' }}
+                </h2>
+                <span
+                  v-if="bookingPage?.is_published"
+                  class="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-1 text-[9.5px] font-semibold text-emerald-700"
+                >
+                  <CheckCircle2 :size="12" /> Live
+                </span>
+              </div>
+              <h3 id="booking-share-title" class="mt-2 text-[12px] font-semibold text-brand-800 dark:text-indigo-200">
+                Get more bookings: share your page
+              </h3>
+              <p class="mt-1 max-w-2xl text-[11.5px] leading-relaxed text-ink-900/55">
+                Post your link to your WhatsApp Status and groups. Every booking lands in Requests and pings your WhatsApp.
+              </p>
+              <template v-if="bookingPageError">
+                <p role="alert" class="mt-3 text-[11px] text-red-700">{{ bookingPageError }}</p>
+              </template>
+              <template v-else-if="bookingPage?.is_published">
+                <a
+                  :href="bookingPageURL"
+                  target="_blank"
+                  rel="noopener"
+                  class="mt-3 inline-flex max-w-full items-center gap-1.5 break-all text-[11px] font-medium text-brand-700 underline decoration-brand-300 underline-offset-4"
+                >
+                  {{ bookingPageURL }} <ExternalLink :size="12" class="shrink-0" />
+                </a>
+                <p v-if="bookingShareError" role="alert" class="mt-2 text-[11px] text-red-700">
+                  {{ bookingShareError }}
+                </p>
+              </template>
+              <template v-else>
+                <p class="mt-3 text-[11px] text-amber-800 dark:text-amber-200">
+                  Your page isn’t published. Publish it from the booking page settings before sharing.
+                </p>
+              </template>
+            </div>
+
+            <div class="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap md:justify-end">
+              <template v-if="bookingPage?.is_published">
+                <button
+                  type="button"
+                  class="inline-flex min-h-10 items-center justify-center gap-1.5 rounded-lg bg-brand-600 px-3 py-2 text-[11.5px] font-semibold text-white transition hover:bg-brand-700"
+                  @click="shareBookingLink"
+                >
+                  <Share2 :size="14" /> Share
+                </button>
+                <button
+                  type="button"
+                  class="inline-flex min-h-10 items-center justify-center gap-1.5 rounded-lg border border-ink-900/10 bg-white px-3 py-2 text-[11.5px] font-semibold text-ink-900/70 transition hover:border-ink-900/25"
+                  @click="copyBookingLink"
+                >
+                  <Check v-if="copiedBookingLink" :size="14" class="text-emerald-600" />
+                  <Copy v-else :size="14" />
+                  {{ copiedBookingLink ? 'Copied' : 'Copy link' }}
+                </button>
+                <button
+                  type="button"
+                  :disabled="generatingQr"
+                  class="col-span-2 inline-flex min-h-10 items-center justify-center gap-1.5 rounded-lg border border-ink-900/10 bg-white px-3 py-2 text-[11.5px] font-semibold text-ink-900/70 transition hover:border-ink-900/25 disabled:opacity-50 sm:col-span-1"
+                  @click="generateBookingQrCode"
+                >
+                  <Loader2 v-if="generatingQr" :size="14" class="animate-spin" />
+                  <Download v-else :size="14" />
+                  QR code
+                </button>
+              </template>
+            </div>
+          </div>
+
+          <div v-if="qrCode && bookingPage?.is_published" class="border-t border-brand-100 bg-white/70 px-5 py-4 sm:px-6 dark:bg-slate-900/40">
+            <div class="flex flex-wrap items-center gap-4">
+              <img :src="qrCode" alt="QR code for your booking page" class="size-32 rounded-lg border border-ink-900/10 bg-white p-2" />
+              <div>
+                <p class="text-[12px] font-semibold">Share your page in person</p>
+                <p class="mt-1 text-[11px] text-ink-900/45">Customers can scan this code to open your booking page.</p>
+                <button
+                  type="button"
+                  class="mt-3 inline-flex items-center gap-1.5 text-[11px] font-semibold text-brand-700 hover:text-brand-800"
+                  @click="downloadBookingQrCode"
+                >
+                  <Download :size="13" /> Download QR code
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <div>
+          <div class="mb-3 flex flex-wrap items-end justify-between gap-2">
+            <div>
+              <h2 class="text-[14px] font-semibold">Financial overview</h2>
+              <p class="mt-1 text-[11px] text-ink-900/40">Daily delivery earnings and cash position</p>
+            </div>
+            <span class="text-[10px] text-ink-900/35">No financial records yet</span>
+          </div>
+          <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <article
+              v-for="(metric, index) in financialMetrics"
+              :key="metric.label"
+              class="overview-card overview-tile rounded-xl border p-4"
+              :class="`overview-tile--${['violet', 'mint', 'peach', 'blue'][index % 4]}`"
+            >
+              <p class="text-[10px] font-medium text-ink-900/45">{{ metric.label }}</p>
+              <p class="mt-2 text-[18px] font-semibold tracking-[-0.035em]">{{ metric.value }}</p>
+              <p class="mt-1 text-[10px] leading-relaxed text-ink-900/35">{{ metric.detail }}</p>
+            </article>
+          </div>
         </div>
 
-        <div class="rounded-xl border border-ink-900/10 bg-white p-4">
-          <p class="text-[9.5px] font-semibold tracking-[0.16em] text-ink-900/40 uppercase">
-            {{ isVerified ? 'Verification' : 'Onboarding' }}
-          </p>
-          <template v-if="isVerified">
-            <p class="mt-2 flex items-center gap-1.5 text-[16px] font-semibold tracking-[-0.03em] text-emerald-600">
-              <ShieldCheck :size="17" /> Verified
-            </p>
-            <p class="mt-2 text-[10.5px] leading-relaxed text-ink-900/40">
-              Your company has been approved by the BOL team.
-            </p>
-          </template>
-          <template v-else>
-            <p class="mt-2 text-[20px] font-semibold tracking-[-0.03em]">{{ progress }}%</p>
-            <div class="mt-2 h-1.5 overflow-hidden rounded-full bg-ink-900/8">
-              <div class="h-full rounded-full bg-brand-500 transition-all" :style="{ width: `${progress}%` }" />
+        <div>
+          <div class="mb-3 flex flex-wrap items-end justify-between gap-2">
+            <div>
+              <h2 class="text-[14px] font-semibold">Booking activity</h2>
+              <p class="mt-1 text-[11px] text-ink-900/40">Today’s workload and requests</p>
             </div>
-            <p class="mt-2 text-[10.5px] text-ink-900/40">{{ completed }} of {{ checklist.length }} steps complete</p>
-          </template>
+            <span class="text-[10px] text-ink-900/35">No booking records yet</span>
+          </div>
+          <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <article
+              v-for="(metric, index) in bookingMetrics"
+              :key="metric.label"
+              class="overview-card overview-tile rounded-xl border p-4"
+              :class="`overview-tile--${['blue', 'peach', 'mint', 'violet'][index % 4]}`"
+            >
+              <p class="text-[10px] font-medium text-ink-900/45">{{ metric.label }}</p>
+              <p class="mt-2 text-[19px] font-semibold tracking-[-0.035em]">{{ metric.value }}</p>
+            </article>
+          </div>
         </div>
 
-        <div class="rounded-xl border border-ink-900/10 bg-white p-4">
-          <p class="text-[9.5px] font-semibold tracking-[0.16em] text-ink-900/40 uppercase">Branches</p>
-          <p class="mt-2 text-[20px] font-semibold tracking-[-0.03em]">1</p>
-          <p class="mt-2 text-[10.5px] leading-relaxed text-ink-900/40">
-            Branch management arrives with the operations module.
+        <section class="overview-card rounded-xl border p-4 sm:p-5" aria-labelledby="analytics-title">
+          <div class="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h2 id="analytics-title" class="text-[14px] font-semibold">Last 7 days</h2>
+              <p class="mt-1 text-[11px] text-ink-900/40">Booking activity over the past week</p>
+            </div>
+            <span class="rounded-md bg-canvas px-2 py-1 text-[10px] font-medium text-ink-900/50">0 bookings</span>
+          </div>
+          <div class="mt-4">
+            <svg
+              viewBox="0 0 700 110"
+              class="h-24 w-full"
+              role="img"
+              aria-label="No booking activity recorded during the last seven days"
+              preserveAspectRatio="none"
+            >
+              <line x1="30" y1="24" x2="690" y2="24" stroke="currentColor" class="text-ink-900/5" />
+              <line x1="30" y1="51" x2="690" y2="51" stroke="currentColor" class="text-ink-900/5" />
+              <line x1="30" y1="78" x2="690" y2="78" stroke="currentColor" class="text-ink-900/10" />
+              <path d="M30 78H690" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-dasharray="5 7" class="text-brand-400" />
+              <circle
+                v-for="(_, index) in analyticsDays"
+                :key="index"
+                :cx="30 + index * 110"
+                cy="78"
+                r="3"
+                fill="currentColor"
+                class="text-brand-500"
+              />
+            </svg>
+            <div class="grid grid-cols-7 text-center text-[9.5px] text-ink-900/35">
+              <span v-for="(day, index) in analyticsDays" :key="`${day}-${index}`">{{ day }}</span>
+            </div>
+          </div>
+          <p class="mt-3 text-center text-[10.5px] text-ink-900/35">
+            Analytics will populate when booking records are available.
           </p>
-        </div>
-      </div>
+        </section>
+      </section>
 
-      <div class="mt-5 grid gap-5 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
-        <div class="rounded-xl border border-ink-900/10 bg-white p-5">
-          <template v-if="isVerified">
-            <div class="flex items-center gap-2 text-emerald-600">
-              <ShieldCheck :size="17" />
-              <h2 class="text-[14px] font-semibold">Company verified</h2>
-            </div>
-            <p class="mt-2 max-w-md text-[12px] leading-relaxed text-ink-900/50">
-              Your business has passed verification. You can publish rates, receive marketplace
-              bookings and share your booking page with customers.
-            </p>
-            <div class="mt-4 flex flex-wrap gap-2">
-              <AppButton to="/dashboard/company" size="sm" variant="secondary">
-                Company profile
-                <ArrowRight :size="14" />
-              </AppButton>
-              <AppButton to="/dashboard/company/booking" size="sm">
-                Booking page
-                <ArrowRight :size="14" />
-              </AppButton>
-            </div>
-          </template>
-
-          <template v-else>
+      <div v-if="!isVerified" class="mt-5 max-w-3xl">
+        <div class="overview-card rounded-2xl border p-5 sm:p-6">
             <div class="flex items-center justify-between gap-3">
-              <h2 class="text-[14px] font-semibold">Onboarding checklist</h2>
-              <span class="rounded-md bg-ink-900/5 px-2 py-1 text-[10px] font-medium text-ink-900/50">
+              <div>
+                <h2 class="text-[14px] font-semibold">A few steps to get rolling</h2>
+                <p class="mt-1 text-[11px] text-ink-900/45">Your setup progress</p>
+              </div>
+              <span class="rounded-full bg-brand-50 px-2.5 py-1 text-[10px] font-semibold text-brand-700 dark:bg-brand-100 dark:text-brand-700">
                 {{ progress }}%
               </span>
             </div>
+            <div class="mt-4 h-2 overflow-hidden rounded-full bg-ink-900/8">
+              <div class="h-full rounded-full bg-gradient-to-r from-brand-500 via-violet-500 to-emerald-400 transition-all" :style="{ width: `${progress}%` }" />
+            </div>
 
-            <ul class="mt-4 divide-y divide-ink-900/8">
-              <li v-for="item in checklist" :key="item.label" class="flex items-start gap-3 py-3">
+            <ul class="mt-3 divide-y divide-ink-900/8">
+              <li v-for="item in checklist" :key="item.label" class="flex items-start gap-3 py-2.5">
                 <span
                   class="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full border"
                   :class="item.done ? 'border-emerald-200 bg-emerald-50 text-emerald-600' : 'border-ink-900/15 text-ink-900/25'"
@@ -229,7 +503,7 @@ const statusTone = computed(() => {
                   <CircleDot v-else :size="9" />
                 </span>
                 <div class="min-w-0 flex-1">
-                  <p class="text-[12.5px] font-medium" :class="item.done ? 'text-ink-900/45' : ''">
+                  <p class="text-[12px] font-medium" :class="item.done ? 'text-ink-900/45' : ''">
                     {{ item.label }}
                   </p>
                   <p class="mt-0.5 text-[11px] leading-relaxed text-ink-900/40">{{ item.body }}</p>
@@ -243,71 +517,6 @@ const statusTone = computed(() => {
                 </NuxtLink>
               </li>
             </ul>
-          </template>
-        </div>
-
-        <div class="space-y-4">
-          <div class="rounded-xl border border-ink-900/10 bg-white p-5">
-            <h2 class="text-[13px] font-semibold">Company</h2>
-            <div class="mt-3 flex items-center gap-2.5">
-              <span
-                class="flex size-9 items-center justify-center rounded-lg text-[13px] font-semibold text-white"
-                :style="{ backgroundColor: detail.branding.primary_color }"
-              >
-                {{ detail.company.name.slice(0, 1).toUpperCase() }}
-              </span>
-              <div class="min-w-0">
-                <p class="truncate text-[12.5px] font-semibold">{{ detail.company.name }}</p>
-                <p class="truncate text-[10.5px] text-ink-900/40">{{ detail.company.business_email }}</p>
-              </div>
-            </div>
-            <dl class="mt-4 space-y-2 border-t border-ink-900/8 pt-3 text-[11.5px]">
-              <div class="flex justify-between gap-2">
-                <dt class="text-ink-900/40">Business type</dt>
-                <dd class="text-right font-medium">{{ detail.company.business_type }}</dd>
-              </div>
-              <div class="flex justify-between gap-2">
-                <dt class="text-ink-900/40">Location</dt>
-                <dd class="text-right font-medium">
-                  {{ [detail.company.city, detail.company.state].filter(Boolean).join(', ') || 'Not set' }}
-                </dd>
-              </div>
-              <div class="flex justify-between gap-2">
-                <dt class="text-ink-900/40">Currency</dt>
-                <dd class="font-medium">{{ detail.settings.currency }}</dd>
-              </div>
-              <div class="flex justify-between gap-2">
-                <dt class="text-ink-900/40">Timezone</dt>
-                <dd class="font-medium">{{ detail.settings.timezone }}</dd>
-              </div>
-            </dl>
-          </div>
-
-          <div v-if="companies.length > 1" class="rounded-xl border border-ink-900/10 bg-white p-5">
-            <h2 class="text-[13px] font-semibold">Switch company</h2>
-            <div class="mt-3 space-y-1.5">
-              <button
-                v-for="company in companies"
-                :key="company.company_id"
-                type="button"
-                class="flex w-full items-center justify-between gap-2 rounded-lg border px-3 py-2 text-left text-[11.5px] transition"
-                :class="company.company_id === currentCompany?.company_id ? 'border-brand-200 bg-brand-50' : 'border-ink-900/10 hover:bg-canvas'"
-                @click="chooseCompany(company)"
-              >
-                <span class="truncate">{{ company.company_name }}</span>
-                <span class="text-[9.5px] text-ink-900/35 capitalize">{{ company.status.replace('_', ' ') }}</span>
-              </button>
-            </div>
-          </div>
-
-          <div class="rounded-xl border border-brand-100 bg-brand-50/60 p-5">
-            <ShieldCheck :size="17" class="text-brand-600" />
-            <p class="mt-2 text-[12px] font-semibold">Your data stays in your workspace</p>
-            <p class="mt-1 text-[11px] leading-relaxed text-ink-900/50">
-              Company access is always checked against your active memberships, not a company id
-              supplied by the browser.
-            </p>
-          </div>
         </div>
       </div>
     </template>

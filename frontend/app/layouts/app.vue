@@ -1,22 +1,23 @@
 <script setup lang="ts">
 import {
-  ArrowLeftRight,
   Building2,
   CalendarCheck,
+  ChartNoAxesColumnIncreasing,
   ChevronDown,
   ClipboardList,
+  CreditCard,
   LayoutDashboard,
   LogOut,
-  MapPin,
   Menu,
   Palette,
   Send,
   Settings,
-  ShieldCheck,
+  Truck,
   UserRound,
   Users,
   X,
 } from 'lucide-vue-next'
+import type { Component } from 'vue'
 
 const route = useRoute()
 const { user, logout } = useAuth()
@@ -32,39 +33,81 @@ const isVerified = computed(
   () => (workspaceDetail.value?.company.status ?? currentCompany.value?.status) === 'verified',
 )
 
-const navigation = computed(() => [
-  { label: 'Overview', to: '/dashboard', icon: LayoutDashboard },
-  ...(isCustomer.value
-    ? [{ label: 'Send a package', to: '/#rate-search', icon: Send }]
-    : isVerified.value
-      ? []
-      : [{ label: 'Onboarding', to: '/onboarding', icon: ClipboardList }]),
-])
+interface NavigationItem {
+  label: string
+  to: string
+  icon: Component
+  comingSoon?: boolean
+  permission?: string
+}
 
-const companyNavigation = [
-  { label: 'Company profile', to: '/dashboard/company', icon: Building2, permission: 'company.view' },
-  { label: 'Branches', to: '/dashboard/company/branches', icon: MapPin, permission: 'branches.view' },
-  { label: 'Staff', to: '/dashboard/company/staff', icon: Users, permission: 'staff.view' },
-  { label: 'Roles & permissions', to: '/dashboard/company/roles', icon: ShieldCheck, permission: 'staff.roles.manage' },
-  { label: 'Booking page', to: '/dashboard/company/booking', icon: CalendarCheck, permission: 'bookings.manage' },
-  { label: 'Branding', to: '/dashboard/company/branding', icon: Palette, permission: 'branding.manage' },
-  { label: 'Settings', to: '/dashboard/company/settings', icon: Settings, permission: 'company.settings.manage' },
-]
+interface NavigationGroup {
+  label: string
+  items: NavigationItem[]
+}
 
-const visibleCompanyNavigation = computed(() =>
-  companyNavigation.filter((item) => {
-    if (!workspaceDetail.value) return true
-    return (
+const navigationGroups = computed<NavigationGroup[]>(() => {
+  if (isCustomer.value) {
+    return [{
+      label: 'Workspace',
+      items: [
+        { label: 'Overview', to: '/dashboard', icon: LayoutDashboard },
+        { label: 'Send a package', to: '/#rate-search', icon: Send },
+      ],
+    }]
+  }
+  if (!isVerified.value) {
+    return [{
+      label: 'Workspace',
+      items: [
+        { label: 'Overview', to: '/dashboard', icon: LayoutDashboard },
+        { label: 'Onboarding', to: '/onboarding', icon: ClipboardList },
+      ],
+    }]
+  }
+
+  const groups: NavigationGroup[] = [
+    {
+      label: 'Workspace',
+      items: [{ label: 'Overview', to: '/dashboard', icon: LayoutDashboard }],
+    },
+    {
+      label: 'Operations',
+      items: [
+        { label: 'Deliveries', to: '/dashboard/deliveries', icon: Truck, permission: 'shipments.view' },
+        { label: 'Customers', to: '/dashboard/coming-soon/customers', icon: Users, comingSoon: true, permission: 'staff.view' },
+        { label: 'Requests', to: '/dashboard/coming-soon/requests', icon: ClipboardList, comingSoon: true, permission: 'bookings.manage' },
+        { label: 'Analytics', to: '/dashboard/coming-soon/analytics', icon: ChartNoAxesColumnIncreasing, comingSoon: true, permission: 'reports.view' },
+        { label: 'Finance', to: '/dashboard/coming-soon/finance', icon: CreditCard, comingSoon: true, permission: 'reports.view' },
+        { label: 'Drivers', to: '/dashboard/company/drivers', icon: UserRound, permission: 'staff.view' },
+      ],
+    },
+    {
+      label: 'Setup',
+      items: [
+        { label: 'Booking page', to: '/dashboard/company/booking', icon: CalendarCheck, permission: 'bookings.manage' },
+        { label: 'Rates & routes', to: '/dashboard/company/rates', icon: ClipboardList, permission: 'rates.view' },
+      ],
+    },
+    {
+      label: 'Settings',
+      items: [
+        { label: 'Profile', to: '/dashboard/company', icon: Building2, permission: 'company.view' },
+        { label: 'Branding', to: '/dashboard/company/branding', icon: Palette, permission: 'branding.manage' },
+        { label: 'Billing', to: '/dashboard/coming-soon/billing', icon: Settings, comingSoon: true, permission: 'company.settings.manage' },
+      ],
+    },
+  ]
+  return groups.map((group) => ({
+    ...group,
+    items: group.items.filter((item) =>
+      !item.permission ||
+      !workspaceDetail.value ||
       workspaceDetail.value.platform_access ||
-      workspaceDetail.value.membership.permissions.includes(item.permission)
-    )
-  }),
-)
-
-const upcoming = [
-  { label: 'Shipments', icon: ArrowLeftRight },
-  { label: 'Rates', icon: ClipboardList },
-]
+      workspaceDetail.value.membership.permissions.includes(item.permission),
+    ),
+  }))
+})
 
 const initials = computed(() => {
   const name = user.value?.full_name ?? ''
@@ -79,6 +122,7 @@ const initials = computed(() => {
 })
 
 function isActive(to: string) {
+  if (to === '/dashboard') return route.path === to
   if (to === '/dashboard/company') return route.path === to
   return route.path === to || route.path.startsWith(`${to}/`)
 }
@@ -86,8 +130,8 @@ function isActive(to: string) {
 const pageTitle = computed(() => {
   if (isCustomer.value) return 'Marketplace dashboard'
   if (route.path.startsWith('/onboarding')) return 'Company onboarding'
-  const companyItem = companyNavigation.find((item) => isActive(item.to))
-  if (companyItem) return companyItem.label
+  const activeItem = navigationGroups.value.flatMap((group) => group.items).find((item) => isActive(item.to))
+  if (activeItem) return activeItem.label
   return 'Workspace overview'
 })
 
@@ -190,64 +234,32 @@ watch(
       </div>
 
       <nav class="flex-1 overflow-y-auto px-3 py-5" aria-label="Workspace">
-        <p class="px-2 text-[9.5px] font-semibold tracking-[0.18em] text-ink-900/35 uppercase">
-          Workspace
-        </p>
-        <ul class="mt-2 space-y-0.5">
-          <li v-for="item in navigation" :key="item.to">
-            <NuxtLink
-              :to="item.to"
-              class="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] font-medium transition"
-              :class="
-                route.path === item.to
-                  ? 'bg-brand-50 text-brand-700'
-                  : 'text-ink-900/60 hover:bg-ink-900/[0.03] hover:text-ink-900'
-              "
-            >
-              <component :is="item.icon" :size="15" />
-              {{ item.label }}
-            </NuxtLink>
-          </li>
-        </ul>
-
-        <template v-if="!isCustomer">
-          <p class="mt-6 px-2 text-[9.5px] font-semibold tracking-[0.18em] text-ink-900/35 uppercase">
-            Company
+        <section v-for="group in navigationGroups" :key="group.label">
+          <p
+            class="px-2 text-[9.5px] font-semibold tracking-[0.18em] text-ink-900/35 uppercase"
+            :class="group.label !== 'Workspace' ? 'mt-6' : ''"
+          >
+            {{ group.label }}
           </p>
           <ul class="mt-2 space-y-0.5">
-            <li v-for="item in visibleCompanyNavigation" :key="item.to">
+            <li v-for="item in group.items" :key="item.to">
               <NuxtLink
                 :to="item.to"
                 class="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] font-medium transition"
-                :class="
-                  isActive(item.to)
-                    ? 'bg-brand-50 text-brand-700'
-                    : 'text-ink-900/60 hover:bg-ink-900/[0.03] hover:text-ink-900'
-                "
+                :class="isActive(item.to) ? 'bg-brand-50 text-brand-700' : 'text-ink-900/60 hover:bg-ink-900/[0.03] hover:text-ink-900'"
               >
                 <component :is="item.icon" :size="15" />
-                {{ item.label }}
+                <span class="min-w-0 flex-1 truncate">{{ item.label }}</span>
+                <span
+                  v-if="item.comingSoon"
+                  class="ml-auto shrink-0 rounded border border-ink-900/10 px-1.5 py-0.5 text-[8.5px] tracking-wide text-ink-900/35 uppercase"
+                >
+                  Soon
+                </span>
               </NuxtLink>
             </li>
           </ul>
-
-          <p class="mt-6 px-2 text-[9.5px] font-semibold tracking-[0.18em] text-ink-900/35 uppercase">
-            Coming next
-          </p>
-          <ul class="mt-2 space-y-0.5">
-            <li
-              v-for="item in upcoming"
-              :key="item.label"
-              class="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] text-ink-900/30"
-            >
-              <component :is="item.icon" :size="15" />
-              {{ item.label }}
-              <span class="ml-auto rounded border border-ink-900/10 px-1.5 py-0.5 text-[8.5px] tracking-wide uppercase">
-                Soon
-              </span>
-            </li>
-          </ul>
-        </template>
+        </section>
       </nav>
 
       <div class="border-t border-ink-900/8 p-3">

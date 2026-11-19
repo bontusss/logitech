@@ -23,6 +23,128 @@ func (q *Queries) BookingPageSlugExists(ctx context.Context, slug string) (bool,
 	return taken, err
 }
 
+const createPublicBookingDelivery = `-- name: CreatePublicBookingDelivery :one
+INSERT INTO deliveries (
+  company_id, sender_name, sender_phone, receiver_name, receiver_phone,
+  pickup_address, dropoff_address, item_description, declared_value_minor,
+  delivery_price_minor, payer, is_paid, payment_method, assigned_driver_id,
+  status, created_by, package_category, weight_kg, additional_instructions,
+  package_photo_url, pickup_latitude, pickup_longitude, dropoff_latitude,
+  dropoff_longitude, selected_route_id, selected_rate_card_id, price_is_estimate, booking_source,
+  delivery_speed, distance_km
+)
+SELECT
+  $1, $2, $3,
+  $4, $5, $6,
+  $7, $8, $9,
+  $10, 'sender', false, NULL, NULL,
+  'requested', NULL, $11, $12,
+  $13, NULLIF($14::text, ''),
+  $15, $16,
+  $17, $18,
+  $19, $20,
+  $21, 'booking_page', $22, $23
+WHERE $19::uuid IS NULL
+   OR EXISTS (
+     SELECT 1 FROM company_booking_routes r
+     WHERE r.id = $19::uuid
+       AND r.company_id = $1::uuid
+       AND r.status = 'active'
+   )
+RETURNING id, company_id, sender_name, sender_phone, receiver_name, receiver_phone, pickup_address, dropoff_address, item_description, declared_value_minor, delivery_price_minor, payer, is_paid, payment_method, assigned_driver_id, status, created_by, created_at, updated_at, package_category, weight_kg, additional_instructions, package_photo_url, pickup_latitude, pickup_longitude, dropoff_latitude, dropoff_longitude, selected_route_id, selected_rate_card_id, price_is_estimate, booking_source, delivery_speed, distance_km
+`
+
+type CreatePublicBookingDeliveryParams struct {
+	CompanyID              uuid.UUID      `json:"company_id"`
+	SenderName             string         `json:"sender_name"`
+	SenderPhone            string         `json:"sender_phone"`
+	ReceiverName           string         `json:"receiver_name"`
+	ReceiverPhone          string         `json:"receiver_phone"`
+	PickupAddress          string         `json:"pickup_address"`
+	DropoffAddress         string         `json:"dropoff_address"`
+	ItemDescription        string         `json:"item_description"`
+	DeclaredValueMinor     int64          `json:"declared_value_minor"`
+	DeliveryPriceMinor     int64          `json:"delivery_price_minor"`
+	PackageCategory        string         `json:"package_category"`
+	WeightKg               pgtype.Numeric `json:"weight_kg"`
+	AdditionalInstructions string         `json:"additional_instructions"`
+	PackagePhotoUrl        string         `json:"package_photo_url"`
+	PickupLatitude         pgtype.Numeric `json:"pickup_latitude"`
+	PickupLongitude        pgtype.Numeric `json:"pickup_longitude"`
+	DropoffLatitude        pgtype.Numeric `json:"dropoff_latitude"`
+	DropoffLongitude       pgtype.Numeric `json:"dropoff_longitude"`
+	SelectedRouteID        *uuid.UUID     `json:"selected_route_id"`
+	SelectedRateCardID     *uuid.UUID     `json:"selected_rate_card_id"`
+	PriceIsEstimate        bool           `json:"price_is_estimate"`
+	DeliverySpeed          string         `json:"delivery_speed"`
+	DistanceKm             pgtype.Numeric `json:"distance_km"`
+}
+
+func (q *Queries) CreatePublicBookingDelivery(ctx context.Context, arg CreatePublicBookingDeliveryParams) (Delivery, error) {
+	row := q.db.QueryRow(ctx, createPublicBookingDelivery,
+		arg.CompanyID,
+		arg.SenderName,
+		arg.SenderPhone,
+		arg.ReceiverName,
+		arg.ReceiverPhone,
+		arg.PickupAddress,
+		arg.DropoffAddress,
+		arg.ItemDescription,
+		arg.DeclaredValueMinor,
+		arg.DeliveryPriceMinor,
+		arg.PackageCategory,
+		arg.WeightKg,
+		arg.AdditionalInstructions,
+		arg.PackagePhotoUrl,
+		arg.PickupLatitude,
+		arg.PickupLongitude,
+		arg.DropoffLatitude,
+		arg.DropoffLongitude,
+		arg.SelectedRouteID,
+		arg.SelectedRateCardID,
+		arg.PriceIsEstimate,
+		arg.DeliverySpeed,
+		arg.DistanceKm,
+	)
+	var i Delivery
+	err := row.Scan(
+		&i.ID,
+		&i.CompanyID,
+		&i.SenderName,
+		&i.SenderPhone,
+		&i.ReceiverName,
+		&i.ReceiverPhone,
+		&i.PickupAddress,
+		&i.DropoffAddress,
+		&i.ItemDescription,
+		&i.DeclaredValueMinor,
+		&i.DeliveryPriceMinor,
+		&i.Payer,
+		&i.IsPaid,
+		&i.PaymentMethod,
+		&i.AssignedDriverID,
+		&i.Status,
+		&i.CreatedBy,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.PackageCategory,
+		&i.WeightKg,
+		&i.AdditionalInstructions,
+		&i.PackagePhotoUrl,
+		&i.PickupLatitude,
+		&i.PickupLongitude,
+		&i.DropoffLatitude,
+		&i.DropoffLongitude,
+		&i.SelectedRouteID,
+		&i.SelectedRateCardID,
+		&i.PriceIsEstimate,
+		&i.BookingSource,
+		&i.DeliverySpeed,
+		&i.DistanceKm,
+	)
+	return i, err
+}
+
 const getBookingPageByCompany = `-- name: GetBookingPageByCompany :one
 SELECT id, company_id, slug, headline, description, is_published, created_at, updated_at FROM booking_pages WHERE company_id = $1
 `
@@ -63,13 +185,15 @@ SELECT
   b.logo_url,
   b.primary_color,
   b.secondary_color,
-  b.cover_image_url
+  b.cover_image_url,
+  COALESCE(cs.currency, 'NGN') AS currency
 FROM booking_pages bp
 JOIN companies c ON c.id = bp.company_id
   AND c.deleted_at IS NULL
   AND c.status = 'verified'
 LEFT JOIN company_branding b ON b.company_id = c.id
 LEFT JOIN company_subdomains s ON s.company_id = c.id
+LEFT JOIN company_settings cs ON cs.company_id = c.id
 WHERE bp.slug = $1 AND bp.is_published
 `
 
@@ -93,6 +217,7 @@ type GetPublicBookingPageRow struct {
 	PrimaryColor   *string     `json:"primary_color"`
 	SecondaryColor *string     `json:"secondary_color"`
 	CoverImageUrl  *string     `json:"cover_image_url"`
+	Currency       string      `json:"currency"`
 }
 
 func (q *Queries) GetPublicBookingPage(ctx context.Context, slug string) (GetPublicBookingPageRow, error) {
@@ -118,8 +243,119 @@ func (q *Queries) GetPublicBookingPage(ctx context.Context, slug string) (GetPub
 		&i.PrimaryColor,
 		&i.SecondaryColor,
 		&i.CoverImageUrl,
+		&i.Currency,
 	)
 	return i, err
+}
+
+const getPublicBookingRate = `-- name: GetPublicBookingRate :one
+SELECT rc.id AS rate_card_id, rc.name, rc.currency, pt.price_cents
+FROM rate_cards rc
+JOIN rate_card_versions v ON v.rate_card_id = rc.id
+  AND v.is_active
+  AND v.deleted_at IS NULL
+  AND v.effective_from <= now()
+  AND (v.effective_until IS NULL OR v.effective_until > now())
+JOIN pricing_tiers pt ON pt.rate_card_version_id = v.id
+  AND pt.deleted_at IS NULL
+  AND pt.min_weight_kg <= $1
+  AND pt.max_weight_kg >= $1
+WHERE rc.company_id = $2
+  AND rc.id = $3
+  AND rc.status = 'published'
+  AND rc.is_published
+  AND rc.deleted_at IS NULL
+  AND (rc.effective_start IS NULL OR rc.effective_start <= now())
+  AND (rc.effective_end IS NULL OR rc.effective_end > now())
+ORDER BY pt.min_weight_kg DESC
+LIMIT 1
+`
+
+type GetPublicBookingRateParams struct {
+	WeightKg   pgtype.Numeric `json:"weight_kg"`
+	CompanyID  uuid.UUID      `json:"company_id"`
+	RateCardID uuid.UUID      `json:"rate_card_id"`
+}
+
+type GetPublicBookingRateRow struct {
+	RateCardID uuid.UUID `json:"rate_card_id"`
+	Name       string    `json:"name"`
+	Currency   string    `json:"currency"`
+	PriceCents int32     `json:"price_cents"`
+}
+
+func (q *Queries) GetPublicBookingRate(ctx context.Context, arg GetPublicBookingRateParams) (GetPublicBookingRateRow, error) {
+	row := q.db.QueryRow(ctx, getPublicBookingRate, arg.WeightKg, arg.CompanyID, arg.RateCardID)
+	var i GetPublicBookingRateRow
+	err := row.Scan(
+		&i.RateCardID,
+		&i.Name,
+		&i.Currency,
+		&i.PriceCents,
+	)
+	return i, err
+}
+
+const listPublicBookingRates = `-- name: ListPublicBookingRates :many
+SELECT DISTINCT ON (rc.id)
+  rc.id AS rate_card_id,
+  rc.name,
+  rc.currency,
+  pt.price_cents
+FROM rate_cards rc
+JOIN rate_card_versions v ON v.rate_card_id = rc.id
+  AND v.is_active
+  AND v.deleted_at IS NULL
+  AND v.effective_from <= now()
+  AND (v.effective_until IS NULL OR v.effective_until > now())
+JOIN pricing_tiers pt ON pt.rate_card_version_id = v.id
+  AND pt.deleted_at IS NULL
+  AND pt.min_weight_kg <= $1
+  AND pt.max_weight_kg >= $1
+WHERE rc.company_id = $2
+  AND rc.status = 'published'
+  AND rc.is_published
+  AND rc.deleted_at IS NULL
+  AND (rc.effective_start IS NULL OR rc.effective_start <= now())
+  AND (rc.effective_end IS NULL OR rc.effective_end > now())
+ORDER BY rc.id, pt.min_weight_kg DESC
+`
+
+type ListPublicBookingRatesParams struct {
+	WeightKg  pgtype.Numeric `json:"weight_kg"`
+	CompanyID uuid.UUID      `json:"company_id"`
+}
+
+type ListPublicBookingRatesRow struct {
+	RateCardID uuid.UUID `json:"rate_card_id"`
+	Name       string    `json:"name"`
+	Currency   string    `json:"currency"`
+	PriceCents int32     `json:"price_cents"`
+}
+
+func (q *Queries) ListPublicBookingRates(ctx context.Context, arg ListPublicBookingRatesParams) ([]ListPublicBookingRatesRow, error) {
+	rows, err := q.db.Query(ctx, listPublicBookingRates, arg.WeightKg, arg.CompanyID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListPublicBookingRatesRow{}
+	for rows.Next() {
+		var i ListPublicBookingRatesRow
+		if err := rows.Scan(
+			&i.RateCardID,
+			&i.Name,
+			&i.Currency,
+			&i.PriceCents,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const upsertBookingPage = `-- name: UpsertBookingPage :one

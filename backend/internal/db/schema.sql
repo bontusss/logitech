@@ -756,7 +756,7 @@ CREATE TABLE booking_pages (
   id           uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   company_id   uuid NOT NULL UNIQUE REFERENCES companies (id) ON DELETE CASCADE,
   slug         citext NOT NULL UNIQUE
-               CHECK (slug ~ '^[a-z0-9][a-z0-9-]{1,38}[a-z0-9]$'),
+               CHECK (slug ~ '^[a-z0-9]([a-z0-9-]{0,38}[a-z0-9])?$'),
   headline     text,
   description  text,
   is_published boolean NOT NULL DEFAULT true,
@@ -767,3 +767,122 @@ CREATE TABLE booking_pages (
 CREATE TRIGGER booking_pages_set_updated_at
 BEFORE UPDATE ON booking_pages
 FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+CREATE TABLE driver_profiles (
+  id                uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  company_id        uuid NOT NULL REFERENCES companies (id) ON DELETE CASCADE,
+  full_name         text NOT NULL,
+  phone             text NOT NULL,
+  vehicle_plate     text NOT NULL,
+  email             citext NOT NULL,
+  portal_token_hash text NOT NULL UNIQUE,
+  status            text NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'suspended')),
+  created_at        timestamptz NOT NULL DEFAULT now(),
+  updated_at        timestamptz NOT NULL DEFAULT now(),
+  UNIQUE (company_id, email),
+  UNIQUE (company_id, id)
+);
+
+CREATE INDEX driver_profiles_company_status_idx ON driver_profiles (company_id, status);
+
+CREATE TRIGGER driver_profiles_set_updated_at
+BEFORE UPDATE ON driver_profiles
+FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+CREATE TABLE deliveries (
+  id                    uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  company_id            uuid NOT NULL REFERENCES companies (id) ON DELETE CASCADE,
+  sender_name           text NOT NULL,
+  sender_phone          text NOT NULL,
+  receiver_name         text NOT NULL,
+  receiver_phone        text NOT NULL,
+  pickup_address        text NOT NULL,
+  dropoff_address       text NOT NULL,
+  item_description      text NOT NULL,
+  declared_value_minor  bigint NOT NULL CHECK (declared_value_minor >= 0),
+  delivery_price_minor  bigint NOT NULL CHECK (delivery_price_minor >= 0),
+  payer                 text NOT NULL CHECK (payer IN ('sender', 'receiver')),
+  is_paid               boolean NOT NULL DEFAULT false,
+  payment_method        text CHECK (payment_method IN ('cash', 'pos', 'bank_transfer')),
+  assigned_driver_id    uuid,
+  status                text NOT NULL DEFAULT 'created'
+                        CHECK (status IN ('created', 'assigned', 'picked_up', 'in_transit', 'delivered', 'cancelled')),
+  created_by            uuid NOT NULL REFERENCES users (id),
+  created_at            timestamptz NOT NULL DEFAULT now(),
+  updated_at            timestamptz NOT NULL DEFAULT now(),
+  FOREIGN KEY (company_id, assigned_driver_id)
+    REFERENCES driver_profiles (company_id, id),
+  CHECK ((is_paid AND payment_method IS NOT NULL) OR (NOT is_paid AND payment_method IS NULL))
+);
+
+CREATE INDEX deliveries_company_created_idx ON deliveries (company_id, created_at DESC);
+CREATE INDEX deliveries_company_status_idx ON deliveries (company_id, status);
+CREATE INDEX deliveries_assigned_driver_idx ON deliveries (assigned_driver_id) WHERE assigned_driver_id IS NOT NULL;
+
+CREATE TRIGGER deliveries_set_updated_at
+BEFORE UPDATE ON deliveries
+FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+ALTER TABLE deliveries
+  ALTER COLUMN created_by DROP NOT NULL,
+  DROP CONSTRAINT deliveries_status_check,
+  ADD CONSTRAINT deliveries_status_check
+    CHECK (status IN ('requested', 'created', 'assigned', 'picked_up', 'in_transit', 'delivered', 'cancelled')),
+  ADD COLUMN package_category text NOT NULL DEFAULT 'other'
+    CHECK (package_category IN ('cloth', 'electronics', 'document', 'food', 'jewelry', 'other')),
+  ADD COLUMN weight_kg numeric(10,2) NOT NULL DEFAULT 0 CHECK (weight_kg >= 0),
+  ADD COLUMN additional_instructions text NOT NULL DEFAULT '',
+  ADD COLUMN package_photo_url text,
+  ADD COLUMN pickup_latitude numeric(10,7),
+  ADD COLUMN pickup_longitude numeric(10,7),
+  ADD COLUMN dropoff_latitude numeric(10,7),
+  ADD COLUMN dropoff_longitude numeric(10,7),
+  ADD COLUMN selected_route_id uuid,
+  ADD COLUMN selected_rate_card_id uuid REFERENCES rate_cards (id) ON DELETE SET NULL,
+  ADD COLUMN price_is_estimate boolean NOT NULL DEFAULT true,
+  ADD COLUMN booking_source text NOT NULL DEFAULT 'dashboard'
+    CHECK (booking_source IN ('dashboard', 'booking_page'));
+
+ALTER TABLE deliveries
+  ADD CONSTRAINT deliveries_pickup_coordinates_check
+    CHECK ((pickup_latitude IS NULL AND pickup_longitude IS NULL)
+      OR (pickup_latitude BETWEEN -90 AND 90 AND pickup_longitude BETWEEN -180 AND 180)),
+  ADD CONSTRAINT deliveries_dropoff_coordinates_check
+    CHECK ((dropoff_latitude IS NULL AND dropoff_longitude IS NULL)
+      OR (dropoff_latitude BETWEEN -90 AND 90 AND dropoff_longitude BETWEEN -180 AND 180));
+
+CREATE TABLE company_booking_routes (
+  id                          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  company_id                  uuid NOT NULL REFERENCES companies (id) ON DELETE CASCADE,
+  origin_state                text NOT NULL,
+  origin_city                 text NOT NULL,
+  destination_state           text NOT NULL,
+  destination_city            text NOT NULL,
+  distance_km                 numeric(10,2) NOT NULL CHECK (distance_km > 0),
+  standard_price_per_km_minor bigint CHECK (standard_price_per_km_minor >= 0),
+  express_price_per_km_minor  bigint CHECK (express_price_per_km_minor >= 0),
+  same_day_price_per_km_minor bigint CHECK (same_day_price_per_km_minor >= 0),
+  minimum_charge_minor        bigint NOT NULL DEFAULT 0 CHECK (minimum_charge_minor >= 0),
+  status                      text NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'inactive')),
+  created_at                  timestamptz NOT NULL DEFAULT now(),
+  updated_at                  timestamptz NOT NULL DEFAULT now(),
+  CHECK (
+    standard_price_per_km_minor IS NOT NULL
+    OR express_price_per_km_minor IS NOT NULL
+    OR same_day_price_per_km_minor IS NOT NULL
+  )
+);
+
+CREATE UNIQUE INDEX company_booking_routes_lane_unique
+  ON company_booking_routes (company_id, lower(origin_state), lower(origin_city), lower(destination_state), lower(destination_city));
+CREATE INDEX company_booking_routes_company_status_idx
+  ON company_booking_routes (company_id, status);
+
+CREATE TRIGGER company_booking_routes_set_updated_at
+BEFORE UPDATE ON company_booking_routes
+FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+ALTER TABLE deliveries
+  ADD COLUMN delivery_speed text NOT NULL DEFAULT 'standard'
+    CHECK (delivery_speed IN ('standard', 'express', 'same_day')),
+  ADD COLUMN distance_km numeric(10,2) NOT NULL DEFAULT 0 CHECK (distance_km >= 0);

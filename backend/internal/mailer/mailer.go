@@ -20,6 +20,7 @@ type Mailer interface {
 	SendWelcome(ctx context.Context, to, fullName string, provider bool) error
 	SendOnboardingReminder(ctx context.Context, to, fullName, companyName string, reminder int) error
 	SendProviderApproved(ctx context.Context, to, fullName, companyName string) error
+	SendDriverWelcome(ctx context.Context, to, fullName, companyName, portalURL string) error
 }
 
 type LogMailer struct {
@@ -61,6 +62,11 @@ func (m *LogMailer) SendOnboardingReminder(_ context.Context, to, fullName, comp
 
 func (m *LogMailer) SendProviderApproved(_ context.Context, to, fullName, companyName string) error {
 	m.Logger.Info("provider approval email", "to", to, "name", fullName, "company", companyName)
+	return nil
+}
+
+func (m *LogMailer) SendDriverWelcome(_ context.Context, to, fullName, companyName, _ string) error {
+	m.Logger.Info("driver welcome email requested", "to", to, "name", fullName, "company", companyName)
 	return nil
 }
 
@@ -127,6 +133,14 @@ func (m *PlunkMailer) SendProviderApproved(ctx context.Context, to, fullName, co
 	company := html.EscapeString(companyName)
 	return m.send(ctx, to, company+" is approved on BOL",
 		fmt.Sprintf(`<p>Hi %s,</p><p>Good news — <strong>%s</strong> has been verified and is now live on the BOL marketplace.</p><p>Shippers can find your company, and you can publish rates and receive bookings from your workspace.</p><p><a href="%s/dashboard/company">Open your provider dashboard</a></p><p>— Nnanna from BOL</p>`, name, company, m.AppURL))
+}
+
+func (m *PlunkMailer) SendDriverWelcome(ctx context.Context, to, fullName, companyName, portalURL string) error {
+	name := html.EscapeString(fullName)
+	company := html.EscapeString(companyName)
+	link := html.EscapeString(portalURL)
+	return m.send(ctx, to, "Welcome to "+company+" — your driver portal is ready",
+		fmt.Sprintf(`<p>Hi %s,</p><p><strong>%s</strong> has added you as a driver on BOL.</p><p>Use your personal driver portal to view delivery assignments. Your browser location will only be requested while you have an active delivery assignment.</p><p><a href="%s">Open your driver portal</a></p><p>Keep this link private. If you have questions, contact your company.</p><p>— Nnanna from BOL</p>`, name, company, link))
 }
 
 func (m *PlunkMailer) send(ctx context.Context, to, subject, body string) error {

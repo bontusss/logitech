@@ -123,6 +123,23 @@ type Company struct {
 	OperatingHours   []byte     `json:"operating_hours"`
 }
 
+type CompanyBookingRoute struct {
+	ID                      uuid.UUID      `json:"id"`
+	CompanyID               uuid.UUID      `json:"company_id"`
+	OriginState             string         `json:"origin_state"`
+	OriginCity              string         `json:"origin_city"`
+	DestinationState        string         `json:"destination_state"`
+	DestinationCity         string         `json:"destination_city"`
+	DistanceKm              pgtype.Numeric `json:"distance_km"`
+	StandardPricePerKmMinor pgtype.Int8    `json:"standard_price_per_km_minor"`
+	ExpressPricePerKmMinor  pgtype.Int8    `json:"express_price_per_km_minor"`
+	SameDayPricePerKmMinor  pgtype.Int8    `json:"same_day_price_per_km_minor"`
+	MinimumChargeMinor      int64          `json:"minimum_charge_minor"`
+	Status                  string         `json:"status"`
+	CreatedAt               time.Time      `json:"created_at"`
+	UpdatedAt               time.Time      `json:"updated_at"`
+}
+
 type CompanyBranding struct {
 	CompanyID      uuid.UUID `json:"company_id"`
 	LogoUrl        *string   `json:"logo_url"`
@@ -219,6 +236,55 @@ type Country struct {
 	CreatedAt   time.Time  `json:"created_at"`
 	UpdatedAt   time.Time  `json:"updated_at"`
 	DeletedAt   *time.Time `json:"deleted_at"`
+}
+
+type Delivery struct {
+	ID                     uuid.UUID      `json:"id"`
+	CompanyID              uuid.UUID      `json:"company_id"`
+	SenderName             string         `json:"sender_name"`
+	SenderPhone            string         `json:"sender_phone"`
+	ReceiverName           string         `json:"receiver_name"`
+	ReceiverPhone          string         `json:"receiver_phone"`
+	PickupAddress          string         `json:"pickup_address"`
+	DropoffAddress         string         `json:"dropoff_address"`
+	ItemDescription        string         `json:"item_description"`
+	DeclaredValueMinor     int64          `json:"declared_value_minor"`
+	DeliveryPriceMinor     int64          `json:"delivery_price_minor"`
+	Payer                  string         `json:"payer"`
+	IsPaid                 bool           `json:"is_paid"`
+	PaymentMethod          *string        `json:"payment_method"`
+	AssignedDriverID       *uuid.UUID     `json:"assigned_driver_id"`
+	Status                 string         `json:"status"`
+	CreatedBy              *uuid.UUID     `json:"created_by"`
+	CreatedAt              time.Time      `json:"created_at"`
+	UpdatedAt              time.Time      `json:"updated_at"`
+	PackageCategory        string         `json:"package_category"`
+	WeightKg               pgtype.Numeric `json:"weight_kg"`
+	AdditionalInstructions string         `json:"additional_instructions"`
+	PackagePhotoUrl        *string        `json:"package_photo_url"`
+	PickupLatitude         pgtype.Numeric `json:"pickup_latitude"`
+	PickupLongitude        pgtype.Numeric `json:"pickup_longitude"`
+	DropoffLatitude        pgtype.Numeric `json:"dropoff_latitude"`
+	DropoffLongitude       pgtype.Numeric `json:"dropoff_longitude"`
+	SelectedRouteID        *uuid.UUID     `json:"selected_route_id"`
+	SelectedRateCardID     *uuid.UUID     `json:"selected_rate_card_id"`
+	PriceIsEstimate        bool           `json:"price_is_estimate"`
+	BookingSource          string         `json:"booking_source"`
+	DeliverySpeed          string         `json:"delivery_speed"`
+	DistanceKm             pgtype.Numeric `json:"distance_km"`
+}
+
+type DriverProfile struct {
+	ID              uuid.UUID `json:"id"`
+	CompanyID       uuid.UUID `json:"company_id"`
+	FullName        string    `json:"full_name"`
+	Phone           string    `json:"phone"`
+	VehiclePlate    string    `json:"vehicle_plate"`
+	Email           string    `json:"email"`
+	PortalTokenHash string    `json:"portal_token_hash"`
+	Status          string    `json:"status"`
+	CreatedAt       time.Time `json:"created_at"`
+	UpdatedAt       time.Time `json:"updated_at"`
 }
 
 type EmailJob struct {

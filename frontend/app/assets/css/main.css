@@ -48,6 +48,31 @@ html.dark body {
   background-color: var(--color-canvas);
 }
 
+.dark .public-booking {
+  background-color: #0b1120;
+  color: #e5eaf3;
+}
+
+.public-booking {
+  --booking-copy: #172033;
+  --booking-muted: #526078;
+}
+
+.dark .public-booking {
+  --booking-copy: #e5eaf3;
+  --booking-muted: #a7b2c5;
+}
+
+.public-booking h1,
+.public-booking h2,
+.public-booking h3 {
+  color: var(--booking-copy);
+}
+
+.public-booking p {
+  text-wrap: pretty;
+}
+
 html.dark [class~="bg-white"] {
   background-color: #111827 !important;
 }
@@ -192,6 +217,375 @@ html.dark textarea::placeholder {
 [class~="text-[13px]"],
 [class~="text-[13.5px]"] {
   font-size: max(0.875rem, 1em) !important;
+}
+
+.dashboard-overview {
+  --overview-card: #ffffff;
+  --overview-border: rgb(37 42 79 / 9%);
+  --overview-hero: linear-gradient(118deg, #f3efff 0%, #fff8f1 54%, #eafaff 100%);
+  --overview-share: linear-gradient(120deg, #f0edff 0%, #fff 62%, #eefbff 100%);
+  --overview-nudge: linear-gradient(110deg, #fff4dc 0%, #fffaf0 100%);
+  --overview-violet: linear-gradient(145deg, #f3edff 0%, #fff 100%);
+  --overview-mint: linear-gradient(145deg, #e6faf1 0%, #fff 100%);
+  --overview-peach: linear-gradient(145deg, #fff0e6 0%, #fff 100%);
+  --overview-blue: linear-gradient(145deg, #eaf4ff 0%, #fff 100%);
+}
+
+html.dark .dashboard-overview {
+  --overview-card: #111827;
+  --overview-border: rgb(203 213 225 / 12%);
+  --overview-hero: linear-gradient(118deg, #211d3d 0%, #2a2029 54%, #112c37 100%);
+  --overview-share: linear-gradient(120deg, #201d3a 0%, #151b2a 62%, #102933 100%);
+  --overview-nudge: linear-gradient(110deg, #382a17 0%, #292216 100%);
+  --overview-violet: linear-gradient(145deg, #29223f 0%, #171a29 100%);
+  --overview-mint: linear-gradient(145deg, #15342d 0%, #171f2c 100%);
+  --overview-peach: linear-gradient(145deg, #3a2821 0%, #211c27 100%);
+  --overview-blue: linear-gradient(145deg, #192e43 0%, #171c2b 100%);
+}
+
+.dashboard-overview .overview-card {
+  background: var(--overview-card) !important;
+  border-color: var(--overview-border);
+}
+
+.dashboard-overview .overview-hero {
+  background: var(--overview-hero) !important;
+  border-color: var(--overview-border);
+}
+
+.dashboard-overview .overview-share {
+  background: var(--overview-share) !important;
+  border-color: var(--overview-border);
+}
+
+.dashboard-overview .overview-nudge {
+  background: var(--overview-nudge) !important;
+  border-color: var(--overview-border);
+}
+
+.dashboard-overview .overview-tile--violet {
+  background: var(--overview-violet) !important;
+}
+
+.dashboard-overview .overview-tile--mint {
+  background: var(--overview-mint) !important;
+}
+
+.dashboard-overview .overview-tile--peach {
+  background: var(--overview-peach) !important;
+}
+
+.dashboard-overview .overview-tile--blue {
+  background: var(--overview-blue) !important;
+}
+
+.dashboard-overview [class~="text-[9px]"],
+.dashboard-overview [class~="text-[9.5px]"],
+.dashboard-overview [class~="text-[10px]"],
+.dashboard-overview [class~="text-[10.5px]"] {
+  font-size: 0.75rem !important;
+}
+
+.dashboard-overview [class~="text-[11px]"],
+.dashboard-overview [class~="text-[11.5px]"] {
+  font-size: 0.8125rem !important;
+}
+
+.dashboard-overview [class~="text-[12px]"],
+.dashboard-overview [class~="text-[12.5px]"] {
+  font-size: 0.875rem !important;
+}
+
+.dashboard-overview [class~="text-[13px]"],
+.dashboard-overview [class~="text-[13.5px]"] {
+  font-size: 0.9375rem !important;
+}
+
+.driver-workspace,
+.delivery-workspace,
+.rates-workspace {
+  --workspace-panel: #ffffff;
+  --workspace-border: rgb(37 42 79 / 10%);
+  --workspace-soft: #f7f7fb;
+}
+
+html.dark .driver-workspace,
+html.dark .delivery-workspace,
+html.dark .rates-workspace {
+  --workspace-panel: #111827;
+  --workspace-border: rgb(203 213 225 / 13%);
+  --workspace-soft: #171f2e;
+}
+
+.driver-workspace .driver-page-hero,
+.delivery-workspace .delivery-page-hero,
+.rates-workspace .rates-page-hero {
+  border-color: var(--workspace-border);
+  background:
+    radial-gradient(circle at 88% 12%, rgb(167 139 250 / 18%), transparent 25%),
+    radial-gradient(circle at 95% 100%, rgb(34 211 238 / 14%), transparent 27%),
+    linear-gradient(115deg, #f3efff 0%, #fff8f1 54%, #effaff 100%);
+}
+
+html.dark .driver-workspace .driver-page-hero,
+html.dark .delivery-workspace .delivery-page-hero,
+html.dark .rates-workspace .rates-page-hero {
+  background:
+    radial-gradient(circle at 88% 12%, rgb(167 139 250 / 14%), transparent 25%),
+    radial-gradient(circle at 95% 100%, rgb(34 211 238 / 10%), transparent 27%),
+    linear-gradient(115deg, #211d3d 0%, #2a2029 54%, #112c37 100%);
+}
+
+.driver-workspace .driver-stat {
+  border-color: var(--workspace-border);
+}
+
+.driver-workspace .driver-stat--violet {
+  background: linear-gradient(145deg, #f3edff, var(--workspace-panel));
+}
+
+.driver-workspace .driver-stat--mint {
+  background: linear-gradient(145deg, #e6faf1, var(--workspace-panel));
+}
+
+.driver-workspace .driver-stat--blue {
+  background: linear-gradient(145deg, #eaf4ff, var(--workspace-panel));
+}
+
+.driver-workspace .driver-stat--peach {
+  background: linear-gradient(145deg, #fff0e6, var(--workspace-panel));
+}
+
+html.dark .driver-workspace .driver-stat--violet {
+  background: linear-gradient(145deg, #29223f, var(--workspace-panel));
+}
+
+html.dark .driver-workspace .driver-stat--mint {
+  background: linear-gradient(145deg, #15342d, var(--workspace-panel));
+}
+
+html.dark .driver-workspace .driver-stat--blue {
+  background: linear-gradient(145deg, #192e43, var(--workspace-panel));
+}
+
+html.dark .driver-workspace .driver-stat--peach {
+  background: linear-gradient(145deg, #3a2821, var(--workspace-panel));
+}
+
+.driver-workspace .driver-list-panel,
+.driver-workspace .driver-card {
+  border-color: var(--workspace-border);
+  background: var(--workspace-panel);
+}
+
+.driver-workspace .driver-card {
+  transition: border-color 160ms ease, transform 160ms ease, box-shadow 160ms ease;
+}
+
+.driver-workspace .driver-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 30px rgb(34 43 80 / 7%);
+}
+
+html.dark .driver-workspace .driver-card:hover {
+  box-shadow: 0 12px 30px rgb(0 0 0 / 18%);
+}
+
+.driver-workspace .driver-portal-notice {
+  border-color: #a7f3d0;
+  background: linear-gradient(110deg, #e8fbf2, #f3fff9);
+}
+
+html.dark .driver-workspace .driver-portal-notice {
+  border-color: #065f46;
+  background: linear-gradient(110deg, #10362d, #142a29);
+}
+
+.driver-workspace .driver-modal,
+.delivery-workspace .delivery-modal {
+  border-color: var(--workspace-border);
+  background: var(--workspace-soft);
+  color: var(--color-ink-900);
+}
+
+.driver-workspace .driver-modal-heading,
+.delivery-workspace .delivery-modal-heading,
+.delivery-workspace .delivery-modal-footer {
+  border-color: var(--workspace-border);
+  background: var(--workspace-panel);
+}
+
+.driver-workspace .driver-modal input,
+.delivery-workspace .delivery-modal input,
+.delivery-workspace .delivery-modal textarea,
+.delivery-workspace .delivery-modal select {
+  border-color: var(--workspace-border);
+  background-color: var(--workspace-panel);
+  color: var(--color-ink-900);
+  font-size: 0.875rem;
+}
+
+.driver-workspace .driver-modal input:focus,
+.delivery-workspace .delivery-modal input:focus,
+.delivery-workspace .delivery-modal textarea:focus,
+.delivery-workspace .delivery-modal select:focus {
+  border-color: #818cf8;
+  box-shadow: 0 0 0 3px rgb(99 102 241 / 13%);
+  outline: none;
+}
+
+.driver-workspace .driver-modal [class~="text-[9.5px]"],
+.driver-workspace .driver-modal [class~="text-[10px]"],
+.driver-workspace .driver-modal [class~="text-[10.5px]"],
+.driver-workspace .driver-modal [class~="text-[11px]"],
+.driver-workspace .driver-modal [class~="text-[11.5px]"],
+.delivery-workspace .delivery-modal [class~="text-[9px]"],
+.delivery-workspace .delivery-modal [class~="text-[9.5px]"],
+.delivery-workspace .delivery-modal [class~="text-[10px]"],
+.delivery-workspace .delivery-modal [class~="text-[10.5px]"],
+.delivery-workspace .delivery-modal [class~="text-[11px]"],
+.delivery-workspace .delivery-modal [class~="text-[11.5px]"],
+.delivery-workspace .delivery-modal [class~="text-[12px]"],
+.delivery-workspace .delivery-modal [class~="text-[12.5px]"] {
+  font-size: 0.8125rem !important;
+}
+
+.driver-workspace .driver-modal [class~="text-[9.5px]"],
+.driver-workspace .driver-modal [class~="text-[10px]"],
+.delivery-workspace .delivery-modal [class~="text-[9px]"],
+.delivery-workspace .delivery-modal [class~="text-[9.5px]"],
+.delivery-workspace .delivery-modal [class~="text-[10px]"] {
+  font-size: 0.75rem !important;
+}
+
+.delivery-workspace .delivery-form-section {
+  border-color: var(--workspace-border);
+  background: var(--workspace-panel);
+}
+
+.delivery-workspace .delivery-form-section--route {
+  border-left: 3px solid #22d3ee;
+}
+
+.delivery-workspace .delivery-form-section--contacts {
+  border-left: 3px solid #a78bfa;
+}
+
+.delivery-workspace .delivery-form-section--payment {
+  border-left: 3px solid #fbbf24;
+}
+
+.delivery-workspace .delivery-form-section--fulfillment {
+  border-left: 3px solid #34d399;
+}
+
+.rates-workspace .rates-stat,
+.rates-workspace .rates-price-card,
+.rates-workspace .rates-form-section {
+  border-color: var(--workspace-border);
+}
+
+.rates-workspace .rates-stat--blue {
+  background: linear-gradient(145deg, #eaf4ff, var(--workspace-panel));
+}
+
+.rates-workspace .rates-stat--mint {
+  background: linear-gradient(145deg, #e6faf1, var(--workspace-panel));
+}
+
+.rates-workspace .rates-stat--peach {
+  background: linear-gradient(145deg, #fff0e6, var(--workspace-panel));
+}
+
+html.dark .rates-workspace .rates-stat--blue {
+  background: linear-gradient(145deg, #192e43, var(--workspace-panel));
+}
+
+html.dark .rates-workspace .rates-stat--mint {
+  background: linear-gradient(145deg, #15342d, var(--workspace-panel));
+}
+
+html.dark .rates-workspace .rates-stat--peach {
+  background: linear-gradient(145deg, #3a2821, var(--workspace-panel));
+}
+
+.rates-workspace .rates-price-card--standard {
+  background: linear-gradient(140deg, #eef5ff, var(--workspace-panel));
+}
+
+.rates-workspace .rates-price-card--express {
+  background: linear-gradient(140deg, #fff4e8, var(--workspace-panel));
+}
+
+.rates-workspace .rates-price-card--same-day {
+  background: linear-gradient(140deg, #f3edff, var(--workspace-panel));
+}
+
+html.dark .rates-workspace .rates-price-card--standard {
+  background: linear-gradient(140deg, #192e43, var(--workspace-panel));
+}
+
+html.dark .rates-workspace .rates-price-card--express {
+  background: linear-gradient(140deg, #3a2a1e, var(--workspace-panel));
+}
+
+html.dark .rates-workspace .rates-price-card--same-day {
+  background: linear-gradient(140deg, #29223f, var(--workspace-panel));
+}
+
+.rates-workspace .rates-modal {
+  border-color: var(--workspace-border);
+  background: var(--workspace-soft);
+  color: var(--color-ink-900);
+}
+
+.rates-workspace .rates-modal-heading,
+.rates-workspace .rates-modal-footer {
+  border-color: var(--workspace-border);
+  background: var(--workspace-panel);
+}
+
+.rates-workspace .rates-form-section {
+  background: var(--workspace-panel);
+}
+
+.rates-workspace .rates-form-section--lane {
+  border-left: 3px solid #22d3ee;
+}
+
+.rates-workspace .rates-form-section--prices {
+  border-left: 3px solid #fbbf24;
+}
+
+.rates-workspace .rates-modal input {
+  border-color: var(--workspace-border);
+  background-color: var(--workspace-panel);
+  color: var(--color-ink-900);
+}
+
+.rates-workspace .rates-modal input:focus {
+  border-color: #818cf8;
+  box-shadow: 0 0 0 3px rgb(99 102 241 / 13%);
+  outline: none;
+}
+
+.delivery-workspace .delivery-map-card,
+.delivery-workspace .delivery-receipt {
+  border-color: var(--workspace-border);
+  background: var(--workspace-panel);
+}
+
+.delivery-workspace .delivery-map-card > section {
+  border: 0;
+  background: transparent;
+}
+
+.delivery-workspace .delivery-receipt {
+  background-image: linear-gradient(160deg, rgb(99 102 241 / 5%), transparent 55%);
+}
+
+html.dark .delivery-workspace .delivery-receipt {
+  background-image: linear-gradient(160deg, rgb(129 140 248 / 10%), transparent 55%);
 }
 
 [id] {

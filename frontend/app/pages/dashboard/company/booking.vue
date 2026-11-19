@@ -2,12 +2,15 @@
 import {
   CalendarCheck,
   Check,
+  CheckCircle2,
   CircleAlert,
   Copy,
+  Download,
   ExternalLink,
   Loader2,
   Save,
 } from 'lucide-vue-next'
+import * as QRCode from 'qrcode'
 
 definePageMeta({ middleware: 'auth', layout: 'app' })
 useSeoMeta({ title: 'Booking page' })
@@ -28,6 +31,12 @@ const pageError = ref('')
 const saving = ref(false)
 const copied = ref(false)
 const error = ref('')
+const checkingSlug = ref(false)
+const slugCheckError = ref('')
+const slugAvailability = ref<{ slug: string; available: boolean; reason?: string } | null>(null)
+const qrCode = ref('')
+const qrError = ref('')
+const generatingQr = ref(false)
 const origin = useRequestURL().origin
 
 const form = reactive({
@@ -40,6 +49,9 @@ const form = reactive({
 const canManage = computed(() => can('bookings.manage'))
 const isVerified = computed(() => detail.value?.company.status === 'verified')
 const publicURL = computed(() => `${origin}/book/${form.slug || 'your-page'}`)
+const availabilityForCurrentSlug = computed(() =>
+  slugAvailability.value?.slug === form.slug ? slugAvailability.value : null,
+)
 
 onMounted(async () => {
   await load()
@@ -59,6 +71,9 @@ async function loadPage() {
         description: data.booking_page.description ?? '',
         is_published: data.booking_page.is_published,
       })
+    } else if (detail.value) {
+      form.slug = defaultSlug(detail.value.company.name)
+      if (form.slug && isVerified.value) await checkSlugAvailability()
     }
   } catch (err) {
     pageError.value = apiErrorMessage(err, 'Could not load your booking page.')
@@ -69,13 +84,47 @@ async function loadPage() {
 
 function normalizeSlug() {
   form.slug = form.slug.toLowerCase().replace(/[^a-z0-9-]/g, '')
+  slugAvailability.value = null
+  slugCheckError.value = ''
+  qrCode.value = ''
+}
+
+function defaultSlug(companyName: string) {
+  const firstWord = companyName.trim().split(/\s+/)[0] ?? ''
+  return firstWord
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9-]/g, '')
+    .replace(/-+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 40)
+    .replace(/-+$/g, '')
+}
+
+async function checkSlugAvailability() {
+  slugCheckError.value = ''
+  if (!form.slug) {
+    slugAvailability.value = null
+    return
+  }
+  checkingSlug.value = true
+  try {
+    slugAvailability.value = await api('/companies/me/booking-page/availability', {
+      query: { slug: form.slug },
+    })
+  } catch (err) {
+    slugCheckError.value = apiErrorMessage(err, 'Could not check this page name.')
+  } finally {
+    checkingSlug.value = false
+  }
 }
 
 async function save() {
   error.value = ''
-  if (!/^[a-z0-9][a-z0-9-]{1,38}[a-z0-9]$/.test(form.slug) || form.slug.includes('--')) {
+  if (!/^[a-z0-9]([a-z0-9-]{0,38}[a-z0-9])?$/.test(form.slug) || form.slug.includes('--')) {
     error.value =
-      'Use 3–40 lowercase letters, numbers or single hyphens, without a leading or trailing hyphen.'
+      'Use 1–40 lowercase letters, numbers or single hyphens, without a leading or trailing hyphen.'
     return
   }
   saving.value = true
@@ -106,6 +155,26 @@ async function copyLink() {
   } catch {
     error.value = 'Could not copy the link. Copy it from the address shown instead.'
   }
+}
+
+async function generateQrCode() {
+  qrError.value = ''
+  generatingQr.value = true
+  try {
+    qrCode.value = await QRCode.toDataURL(publicURL.value, { width: 256, margin: 2 })
+  } catch {
+    qrError.value = 'Could not create the QR code. Please try again.'
+  } finally {
+    generatingQr.value = false
+  }
+}
+
+function downloadQrCode() {
+  if (!qrCode.value) return
+  const link = document.createElement('a')
+  link.href = qrCode.value
+  link.download = `${form.slug}-booking-page.png`
+  link.click()
 }
 </script>
 
@@ -197,10 +266,29 @@ async function copyLink() {
                   class="w-full rounded-r-lg px-3 py-2.5 font-mono text-[13px] outline-none disabled:bg-slate-50"
                   placeholder="aba-freight"
                   @input="normalizeSlug"
+                  @blur="checkSlugAvailability"
                 />
               </div>
               <span class="mt-1 block text-[10px] text-ink-900/35">
-                3–40 lowercase letters, numbers or hyphens. This is the public address of your page.
+                1–40 lowercase letters, numbers or hyphens. This is the public address of your page.
+              </span>
+              <span v-if="checkingSlug" class="mt-1 flex items-center gap-1 text-[10.5px] text-ink-900/45">
+                <Loader2 :size="12" class="animate-spin" /> Checking availability…
+              </span>
+              <span
+                v-else-if="availabilityForCurrentSlug?.available"
+                class="mt-1 flex items-center gap-1 text-[10.5px] font-medium text-emerald-700"
+              >
+                <CheckCircle2 :size="12" /> This page name is available.
+              </span>
+              <span
+                v-else-if="availabilityForCurrentSlug"
+                class="mt-1 flex items-center gap-1 text-[10.5px] text-red-700"
+              >
+                <CircleAlert :size="12" /> {{ availabilityForCurrentSlug.reason || 'That page name is taken.' }}
+              </span>
+              <span v-else-if="slugCheckError" role="alert" class="mt-1 block text-[10.5px] text-red-700">
+                {{ slugCheckError }}
               </span>
             </label>
 
@@ -293,6 +381,29 @@ async function copyLink() {
               >
                 Open page <ExternalLink :size="13" />
               </a>
+            </div>
+            <div v-if="page" class="mt-4 border-t border-ink-900/8 pt-4">
+              <button
+                type="button"
+                :disabled="generatingQr"
+                class="inline-flex items-center gap-1.5 rounded-lg border border-ink-900/10 px-3 py-2 text-[11.5px] font-semibold text-ink-900/70 transition hover:border-ink-900/25 disabled:opacity-50"
+                @click="generateQrCode"
+              >
+                <Loader2 v-if="generatingQr" :size="13" class="animate-spin" />
+                <CalendarCheck v-else :size="13" />
+                {{ qrCode ? 'Refresh QR code' : 'Create shareable QR code' }}
+              </button>
+              <p v-if="qrError" role="alert" class="mt-2 text-[11px] text-red-700">{{ qrError }}</p>
+              <div v-if="qrCode" class="mt-3 flex flex-col items-center rounded-lg border border-ink-900/8 bg-white p-3">
+                <img :src="qrCode" alt="QR code for the company booking page" class="size-48" />
+                <button
+                  type="button"
+                  class="mt-2 inline-flex items-center gap-1.5 text-[11.5px] font-semibold text-brand-600 hover:text-brand-700"
+                  @click="downloadQrCode"
+                >
+                  <Download :size="13" /> Download QR code
+                </button>
+              </div>
             </div>
             <p v-if="page && !page.is_published" class="mt-3 text-[11px] text-amber-700">
               This page is currently unpublished, so visitors will see “not found”.

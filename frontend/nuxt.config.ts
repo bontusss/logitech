@@ -56,6 +56,11 @@ export default defineNuxtConfig({
       demoUrl: process.env.NUXT_PUBLIC_DEMO_URL ?? '/book-demo',
       // Full click-to-chat URL (https://wa.me/<number>) once a number is confirmed.
       whatsappUrl: process.env.NUXT_PUBLIC_WHATSAPP_URL ?? '',
+      // Public Mapbox token for address geocoding and delivery map previews.
+      mapboxAccessToken: process.env.NUXT_PUBLIC_MAPBOX_ACCESS_TOKEN ?? '',
+      // Cloudinary unsigned upload settings for optional customer package photos.
+      cloudinaryCloudName: process.env.NUXT_PUBLIC_CLOUDINARY_CLOUD_NAME ?? '',
+      cloudinaryUploadPreset: process.env.NUXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET ?? '',
       // Gin API base. Use /api/v1 when the app and API share an origin.
       apiBase: process.env.NUXT_PUBLIC_API_BASE ?? '/api/v1',
       // Base domain used to resolve company branding from the left-most host label.

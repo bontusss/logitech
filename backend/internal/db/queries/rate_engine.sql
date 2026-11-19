@@ -38,7 +38,9 @@ INSERT INTO company_routes (company_id, origin_location_type, origin_location_id
 SELECT * FROM rate_cards WHERE company_id = $1 AND deleted_at IS NULL;
 
 -- name: CreateRateCard :one
-INSERT INTO rate_cards (company_id, name, description, status) VALUES ($1, $2, $3, $4) RETURNING *;
+INSERT INTO rate_cards (company_id, name, description, status, is_published, published_at)
+VALUES ($1, $2, $3, $4, $4 = 'published', CASE WHEN $4 = 'published' THEN now() END)
+RETURNING *;
 
 -- name: ListRateCardVersions :many
 SELECT * FROM rate_card_versions WHERE rate_card_id = $1 AND deleted_at IS NULL;

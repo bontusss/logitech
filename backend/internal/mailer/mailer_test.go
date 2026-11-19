@@ -12,11 +12,18 @@ import (
 
 func TestPlunkMailerUsesConfiguredSenderForEveryMessage(t *testing.T) {
 	requests := 0
+	var driverMessage struct {
+		Subject string `json:"subject"`
+		Body    string `json:"body"`
+	}
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		requests++
 		require.Equal(t, "Bearer secret", r.Header.Get("Authorization"))
 		require.Equal(t, "/v1/send", r.URL.Path)
 		var payload struct {
+			To      string `json:"to"`
+			Subject string `json:"subject"`
+			Body    string `json:"body"`
 			From struct {
 				Name  string `json:"name"`
 				Email string `json:"email"`
@@ -25,6 +32,10 @@ func TestPlunkMailerUsesConfiguredSenderForEveryMessage(t *testing.T) {
 		require.NoError(t, json.NewDecoder(r.Body).Decode(&payload))
 		require.Equal(t, "Nnanna from BOL", payload.From.Name)
 		require.Equal(t, "hello@example.com", payload.From.Email)
+		if payload.To == "driver@example.com" {
+			driverMessage.Subject = payload.Subject
+			driverMessage.Body = payload.Body
+		}
 		w.WriteHeader(http.StatusAccepted)
 	}))
 	defer server.Close()
@@ -41,5 +52,9 @@ func TestPlunkMailerUsesConfiguredSenderForEveryMessage(t *testing.T) {
 	require.NoError(t, mailer.SendWelcome(ctx, "person@example.com", "Ada", true))
 	require.NoError(t, mailer.SendOnboardingReminder(ctx, "person@example.com", "Ada", "Aba Freight", 1))
 	require.NoError(t, mailer.SendProviderApproved(ctx, "person@example.com", "Ada", "Aba Freight"))
-	require.Equal(t, 7, requests)
+	require.NoError(t, mailer.SendDriverWelcome(ctx, "driver@example.com", "David Driver", "Aba Freight", "https://bol.example/rider/private-token"))
+	require.Equal(t, 8, requests)
+	require.Contains(t, driverMessage.Subject, "Aba Freight")
+	require.Contains(t, driverMessage.Body, "https://bol.example/rider/private-token")
+	require.Contains(t, driverMessage.Body, "only be requested while you have an active delivery assignment")
 }

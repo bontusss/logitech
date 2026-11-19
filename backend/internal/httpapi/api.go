@@ -69,6 +69,10 @@ func New(cfg *config.Config, svc *service.Service, authManager *auth.Manager, li
 	v1.GET("/public/manifest", api.publicManifest)
 	v1.GET("/public/companies/:subdomain", api.publicCompany)
 	v1.GET("/public/book/:slug", api.rateLimit("public-booking-page", 60), api.publicBookingPage)
+	v1.GET("/public/book/:slug/routes", api.rateLimit("public-booking-routes", 60), api.publicBookingRoutes)
+	v1.GET("/public/book/:slug/rates", api.rateLimit("public-booking-rates", 60), api.publicBookingRates)
+	v1.POST("/public/book/:slug/bookings", api.rateLimit("public-booking-create", 10), api.createPublicBooking)
+	v1.GET("/public/riders/:token", api.rateLimit("driver-portal", 60), api.driverPortal)
 	v1.GET("/invitations/:token", api.rateLimit("invitation-preview", 30), api.previewInvitation)
 	v1.POST("/invitations/:token/accept", api.rateLimit("invitation-accept", 10), api.acceptInvitation)
 
@@ -98,7 +102,12 @@ func New(cfg *config.Config, svc *service.Service, authManager *auth.Manager, li
 	company.PUT("/subdomain", api.requirePermission("subdomain.manage"), api.updateSubdomain)
 
 	company.GET("/booking-page", api.requirePermission("bookings.manage"), api.getBookingPage)
+	company.GET("/booking-page/availability", api.requirePermission("bookings.manage"), api.checkBookingPageSlug)
 	company.PUT("/booking-page", api.requirePermission("bookings.manage"), api.upsertBookingPage)
+	company.GET("/booking-routes", api.requirePermission("rates.view"), api.listCompanyBookingRoutes)
+	company.POST("/booking-routes", api.requirePermission("rates.create"), api.createCompanyBookingRoute)
+	company.PUT("/booking-routes/:id", api.requirePermission("rates.update"), api.updateCompanyBookingRoute)
+	company.PATCH("/booking-routes/:id/status", api.requirePermission("rates.update"), api.setCompanyBookingRouteStatus)
 
 	company.GET("/branches", api.requirePermission("branches.view"), api.listBranches)
 	company.POST("/branches", api.requirePermission("branches.create"), api.createBranch)
@@ -110,6 +119,11 @@ func New(cfg *config.Config, svc *service.Service, authManager *auth.Manager, li
 	company.PUT("/branches/:id/staff", api.requirePermission("staff.update"), api.setBranchStaff)
 
 	company.GET("/members", api.requirePermission("staff.view"), api.listMembers)
+	company.GET("/drivers", api.requirePermission("staff.view"), api.listDrivers)
+	company.POST("/drivers", api.requirePermission("staff.invite"), api.createDriver)
+	company.PATCH("/drivers/:id/status", api.requirePermission("staff.deactivate"), api.setDriverStatus)
+	company.GET("/deliveries", api.requirePermission("shipments.view"), api.listDeliveries)
+	company.POST("/deliveries", api.requirePermission("shipments.create"), api.createDelivery)
 	company.PATCH("/members/:id", api.requirePermission("staff.update"), api.updateMember)
 	company.PUT("/members/:id/branches", api.requirePermission("staff.update"), api.setMemberBranches)
 	company.PATCH("/members/:id/role", api.requirePermission("staff.roles.manage"), api.updateMemberRole)

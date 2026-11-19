@@ -2,6 +2,7 @@ package httpapi
 
 import (
 	"net/http"
+	"path"
 	"strconv"
 	"strings"
 	"time"
@@ -320,9 +321,13 @@ func (a *API) requestLogger() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		start := time.Now()
 		c.Next()
+		requestPath := c.Request.URL.Path
+		if strings.HasPrefix(requestPath, "/api/v1/public/riders/") {
+			requestPath = path.Join("/api/v1/public/riders", ":token")
+		}
 		a.log.Info("http request",
 			"method", c.Request.Method,
-			"path", c.Request.URL.Path,
+			"path", requestPath,
 			"status", c.Writer.Status(),
 			"duration_ms", time.Since(start).Milliseconds(),
 		)

@@ -59,6 +59,47 @@ func (q *Queries) ClaimInvitation(ctx context.Context, arg ClaimInvitationParams
 	return i, err
 }
 
+const createDriverProfile = `-- name: CreateDriverProfile :one
+INSERT INTO driver_profiles (
+  company_id, full_name, phone, vehicle_plate, email, portal_token_hash
+) VALUES ($1, $2, $3, $4, $5, $6)
+RETURNING id, company_id, full_name, phone, vehicle_plate, email, portal_token_hash, status, created_at, updated_at
+`
+
+type CreateDriverProfileParams struct {
+	CompanyID       uuid.UUID `json:"company_id"`
+	FullName        string    `json:"full_name"`
+	Phone           string    `json:"phone"`
+	VehiclePlate    string    `json:"vehicle_plate"`
+	Email           string    `json:"email"`
+	PortalTokenHash string    `json:"portal_token_hash"`
+}
+
+func (q *Queries) CreateDriverProfile(ctx context.Context, arg CreateDriverProfileParams) (DriverProfile, error) {
+	row := q.db.QueryRow(ctx, createDriverProfile,
+		arg.CompanyID,
+		arg.FullName,
+		arg.Phone,
+		arg.VehiclePlate,
+		arg.Email,
+		arg.PortalTokenHash,
+	)
+	var i DriverProfile
+	err := row.Scan(
+		&i.ID,
+		&i.CompanyID,
+		&i.FullName,
+		&i.Phone,
+		&i.VehiclePlate,
+		&i.Email,
+		&i.PortalTokenHash,
+		&i.Status,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const getAnyCompanyMember = `-- name: GetAnyCompanyMember :one
 SELECT id, company_id, user_id, status, title, invited_by, joined_at, created_at, updated_at, deleted_at FROM company_members
 WHERE company_id = $1 AND user_id = $2
@@ -112,6 +153,40 @@ func (q *Queries) GetCompanyInvitation(ctx context.Context, arg GetCompanyInvita
 		&i.RevokedAt,
 		&i.CreatedAt,
 		&i.AcceptedByUserID,
+	)
+	return i, err
+}
+
+const getDriverProfileForPortal = `-- name: GetDriverProfileForPortal :one
+SELECT d.id, d.company_id, d.full_name, d.phone, d.vehicle_plate, d.email, d.status, c.name AS company_name
+FROM driver_profiles d
+JOIN companies c ON c.id = d.company_id AND c.deleted_at IS NULL AND c.status = 'verified'
+WHERE d.portal_token_hash = $1 AND d.status = 'active'
+`
+
+type GetDriverProfileForPortalRow struct {
+	ID           uuid.UUID `json:"id"`
+	CompanyID    uuid.UUID `json:"company_id"`
+	FullName     string    `json:"full_name"`
+	Phone        string    `json:"phone"`
+	VehiclePlate string    `json:"vehicle_plate"`
+	Email        string    `json:"email"`
+	Status       string    `json:"status"`
+	CompanyName  string    `json:"company_name"`
+}
+
+func (q *Queries) GetDriverProfileForPortal(ctx context.Context, portalTokenHash string) (GetDriverProfileForPortalRow, error) {
+	row := q.db.QueryRow(ctx, getDriverProfileForPortal, portalTokenHash)
+	var i GetDriverProfileForPortalRow
+	err := row.Scan(
+		&i.ID,
+		&i.CompanyID,
+		&i.FullName,
+		&i.Phone,
+		&i.VehiclePlate,
+		&i.Email,
+		&i.Status,
+		&i.CompanyName,
 	)
 	return i, err
 }
@@ -224,6 +299,55 @@ func (q *Queries) ListCompanyInvitations(ctx context.Context, companyID uuid.UUI
 	return items, nil
 }
 
+const listDriverProfiles = `-- name: ListDriverProfiles :many
+SELECT id, company_id, full_name, phone, vehicle_plate, email, status, created_at, updated_at
+FROM driver_profiles
+WHERE company_id = $1
+ORDER BY created_at DESC
+`
+
+type ListDriverProfilesRow struct {
+	ID           uuid.UUID `json:"id"`
+	CompanyID    uuid.UUID `json:"company_id"`
+	FullName     string    `json:"full_name"`
+	Phone        string    `json:"phone"`
+	VehiclePlate string    `json:"vehicle_plate"`
+	Email        string    `json:"email"`
+	Status       string    `json:"status"`
+	CreatedAt    time.Time `json:"created_at"`
+	UpdatedAt    time.Time `json:"updated_at"`
+}
+
+func (q *Queries) ListDriverProfiles(ctx context.Context, companyID uuid.UUID) ([]ListDriverProfilesRow, error) {
+	rows, err := q.db.Query(ctx, listDriverProfiles, companyID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListDriverProfilesRow{}
+	for rows.Next() {
+		var i ListDriverProfilesRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.CompanyID,
+			&i.FullName,
+			&i.Phone,
+			&i.VehiclePlate,
+			&i.Email,
+			&i.Status,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listInvitationBranchIDs = `-- name: ListInvitationBranchIDs :many
 SELECT branch_id FROM invitation_branches WHERE invitation_id = $1
 `
@@ -303,6 +427,49 @@ type RevokeInvitationParams struct {
 func (q *Queries) RevokeInvitation(ctx context.Context, arg RevokeInvitationParams) error {
 	_, err := q.db.Exec(ctx, revokeInvitation, arg.ID, arg.CompanyID)
 	return err
+}
+
+const setDriverProfileStatus = `-- name: SetDriverProfileStatus :one
+UPDATE driver_profiles
+SET status = $3,
+    updated_at = now()
+WHERE id = $1 AND company_id = $2
+RETURNING id, company_id, full_name, phone, vehicle_plate, email, status, created_at, updated_at
+`
+
+type SetDriverProfileStatusParams struct {
+	ID        uuid.UUID `json:"id"`
+	CompanyID uuid.UUID `json:"company_id"`
+	Status    string    `json:"status"`
+}
+
+type SetDriverProfileStatusRow struct {
+	ID           uuid.UUID `json:"id"`
+	CompanyID    uuid.UUID `json:"company_id"`
+	FullName     string    `json:"full_name"`
+	Phone        string    `json:"phone"`
+	VehiclePlate string    `json:"vehicle_plate"`
+	Email        string    `json:"email"`
+	Status       string    `json:"status"`
+	CreatedAt    time.Time `json:"created_at"`
+	UpdatedAt    time.Time `json:"updated_at"`
+}
+
+func (q *Queries) SetDriverProfileStatus(ctx context.Context, arg SetDriverProfileStatusParams) (SetDriverProfileStatusRow, error) {
+	row := q.db.QueryRow(ctx, setDriverProfileStatus, arg.ID, arg.CompanyID, arg.Status)
+	var i SetDriverProfileStatusRow
+	err := row.Scan(
+		&i.ID,
+		&i.CompanyID,
+		&i.FullName,
+		&i.Phone,
+		&i.VehiclePlate,
+		&i.Email,
+		&i.Status,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
 }
 
 const updateInvitationToken = `-- name: UpdateInvitationToken :one
