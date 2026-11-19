@@ -25,6 +25,7 @@ type Config struct {
 	UploadDir                string
 	APIPublicURL             string
 	AppDomain                string
+	MapboxAccessToken        string
 	SuperAdminEmail          string
 	SuperAdminPassword       string
 	PlunkSecretKey           string
@@ -53,6 +54,7 @@ func Load() (*Config, error) {
 		UploadDir:                getenv("UPLOAD_DIR", "uploads"),
 		APIPublicURL:             getenv("API_PUBLIC_URL", "http://localhost:8080"),
 		AppDomain:                getenv("APP_DOMAIN", "localhost"),
+		MapboxAccessToken:        os.Getenv("NUXT_PUBLIC_MAPBOX_ACCESS_TOKEN"),
 		SuperAdminEmail:          os.Getenv("SUPER_ADMIN_EMAIL"),
 		SuperAdminPassword:       os.Getenv("SUPER_ADMIN_PASSWORD"),
 		PlunkSecretKey:           os.Getenv("PLUNK_SECRET_KEY"),

@@ -22,6 +22,12 @@ var bookingPageSlugPattern = regexp.MustCompile(`^[a-z0-9]([a-z0-9-]{0,38}[a-z0-
 var bookingPageSlugInvalidChars = regexp.MustCompile(`[^a-z0-9-]+`)
 var bookingPageSlugRepeatedHyphens = regexp.MustCompile(`-+`)
 
+func (a *API) publicConfig(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{
+		"mapbox_access_token": a.cfg.MapboxAccessToken,
+	})
+}
+
 func validateBookingPageSlug(value string) (string, string) {
 	value = strings.ToLower(strings.TrimSpace(value))
 	if value == "" {

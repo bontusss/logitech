@@ -7,7 +7,6 @@ const props = defineProps<{
   dropoffAddress: string
 }>()
 
-const config = useRuntimeConfig()
 const mapElement = ref<HTMLElement | null>(null)
 const message = ref('')
 const loading = ref(false)
@@ -19,11 +18,12 @@ let mapboxModule: typeof import('mapbox-gl') | null = null
 let geocodeTimer: ReturnType<typeof setTimeout> | undefined
 let requestController: AbortController | null = null
 
-const mapboxToken = config.public.mapboxAccessToken as string
+const { token: mapboxToken, loadError: mapboxConfigError, load: loadMapboxToken } = useMapboxToken()
 
 onMounted(async () => {
+  await loadMapboxToken()
   if (!mapboxToken) {
-    message.value = 'Add NUXT_PUBLIC_MAPBOX_ACCESS_TOKEN to enable address lookup and the map preview.'
+    message.value = mapboxConfigError.value || 'Add NUXT_PUBLIC_MAPBOX_ACCESS_TOKEN to enable address lookup and the map preview.'
     return
   }
   if (!mapElement.value) return

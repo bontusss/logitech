@@ -66,6 +66,7 @@ func New(cfg *config.Config, svc *service.Service, authManager *auth.Manager, li
 	v1.POST("/companies", api.rateLimit("company-register", 5), api.registerCompany)
 
 	v1.GET("/public/branding", api.publicBranding)
+	v1.GET("/public/config", api.publicConfig)
 	v1.GET("/public/manifest", api.publicManifest)
 	v1.GET("/public/companies/:subdomain", api.publicCompany)
 	v1.GET("/public/book/:slug", api.rateLimit("public-booking-page", 60), api.publicBookingPage)

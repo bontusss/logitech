@@ -118,9 +118,11 @@ using the repository's Dockerfile; the server listens on Render's `PORT` environ
 For this same-origin deployment, set `APP_ENV=production`, `APP_URL` to the public HTTPS
 frontend URL, and `CORS_ORIGINS` to that URL (without a trailing slash). The frontend defaults
 to the relative `/api/v1` path. If the API is hosted on a different origin, set
-`NUXT_PUBLIC_API_BASE` to its public API URL in the frontend build environment; this value is
-embedded when the static frontend is generated, so changing only the runtime environment requires
-a rebuild/redeploy.
+`NUXT_PUBLIC_API_BASE` to its public API URL in the frontend build environment; this value is embedded when the static
+frontend is generated, so changing only the runtime environment requires a rebuild/redeploy.
+The Mapbox token is fetched from the API at runtime, so configure
+`NUXT_PUBLIC_MAPBOX_ACCESS_TOKEN` on the API service; changing it does not require rebuilding the
+static frontend.
 
 ### Transactional email and WhatsApp verification
 

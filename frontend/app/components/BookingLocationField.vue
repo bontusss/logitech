@@ -21,16 +21,17 @@ interface Suggestion {
   longitude: number
 }
 
-const config = useRuntimeConfig()
 const input = ref(props.modelValue?.address ?? '')
 const suggestions = ref<Suggestion[]>([])
 const searching = ref(false)
 const locating = ref(false)
 const error = ref('')
 const open = ref(false)
-const token = config.public.mapboxAccessToken as string
+const { token, loadError: mapboxConfigError, load: loadMapboxToken } = useMapboxToken()
 let timer: ReturnType<typeof setTimeout> | undefined
 let controller: AbortController | null = null
+
+onMounted(() => void loadMapboxToken())
 
 watch(input, (value) => {
   emit('update:modelValue', null)
@@ -182,7 +183,7 @@ function useCurrentLocation() {
       </button>
     </div>
     <p v-if="!token" class="mt-2 text-[10px] leading-4 text-amber-700">
-      Mapbox is not configured for this page yet. Add its public access token to enable verified location search.
+      {{ mapboxConfigError || 'Mapbox is not configured for this page yet. Add its public access token to enable verified location search.' }}
     </p>
     <ul
       v-if="open && suggestions.length"
