@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { parseProviderBusinessTypes } from '~/utils/providerBusinessTypes'
 import {
   ArrowDownLeft,
   ArrowUpRight,
@@ -14,10 +15,12 @@ import {
   Truck,
   X,
   Zap,
+  Copy,
+  Trash2,
 } from 'lucide-vue-next'
 
 definePageMeta({ middleware: 'auth', layout: 'app' })
-useSeoMeta({ title: 'Rates & routes' })
+useSeoMeta({ title: 'Rates & Coverage' })
 
 interface BookingRoute {
   id: string
@@ -46,8 +49,34 @@ interface RouteForm {
 }
 
 const { api } = useApi()
-const { detail, load, can } = useWorkspace()
+const { detail, load, can, confirm } = useWorkspace()
 const routes = ref<BookingRoute[]>([])
+interface LastMileArea {
+  id: string
+  name: string
+  state: string | null
+  city: string | null
+  coverage_status: 'draft' | 'active' | 'inactive'
+  pricing_model: 'flat' | 'zone' | 'distance' | 'manual'
+  flat_price_minor: number | null
+  base_delivery_fee_minor: number | null
+  price_per_km_minor: number | null
+  maximum_distance_km: number
+  express_available: boolean
+}
+const areas = ref<LastMileArea[]>([])
+const areaModalOpen = ref(false)
+const areaEditingId = ref('')
+const areaForm = reactive({
+  name: '', state: '', city: '', coverage_status: 'draft' as 'draft' | 'active' | 'inactive',
+  pricing_model: 'flat' as 'flat' | 'zone' | 'distance' | 'manual',
+  flat_price_minor: '' as string | number,
+  base_delivery_fee_minor: '' as string | number,
+  price_per_km_minor: '' as string | number,
+  maximum_distance_km: '' as string | number,
+  express_available: false, pickup_available: true, delivery_available: true,
+  price_is_estimate: true,
+})
 const loading = ref(true)
 const saving = ref(false)
 const modalOpen = ref(false)
@@ -79,6 +108,16 @@ const filteredRoutes = computed(() => {
       .some((value) => value.toLocaleLowerCase().includes(query)),
   )
 })
+const offeredTypes = computed(() => parseProviderBusinessTypes(detail.value?.company.business_type ?? ''))
+const offersIntercity = computed(() => offeredTypes.value.includes('intercity'))
+const offersLastMile = computed(() => offeredTypes.value.includes('lastmile'))
+const activeTab = ref<'intercity' | 'lastmile'>('intercity')
+
+watch(detail, (value) => {
+  if (!value) return
+  if (!offersIntercity.value && offersLastMile.value) activeTab.value = 'lastmile'
+  if (offersIntercity.value && !offersLastMile.value) activeTab.value = 'intercity'
+}, { immediate: true })
 const activeRoutes = computed(() => routes.value.filter((route) => route.status === 'active').length)
 const serviceOptions = computed(() =>
   routes.value.reduce(
@@ -93,10 +132,18 @@ const serviceOptions = computed(() =>
 
 onMounted(async () => {
   await load()
-  await fetchRoutes()
+  await Promise.all([fetchRoutes(), fetchAreas()])
   window.addEventListener('keydown', onKeydown)
 })
 onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
+
+async function fetchAreas() {
+  try {
+    areas.value = (await api<{ areas: LastMileArea[] }>('/companies/me/last-mile-areas')).areas
+  } catch (cause) {
+    error.value = apiErrorMessage(cause, 'Could not load last-mile service areas.')
+  }
+}
 
 async function fetchRoutes() {
   loading.value = true
@@ -225,6 +272,76 @@ async function saveRoute() {
   }
 }
 
+function openAreaCreate() {
+  areaEditingId.value = ''
+  Object.assign(areaForm, { name: '', state: '', city: '', coverage_status: 'draft', pricing_model: 'flat', flat_price_minor: '', base_delivery_fee_minor: '', price_per_km_minor: '', maximum_distance_km: '', express_available: false, pickup_available: true, delivery_available: true, price_is_estimate: true })
+  areaModalOpen.value = true
+}
+
+function editArea(area: LastMileArea) {
+  areaEditingId.value = area.id
+  Object.assign(areaForm, { name: area.name, state: area.state ?? '', city: area.city ?? '', coverage_status: area.coverage_status, pricing_model: area.pricing_model, flat_price_minor: area.flat_price_minor ? String(area.flat_price_minor / 100) : '', base_delivery_fee_minor: area.base_delivery_fee_minor ? String(area.base_delivery_fee_minor / 100) : '', price_per_km_minor: area.price_per_km_minor ? String(area.price_per_km_minor / 100) : '', maximum_distance_km: area.maximum_distance_km ? String(area.maximum_distance_km) : '', express_available: area.express_available, price_is_estimate: true })
+  areaModalOpen.value = true
+}
+
+async function saveArea() {
+  if (!areaForm.name.trim()) { error.value = 'Enter a service area name.'; return }
+  if (areaForm.pricing_model === 'flat' && !areaForm.flat_price_minor) { error.value = 'Enter a flat delivery price.'; return }
+  if (areaForm.pricing_model === 'distance' && (!areaForm.base_delivery_fee_minor || !areaForm.price_per_km_minor)) { error.value = 'Enter a base fee and price per kilometre.'; return }
+  saving.value = true
+  try {
+    const money = (value: string | number) => String(value).trim() ? Math.round(Number(value) * 100) : null
+    const body = {
+      name: areaForm.name.trim(), state: areaForm.state.trim() || null, city: areaForm.city.trim() || null,
+      coverage_status: areaForm.coverage_status, pricing_model: areaForm.pricing_model,
+      flat_price_minor: areaForm.pricing_model === 'flat' ? money(areaForm.flat_price_minor) : null,
+      base_delivery_fee_minor: areaForm.pricing_model === 'distance' ? money(areaForm.base_delivery_fee_minor) : null,
+      price_per_km_minor: areaForm.pricing_model === 'distance' ? money(areaForm.price_per_km_minor) : null,
+      maximum_distance_km: areaForm.maximum_distance_km ? Number(areaForm.maximum_distance_km) : null,
+      express_available: areaForm.express_available, pickup_available: areaForm.pickup_available,
+      delivery_available: areaForm.delivery_available, price_is_estimate: areaForm.price_is_estimate,
+    }
+    if (areaEditingId.value) await api(`/companies/me/last-mile-areas/${areaEditingId.value}`, { method: 'PUT', body })
+    else await api('/companies/me/last-mile-areas', { method: 'POST', body })
+    areaModalOpen.value = false
+    await fetchAreas()
+  } catch (cause) { error.value = apiErrorMessage(cause, 'Could not save the service area.') }
+  finally { saving.value = false }
+}
+
+async function deleteArea(area: LastMileArea) {
+  const approved = await confirm({ title: 'Delete service area?', message: `${area.name} and its zones will be permanently deleted.`, confirmLabel: 'Delete area', danger: true })
+  if (!approved) return
+  try { await api(`/companies/me/last-mile-areas/${area.id}`, { method: 'DELETE' }); await fetchAreas() }
+  catch (cause) { error.value = apiErrorMessage(cause, 'Could not delete this service area.') }
+}
+
+async function duplicateRoute(route: BookingRoute) {
+  error.value = ''
+  try {
+    await api(`/companies/me/booking-routes/${route.id}/duplicate`, { method: 'POST' })
+    await fetchRoutes()
+  } catch (cause) {
+    error.value = apiErrorMessage(cause, 'Could not duplicate this route.')
+  }
+}
+
+async function deleteRoute(route: BookingRoute) {
+  const approved = await confirm({
+    title: 'Delete route?',
+    message: `${route.origin_city} to ${route.destination_city} will be permanently deleted.`,
+    confirmLabel: 'Delete route',
+    danger: true,
+  })
+  if (!approved) return
+  try {
+    await api(`/companies/me/booking-routes/${route.id}`, { method: 'DELETE' })
+    await fetchRoutes()
+  } catch (cause) {
+    error.value = apiErrorMessage(cause, 'Could not delete this route.')
+  }
+}
+
 async function toggleStatus(route: BookingRoute) {
   error.value = ''
   try {
@@ -249,13 +366,13 @@ async function toggleStatus(route: BookingRoute) {
           <p class="inline-flex items-center gap-1.5 rounded-full bg-white/75 px-2.5 py-1 text-[10px] font-semibold tracking-wide text-brand-700 dark:bg-slate-950/30 dark:text-indigo-200">
             <Sparkles :size="12" /> YOUR DELIVERY NETWORK
           </p>
-          <h1 class="mt-2 text-[clamp(1.45rem,2.5vw,1.8rem)] leading-tight font-semibold tracking-[-0.04em]">Rates & routes</h1>
+          <h1 class="mt-2 text-[clamp(1.45rem,2.5vw,1.8rem)] leading-tight font-semibold tracking-[-0.04em]">Rates & Coverage</h1>
           <p class="mt-1.5 max-w-xl text-[12px] leading-relaxed text-ink-900/65">
             Set the lanes you serve and what each delivery speed costs per kilometre.
           </p>
         </div>
         <button
-          v-if="canCreate"
+          v-if="canCreate && activeTab === 'intercity'"
           type="button"
           class="inline-flex min-h-10 items-center gap-1.5 rounded-xl bg-brand-600 px-4 py-2.5 text-[12px] font-semibold text-white shadow-sm shadow-brand-600/20 transition hover:-translate-y-0.5 hover:bg-brand-700"
           @click="openCreate"
@@ -265,11 +382,16 @@ async function toggleStatus(route: BookingRoute) {
       </div>
     </header>
 
-    <p v-if="error && !modalOpen" role="alert" class="mt-4 flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 px-3.5 py-2.5 text-[12px] text-red-700">
+    <div v-if="offersIntercity && offersLastMile" class="mt-5 inline-flex rounded-xl border border-ink-900/10 bg-white p-1">
+      <button type="button" class="rounded-lg px-4 py-2 text-[12px] font-semibold" :class="activeTab === 'intercity' ? 'bg-brand-600 text-white' : 'text-ink-900/55'" @click="activeTab = 'intercity'">Inter-city</button>
+      <button type="button" class="rounded-lg px-4 py-2 text-[12px] font-semibold" :class="activeTab === 'lastmile' ? 'bg-brand-600 text-white' : 'text-ink-900/55'" @click="activeTab = 'lastmile'">Last-mile</button>
+    </div>
+
+    <p v-if="error && !modalOpen && !areaModalOpen" role="alert" class="mt-4 flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 px-3.5 py-2.5 text-[12px] text-red-700">
       <CircleAlert :size="14" class="mt-0.5 shrink-0" /> {{ error }}
     </p>
 
-    <section class="mt-5 grid gap-3 sm:grid-cols-3" aria-label="Rate overview">
+    <section v-if="activeTab === 'intercity'" class="mt-5 grid gap-3 sm:grid-cols-3" aria-label="Rate overview">
       <article class="rates-stat rates-stat--blue rounded-2xl border p-4">
         <span class="flex size-8 items-center justify-center rounded-xl bg-white/70 text-blue-700 dark:bg-white/10 dark:text-blue-200"><Route :size="16" /></span>
         <p class="mt-3 text-[10px] font-semibold text-ink-900/50">Total routes</p>
@@ -287,7 +409,7 @@ async function toggleStatus(route: BookingRoute) {
       </article>
     </section>
 
-    <section class="mt-5 overflow-hidden rounded-2xl border border-ink-900/10 bg-white">
+    <section v-if="activeTab === 'intercity'" class="mt-5 overflow-hidden rounded-2xl border border-ink-900/10 bg-white">
       <div class="flex flex-wrap items-center justify-between gap-3 border-b border-ink-900/8 px-4 py-3.5 sm:px-5">
         <div>
           <h2 class="text-[13px] font-semibold">Your routes</h2>
@@ -357,7 +479,9 @@ async function toggleStatus(route: BookingRoute) {
             Minimum charge {{ formatMoney(route.minimum_charge_minor) }} · {{ currency }} {{ route.distance_km }} km × price/km
           </div>
           <div v-if="canUpdate || canCreate" class="mt-3 flex justify-end gap-2">
+            <button v-if="canCreate" type="button" class="rounded-lg border border-ink-900/10 px-3 py-1.5 text-[10px] font-semibold text-ink-900/65 hover:bg-canvas" @click="duplicateRoute(route)"><Copy :size="11" class="mr-1 inline" />Duplicate</button>
             <button v-if="canUpdate" type="button" class="rounded-lg border border-ink-900/10 px-3 py-1.5 text-[10px] font-semibold text-ink-900/65 hover:bg-canvas" @click="editRoute(route)">Edit route</button>
+            <button v-if="canUpdate" type="button" class="rounded-lg px-3 py-1.5 text-[10px] font-semibold text-rose-700 hover:bg-rose-50" @click="deleteRoute(route)"><Trash2 :size="11" class="mr-1 inline" />Delete</button>
             <button v-if="canUpdate" type="button" class="rounded-lg px-3 py-1.5 text-[10px] font-semibold" :class="route.status === 'active' ? 'text-rose-700 hover:bg-rose-50' : 'text-emerald-700 hover:bg-emerald-50'" @click="toggleStatus(route)">
               {{ route.status === 'active' ? 'Pause route' : 'Publish route' }}
             </button>
@@ -365,6 +489,30 @@ async function toggleStatus(route: BookingRoute) {
         </article>
       </div>
     </section>
+
+    <section v-if="activeTab === 'lastmile'" class="mt-5 overflow-hidden rounded-2xl border border-ink-900/10 bg-white">
+      <div class="flex flex-wrap items-center justify-between gap-3 border-b border-ink-900/8 px-4 py-3.5 sm:px-5">
+        <div><h2 class="text-[13px] font-semibold">Last-mile service areas</h2><p class="mt-0.5 text-[10.5px] text-ink-900/45">Configure coverage zones and local delivery prices.</p></div>
+        <button v-if="canCreate" type="button" class="inline-flex items-center gap-1.5 rounded-lg bg-brand-600 px-3.5 py-2.5 text-[11.5px] font-semibold text-white" @click="openAreaCreate"><Plus :size="13" /> Add service area</button>
+      </div>
+      <div v-if="!areas.length" class="px-5 py-12 text-center"><MapPin class="mx-auto text-brand-600" :size="20" /><h3 class="mt-3 text-[13px] font-semibold">No last-mile coverage configured</h3><p class="mt-1 text-[11px] text-ink-900/45">Create a service area, add zones and choose a pricing model.</p></div>
+      <div v-else class="divide-y divide-ink-900/8">
+        <article v-for="area in areas" :key="area.id" class="p-4 sm:p-5">
+          <div class="flex flex-wrap items-start justify-between gap-3"><div><h3 class="text-[12px] font-semibold">{{ area.name }}</h3><p class="mt-1 text-[10.5px] text-ink-900/45">{{ [area.city, area.state].filter(Boolean).join(', ') || 'Custom coverage area' }}</p></div><span class="rounded-full px-2.5 py-1 text-[9px] font-semibold" :class="area.coverage_status === 'active' ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'">{{ area.coverage_status }}</span></div>
+          <p class="mt-3 text-[11px]"><span class="text-ink-900/45">Pricing:</span> <strong class="capitalize">{{ area.pricing_model }}</strong><span v-if="area.flat_price_minor" class="ml-2">{{ formatMoney(area.flat_price_minor) }} flat</span></p>
+          <div v-if="canUpdate || canCreate" class="mt-3 flex justify-end gap-2"><button v-if="canUpdate" type="button" class="rounded-lg border border-ink-900/10 px-3 py-1.5 text-[10px] font-semibold" @click="editArea(area)">Edit area</button><button v-if="canUpdate" type="button" class="rounded-lg px-3 py-1.5 text-[10px] font-semibold text-rose-700 hover:bg-rose-50" @click="deleteArea(area)">Delete</button></div>
+        </article>
+      </div>
+    </section>
+
+    <div v-if="areaModalOpen" class="fixed inset-0 z-[80] flex items-center justify-center bg-ink-950/55 px-3 py-4 backdrop-blur-md" role="dialog" aria-modal="true" @click.self="areaModalOpen = false">
+      <form class="max-h-full w-full max-w-xl overflow-y-auto rounded-2xl border bg-white shadow-2xl" @submit.prevent="saveArea">
+        <header class="flex items-start justify-between border-b px-5 py-4"><div><p class="text-[9.5px] font-semibold tracking-[0.16em] text-brand-700 uppercase">LAST-MILE COVERAGE</p><h2 class="mt-1 text-[15px] font-semibold">{{ areaEditingId ? 'Edit service area' : 'Add service area' }}</h2></div><button type="button" class="p-1.5" aria-label="Close" @click="areaModalOpen=false"><X :size="18" /></button></header>
+        <p v-if="error" role="alert" class="mx-5 mt-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-[12px] text-red-700">{{ error }}</p>
+        <div class="grid gap-3 p-5 sm:grid-cols-2"><label class="block sm:col-span-2"><span class="mb-1.5 block text-[10.5px] font-medium">Service area name</span><input v-model="areaForm.name" required class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-[12px]" placeholder="e.g. Lagos mainland" /></label><label class="block"><span class="mb-1.5 block text-[10.5px] font-medium">State</span><input v-model="areaForm.state" class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-[12px]" /></label><label class="block"><span class="mb-1.5 block text-[10.5px] font-medium">City</span><input v-model="areaForm.city" class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-[12px]" /></label><label class="block sm:col-span-2"><span class="mb-1.5 block text-[10.5px] font-medium">Pricing model</span><select v-model="areaForm.pricing_model" class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-[12px]"><option value="flat">Flat pricing</option><option value="zone">Zone-based pricing</option><option value="distance">Distance-based pricing</option><option value="manual">Manual quotation</option></select></label><label v-if="areaForm.pricing_model === 'flat'" class="block sm:col-span-2"><span class="mb-1.5 block text-[10.5px] font-medium">Flat price</span><input v-model="areaForm.flat_price_minor" type="number" min="0.01" step="0.01" class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-[12px]" /></label><template v-if="areaForm.pricing_model === 'distance'"><label class="block"><span class="mb-1.5 block text-[10.5px] font-medium">Base fee</span><input v-model="areaForm.base_delivery_fee_minor" type="number" min="0.01" step="0.01" class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-[12px]" /></label><label class="block"><span class="mb-1.5 block text-[10.5px] font-medium">Price per km</span><input v-model="areaForm.price_per_km_minor" type="number" min="0.01" step="0.01" class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-[12px]" /></label><label class="block sm:col-span-2"><span class="mb-1.5 block text-[10.5px] font-medium">Maximum distance (optional)</span><input v-model="areaForm.maximum_distance_km" type="number" min="0.1" step="0.1" class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-[12px]" /></label></template><label class="block"><span class="mb-1.5 block text-[10.5px] font-medium">Coverage status</span><select v-model="areaForm.coverage_status" class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-[12px]"><option value="draft">Draft</option><option value="active">Active</option><option value="inactive">Inactive</option></select></label><label class="flex items-center gap-2 text-[11px]"><input v-model="areaForm.express_available" type="checkbox" /> Express delivery available</label></div>
+        <footer class="flex justify-end gap-2 border-t px-5 py-4"><button type="button" class="rounded-lg border px-3 py-2 text-[11px] font-semibold" @click="areaModalOpen=false">Cancel</button><button type="submit" :disabled="saving" class="rounded-lg bg-brand-600 px-4 py-2 text-[11px] font-semibold text-white"><Loader2 v-if="saving" :size="13" class="inline animate-spin" /> Save service area</button></footer>
+      </form>
+    </div>
 
     <div v-if="modalOpen" class="fixed inset-0 z-[80] flex items-center justify-center bg-ink-950/55 px-3 py-4 backdrop-blur-md sm:px-5 sm:py-6" role="dialog" aria-modal="true" aria-labelledby="route-modal-title" @click.self="closeModal">
       <form class="rates-modal max-h-full w-full max-w-2xl overflow-y-auto rounded-2xl border shadow-2xl" @submit.prevent="saveRoute">

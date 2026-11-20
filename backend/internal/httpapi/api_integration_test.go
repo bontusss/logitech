@@ -150,7 +150,7 @@ func registerCompany(t *testing.T, env *testEnv, name, email string) authRespons
 		"company_name":   name,
 		"business_email": email,
 		"phone":          "+2348000000000",
-		"business_type":  "Intercity haulage",
+		"business_type":  "intercity",
 		"country":        "NG",
 		"state":          "Abia",
 		"city":           "Aba",

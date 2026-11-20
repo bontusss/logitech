@@ -76,7 +76,7 @@ const navigationGroups = computed<NavigationGroup[]>(() => {
       items: [
         { label: 'Deliveries', to: '/dashboard/deliveries', icon: Truck, permission: 'shipments.view' },
         { label: 'Customers', to: '/dashboard/coming-soon/customers', icon: Users, comingSoon: true, permission: 'staff.view' },
-        { label: 'Requests', to: '/dashboard/coming-soon/requests', icon: ClipboardList, comingSoon: true, permission: 'bookings.manage' },
+        { label: 'Requests', to: '/dashboard/requests', icon: ClipboardList, permission: 'bookings.manage' },
         { label: 'Analytics', to: '/dashboard/coming-soon/analytics', icon: ChartNoAxesColumnIncreasing, comingSoon: true, permission: 'reports.view' },
         { label: 'Finance', to: '/dashboard/coming-soon/finance', icon: CreditCard, comingSoon: true, permission: 'reports.view' },
         { label: 'Drivers', to: '/dashboard/company/drivers', icon: UserRound, permission: 'staff.view' },
@@ -86,7 +86,7 @@ const navigationGroups = computed<NavigationGroup[]>(() => {
       label: 'Setup',
       items: [
         { label: 'Booking page', to: '/dashboard/company/booking', icon: CalendarCheck, permission: 'bookings.manage' },
-        { label: 'Rates & routes', to: '/dashboard/company/rates', icon: ClipboardList, permission: 'rates.view' },
+        { label: 'Rates & Coverage', to: '/dashboard/company/rates', icon: ClipboardList, permission: 'rates.view' },
       ],
     },
     {

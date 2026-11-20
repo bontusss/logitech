@@ -1,6 +1,11 @@
 <script setup lang="ts">
 import { ArrowRight, Building2, ShoppingBag } from 'lucide-vue-next'
 import { isValidNigerianPhone } from '~/utils/nigeria'
+import {
+  providerBusinessTypes,
+  serializeProviderBusinessTypes,
+  type ProviderBusinessType,
+} from '~/utils/providerBusinessTypes'
 
 definePageMeta({ layout: 'auth' })
 useSeoMeta({
@@ -17,7 +22,7 @@ const pending = ref(false)
 const customer = reactive({ full_name: '', email: '', phone: '', password: '' })
 const company = reactive({
   company_name: '',
-  business_type: 'Intercity transport',
+  business_types: ['intercity'] as ProviderBusinessType[],
   business_email: '',
   phone: '',
   contact_name: '',
@@ -27,15 +32,6 @@ const company = reactive({
   address: '',
   password: '',
 })
-
-const businessTypes = [
-  'Intercity transport',
-  'Courier and parcels',
-  'Freight forwarding',
-  'Haulage and trucking',
-  'Marketplace aggregator',
-  'Other logistics service',
-]
 
 async function submitCustomer() {
   error.value = ''
@@ -56,13 +52,21 @@ async function submitCustomer() {
 
 async function submitCompany() {
   error.value = ''
+  if (!company.business_types.length) {
+    error.value = 'Select at least one business type.'
+    return
+  }
   if (!isValidNigerianPhone(company.phone)) {
     error.value = 'Enter a valid Nigerian phone number.'
     return
   }
   pending.value = true
   try {
-    await registerCompany({ ...company })
+    await registerCompany({
+      ...company,
+      business_type: serializeProviderBusinessTypes(company.business_types),
+      business_types: company.business_types,
+    })
     await navigateTo('/onboarding')
   } catch (err) {
     error.value = apiErrorMessage(err, 'Could not register your company.')
@@ -147,12 +151,20 @@ const labelClass = 'mb-1.5 block text-[11px] font-medium text-ink-900/55'
           <span :class="labelClass">Company name</span>
           <input v-model="company.company_name" type="text" required :class="inputClass" placeholder="Aba Freight Ltd" />
         </label>
-        <label class="block">
-          <span :class="labelClass">Business type</span>
-          <select v-model="company.business_type" :class="inputClass">
-            <option v-for="type in businessTypes" :key="type" :value="type">{{ type }}</option>
-          </select>
-        </label>
+        <fieldset class="block">
+          <legend :class="labelClass">Business type</legend>
+          <div class="flex flex-wrap gap-2">
+            <label
+              v-for="type in providerBusinessTypes"
+              :key="type.value"
+              class="flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2.5 text-[12px]"
+              :class="company.business_types.includes(type.value) ? 'border-brand-500 bg-brand-50 text-brand-700' : 'border-slate-300 bg-white text-ink-900/60'"
+            >
+              <input v-model="company.business_types" type="checkbox" :value="type.value" class="size-3.5 rounded border-slate-300" />
+              {{ type.label }}
+            </label>
+          </div>
+        </fieldset>
       </div>
 
       <div class="grid gap-3 sm:grid-cols-2">

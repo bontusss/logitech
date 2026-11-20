@@ -11,12 +11,15 @@ import (
 )
 
 type Querier interface {
+	AcceptBookingRequest(ctx context.Context, arg AcceptBookingRequestParams) (Delivery, error)
 	AddBranchMember(ctx context.Context, arg AddBranchMemberParams) error
+	AddDeliveryTimelineEvent(ctx context.Context, arg AddDeliveryTimelineEventParams) (DeliveryTimelineEvent, error)
 	AddInvitationBranch(ctx context.Context, arg AddInvitationBranchParams) error
 	AddMemberBranch(ctx context.Context, arg AddMemberBranchParams) error
 	AddMemberRole(ctx context.Context, arg AddMemberRoleParams) error
 	AddRolePermission(ctx context.Context, arg AddRolePermissionParams) error
 	ApproveCompany(ctx context.Context, id uuid.UUID) (Company, error)
+	AssignDeliveryDriver(ctx context.Context, arg AssignDeliveryDriverParams) (Delivery, error)
 	BookingPageSlugExists(ctx context.Context, slug string) (bool, error)
 	ClaimInvitation(ctx context.Context, arg ClaimInvitationParams) (CompanyInvitation, error)
 	ConsumeEmailVerification(ctx context.Context, id uuid.UUID) error
@@ -41,30 +44,42 @@ type Querier interface {
 	CreateDriverProfile(ctx context.Context, arg CreateDriverProfileParams) (DriverProfile, error)
 	CreateEmailVerification(ctx context.Context, arg CreateEmailVerificationParams) (EmailVerification, error)
 	CreateInvitation(ctx context.Context, arg CreateInvitationParams) (CompanyInvitation, error)
+	CreateLastMileArea(ctx context.Context, arg CreateLastMileAreaParams) (LastMileServiceArea, error)
 	CreatePackageCategory(ctx context.Context, arg CreatePackageCategoryParams) (PackageCategory, error)
 	CreatePasswordReset(ctx context.Context, arg CreatePasswordResetParams) (PasswordReset, error)
+	CreatePricingQuoteVersion(ctx context.Context, arg CreatePricingQuoteVersionParams) (PricingQuoteVersion, error)
 	CreatePricingRule(ctx context.Context, arg CreatePricingRuleParams) (PricingRule, error)
 	CreatePricingTier(ctx context.Context, arg CreatePricingTierParams) (PricingTier, error)
+	CreatePricingZoneRate(ctx context.Context, arg CreatePricingZoneRateParams) (PricingZoneRate, error)
 	CreatePublicBookingDelivery(ctx context.Context, arg CreatePublicBookingDeliveryParams) (Delivery, error)
 	CreateRateCard(ctx context.Context, arg CreateRateCardParams) (RateCard, error)
 	CreateRateCardVersion(ctx context.Context, arg CreateRateCardVersionParams) (RateCardVersion, error)
 	CreateRefreshToken(ctx context.Context, arg CreateRefreshTokenParams) (RefreshToken, error)
+	CreateServiceZone(ctx context.Context, arg CreateServiceZoneParams) (ServiceZone, error)
 	CreateShippingQuote(ctx context.Context, arg CreateShippingQuoteParams) (ShippingQuote, error)
 	CreateShippingService(ctx context.Context, arg CreateShippingServiceParams) (ShippingService, error)
+	CreateSizeCategory(ctx context.Context, arg CreateSizeCategoryParams) (PricingSizeCategory, error)
 	CreateState(ctx context.Context, arg CreateStateParams) (State, error)
 	CreateTerminal(ctx context.Context, arg CreateTerminalParams) (Terminal, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
+	CreateWeightBracket(ctx context.Context, arg CreateWeightBracketParams) (PricingWeightBracket, error)
+	DeclineBookingRequest(ctx context.Context, arg DeclineBookingRequestParams) (Delivery, error)
 	DeleteBranchMembers(ctx context.Context, branchID uuid.UUID) error
+	DeleteCompanyBookingRoute(ctx context.Context, arg DeleteCompanyBookingRouteParams) error
 	DeleteCompanyRole(ctx context.Context, arg DeleteCompanyRoleParams) error
+	DeleteLastMileArea(ctx context.Context, arg DeleteLastMileAreaParams) error
 	DeleteMemberBranches(ctx context.Context, memberID uuid.UUID) error
 	DeleteMemberRoles(ctx context.Context, memberID uuid.UUID) error
 	DeleteRolePermissions(ctx context.Context, roleID uuid.UUID) error
+	DeleteServiceZone(ctx context.Context, arg DeleteServiceZoneParams) error
+	DuplicateCompanyBookingRoute(ctx context.Context, arg DuplicateCompanyBookingRouteParams) (CompanyBookingRoute, error)
 	GetActiveCompanyMember(ctx context.Context, arg GetActiveCompanyMemberParams) (CompanyMember, error)
 	GetAnyCompanyMember(ctx context.Context, arg GetAnyCompanyMemberParams) (CompanyMember, error)
 	GetBookingPageByCompany(ctx context.Context, companyID uuid.UUID) (BookingPage, error)
 	GetBranch(ctx context.Context, arg GetBranchParams) (Branch, error)
 	GetCompanyBranding(ctx context.Context, companyID uuid.UUID) (CompanyBranding, error)
 	GetCompanyByID(ctx context.Context, id uuid.UUID) (Company, error)
+	GetCompanyDelivery(ctx context.Context, arg GetCompanyDeliveryParams) (GetCompanyDeliveryRow, error)
 	GetCompanyIDBySubdomain(ctx context.Context, subdomain string) (uuid.UUID, error)
 	GetCompanyInvitation(ctx context.Context, arg GetCompanyInvitationParams) (CompanyInvitation, error)
 	GetCompanyMember(ctx context.Context, arg GetCompanyMemberParams) (CompanyMember, error)
@@ -75,6 +90,7 @@ type Querier interface {
 	GetEmailVerificationByHash(ctx context.Context, tokenHash string) (EmailVerification, error)
 	GetInvitationByToken(ctx context.Context, tokenHash string) (CompanyInvitation, error)
 	GetInvitationDetails(ctx context.Context, tokenHash string) (GetInvitationDetailsRow, error)
+	GetLastMileArea(ctx context.Context, arg GetLastMileAreaParams) (LastMileServiceArea, error)
 	GetPasswordResetByHash(ctx context.Context, tokenHash string) (PasswordReset, error)
 	GetPublicBookingPage(ctx context.Context, slug string) (GetPublicBookingPageRow, error)
 	GetPublicBookingRate(ctx context.Context, arg GetPublicBookingRateParams) (GetPublicBookingRateRow, error)
@@ -95,11 +111,14 @@ type Querier interface {
 	ListCompanyDeliveries(ctx context.Context, companyID uuid.UUID) ([]ListCompanyDeliveriesRow, error)
 	ListCompanyInvitations(ctx context.Context, companyID uuid.UUID) ([]ListCompanyInvitationsRow, error)
 	ListCompanyMembers(ctx context.Context, companyID uuid.UUID) ([]ListCompanyMembersRow, error)
+	ListCompanyRequests(ctx context.Context, companyID uuid.UUID) ([]ListCompanyRequestsRow, error)
 	ListCompanyRoutes(ctx context.Context, companyID uuid.UUID) ([]CompanyRoute, error)
 	ListCountries(ctx context.Context) ([]Country, error)
 	ListCustomerAccounts(ctx context.Context) ([]ListCustomerAccountsRow, error)
+	ListDeliveryTimeline(ctx context.Context, arg ListDeliveryTimelineParams) ([]DeliveryTimelineEvent, error)
 	ListDriverProfiles(ctx context.Context, companyID uuid.UUID) ([]ListDriverProfilesRow, error)
 	ListInvitationBranchIDs(ctx context.Context, invitationID uuid.UUID) ([]uuid.UUID, error)
+	ListLastMileAreas(ctx context.Context, companyID uuid.UUID) ([]LastMileServiceArea, error)
 	ListMemberBranchIDs(ctx context.Context, arg ListMemberBranchIDsParams) ([]uuid.UUID, error)
 	ListMemberBranches(ctx context.Context, arg ListMemberBranchesParams) ([]ListMemberBranchesRow, error)
 	ListMemberRoles(ctx context.Context, memberID uuid.UUID) ([]string, error)
@@ -115,16 +134,23 @@ type Querier interface {
 	ListRateCards(ctx context.Context, companyID uuid.UUID) ([]RateCard, error)
 	ListRolePermissionKeys(ctx context.Context, roleID uuid.UUID) ([]string, error)
 	ListRolesForCompany(ctx context.Context, companyID *uuid.UUID) ([]ListRolesForCompanyRow, error)
+	ListServiceZones(ctx context.Context, arg ListServiceZonesParams) ([]ServiceZone, error)
 	ListShippingQuotes(ctx context.Context, arg ListShippingQuotesParams) ([]ShippingQuote, error)
 	ListShippingServices(ctx context.Context, companyID uuid.UUID) ([]ShippingService, error)
+	ListSizeCategories(ctx context.Context, arg ListSizeCategoriesParams) ([]PricingSizeCategory, error)
 	ListStatesByCountry(ctx context.Context, countryID uuid.UUID) ([]State, error)
 	ListTerminalsByCity(ctx context.Context, cityID *uuid.UUID) ([]Terminal, error)
 	ListUserMemberships(ctx context.Context, userID uuid.UUID) ([]ListUserMembershipsRow, error)
 	ListUserPermissions(ctx context.Context, arg ListUserPermissionsParams) ([]string, error)
+	ListWeightBrackets(ctx context.Context, arg ListWeightBracketsParams) ([]PricingWeightBracket, error)
+	ListZoneRates(ctx context.Context, arg ListZoneRatesParams) ([]PricingZoneRate, error)
 	MarkEmailVerified(ctx context.Context, id uuid.UUID) error
 	MarkInvitationAccepted(ctx context.Context, arg MarkInvitationAcceptedParams) error
 	MemberHasBranchAccess(ctx context.Context, arg MemberHasBranchAccessParams) (bool, error)
 	ReactivateCompanyMember(ctx context.Context, id uuid.UUID) (CompanyMember, error)
+	ReplacePricingZoneRates(ctx context.Context, arg ReplacePricingZoneRatesParams) error
+	ReplaceSizeCategories(ctx context.Context, arg ReplaceSizeCategoriesParams) error
+	ReplaceWeightBrackets(ctx context.Context, arg ReplaceWeightBracketsParams) error
 	RevokeInvitation(ctx context.Context, arg RevokeInvitationParams) error
 	RevokePendingInvitations(ctx context.Context, arg RevokePendingInvitationsParams) error
 	RevokeRefreshToken(ctx context.Context, id uuid.UUID) error
@@ -142,10 +168,13 @@ type Querier interface {
 	UpdateCompanyBookingRoute(ctx context.Context, arg UpdateCompanyBookingRouteParams) (CompanyBookingRoute, error)
 	UpdateCompanyBranding(ctx context.Context, arg UpdateCompanyBrandingParams) (CompanyBranding, error)
 	UpdateCompanyCACName(ctx context.Context, arg UpdateCompanyCACNameParams) (Company, error)
+	UpdateCompanyDelivery(ctx context.Context, arg UpdateCompanyDeliveryParams) (Delivery, error)
+	UpdateCompanyDeliveryStatus(ctx context.Context, arg UpdateCompanyDeliveryStatusParams) (Delivery, error)
 	UpdateCompanyRole(ctx context.Context, arg UpdateCompanyRoleParams) (Role, error)
 	UpdateCompanySettings(ctx context.Context, arg UpdateCompanySettingsParams) (CompanySetting, error)
 	UpdateCompanyVerification(ctx context.Context, arg UpdateCompanyVerificationParams) (Company, error)
 	UpdateInvitationToken(ctx context.Context, arg UpdateInvitationTokenParams) (CompanyInvitation, error)
+	UpdateLastMileArea(ctx context.Context, arg UpdateLastMileAreaParams) (LastMileServiceArea, error)
 	UpdateMemberProfile(ctx context.Context, arg UpdateMemberProfileParams) (CompanyMember, error)
 	UpdateMemberStatus(ctx context.Context, arg UpdateMemberStatusParams) error
 	UpdateUserPassword(ctx context.Context, arg UpdateUserPasswordParams) error

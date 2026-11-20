@@ -13,6 +13,165 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const acceptBookingRequest = `-- name: AcceptBookingRequest :one
+UPDATE deliveries
+SET request_status = 'accepted', status = 'created', accepted_at = now(), tracking_code =
+  'TRK-' || upper(substr(replace(id::text, '-', ''), 1, 12)), updated_at = now()
+WHERE company_id = $1 AND id = $2 AND request_status = 'pending'
+RETURNING id, company_id, sender_name, sender_phone, receiver_name, receiver_phone, pickup_address, dropoff_address, item_description, declared_value_minor, delivery_price_minor, payer, is_paid, payment_method, assigned_driver_id, status, created_by, created_at, updated_at, package_category, weight_kg, additional_instructions, package_photo_url, pickup_latitude, pickup_longitude, dropoff_latitude, dropoff_longitude, selected_route_id, selected_rate_card_id, price_is_estimate, booking_source, delivery_speed, distance_km, request_status, tracking_code, rider_link_token, declined_at, accepted_at
+`
+
+type AcceptBookingRequestParams struct {
+	CompanyID uuid.UUID `json:"company_id"`
+	ID        uuid.UUID `json:"id"`
+}
+
+func (q *Queries) AcceptBookingRequest(ctx context.Context, arg AcceptBookingRequestParams) (Delivery, error) {
+	row := q.db.QueryRow(ctx, acceptBookingRequest, arg.CompanyID, arg.ID)
+	var i Delivery
+	err := row.Scan(
+		&i.ID,
+		&i.CompanyID,
+		&i.SenderName,
+		&i.SenderPhone,
+		&i.ReceiverName,
+		&i.ReceiverPhone,
+		&i.PickupAddress,
+		&i.DropoffAddress,
+		&i.ItemDescription,
+		&i.DeclaredValueMinor,
+		&i.DeliveryPriceMinor,
+		&i.Payer,
+		&i.IsPaid,
+		&i.PaymentMethod,
+		&i.AssignedDriverID,
+		&i.Status,
+		&i.CreatedBy,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.PackageCategory,
+		&i.WeightKg,
+		&i.AdditionalInstructions,
+		&i.PackagePhotoUrl,
+		&i.PickupLatitude,
+		&i.PickupLongitude,
+		&i.DropoffLatitude,
+		&i.DropoffLongitude,
+		&i.SelectedRouteID,
+		&i.SelectedRateCardID,
+		&i.PriceIsEstimate,
+		&i.BookingSource,
+		&i.DeliverySpeed,
+		&i.DistanceKm,
+		&i.RequestStatus,
+		&i.TrackingCode,
+		&i.RiderLinkToken,
+		&i.DeclinedAt,
+		&i.AcceptedAt,
+	)
+	return i, err
+}
+
+const addDeliveryTimelineEvent = `-- name: AddDeliveryTimelineEvent :one
+INSERT INTO delivery_timeline_events (delivery_id, company_id, status, note, created_by)
+VALUES ($1, $2, $3, $4, $5)
+RETURNING id, delivery_id, company_id, status, note, created_by, created_at
+`
+
+type AddDeliveryTimelineEventParams struct {
+	DeliveryID uuid.UUID  `json:"delivery_id"`
+	CompanyID  uuid.UUID  `json:"company_id"`
+	Status     string     `json:"status"`
+	Note       *string    `json:"note"`
+	CreatedBy  *uuid.UUID `json:"created_by"`
+}
+
+func (q *Queries) AddDeliveryTimelineEvent(ctx context.Context, arg AddDeliveryTimelineEventParams) (DeliveryTimelineEvent, error) {
+	row := q.db.QueryRow(ctx, addDeliveryTimelineEvent,
+		arg.DeliveryID,
+		arg.CompanyID,
+		arg.Status,
+		arg.Note,
+		arg.CreatedBy,
+	)
+	var i DeliveryTimelineEvent
+	err := row.Scan(
+		&i.ID,
+		&i.DeliveryID,
+		&i.CompanyID,
+		&i.Status,
+		&i.Note,
+		&i.CreatedBy,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const assignDeliveryDriver = `-- name: AssignDeliveryDriver :one
+UPDATE deliveries AS delivery
+SET assigned_driver_id = NULLIF($3::uuid, '00000000-0000-0000-0000-000000000000'),
+    status = CASE WHEN $3::uuid = '00000000-0000-0000-0000-000000000000' THEN 'created'
+                  ELSE 'assigned' END,
+    updated_at = now()
+WHERE delivery.company_id = $1 AND delivery.id = $2
+  AND (NULLIF($3::uuid, '00000000-0000-0000-0000-000000000000') IS NULL
+       OR EXISTS (SELECT 1 FROM driver_profiles driver
+                  WHERE driver.id = $3::uuid AND driver.company_id = $1 AND driver.status = 'active'))
+RETURNING id, company_id, sender_name, sender_phone, receiver_name, receiver_phone, pickup_address, dropoff_address, item_description, declared_value_minor, delivery_price_minor, payer, is_paid, payment_method, assigned_driver_id, status, created_by, created_at, updated_at, package_category, weight_kg, additional_instructions, package_photo_url, pickup_latitude, pickup_longitude, dropoff_latitude, dropoff_longitude, selected_route_id, selected_rate_card_id, price_is_estimate, booking_source, delivery_speed, distance_km, request_status, tracking_code, rider_link_token, declined_at, accepted_at
+`
+
+type AssignDeliveryDriverParams struct {
+	CompanyID uuid.UUID `json:"company_id"`
+	ID        uuid.UUID `json:"id"`
+	Column3   uuid.UUID `json:"column_3"`
+}
+
+func (q *Queries) AssignDeliveryDriver(ctx context.Context, arg AssignDeliveryDriverParams) (Delivery, error) {
+	row := q.db.QueryRow(ctx, assignDeliveryDriver, arg.CompanyID, arg.ID, arg.Column3)
+	var i Delivery
+	err := row.Scan(
+		&i.ID,
+		&i.CompanyID,
+		&i.SenderName,
+		&i.SenderPhone,
+		&i.ReceiverName,
+		&i.ReceiverPhone,
+		&i.PickupAddress,
+		&i.DropoffAddress,
+		&i.ItemDescription,
+		&i.DeclaredValueMinor,
+		&i.DeliveryPriceMinor,
+		&i.Payer,
+		&i.IsPaid,
+		&i.PaymentMethod,
+		&i.AssignedDriverID,
+		&i.Status,
+		&i.CreatedBy,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.PackageCategory,
+		&i.WeightKg,
+		&i.AdditionalInstructions,
+		&i.PackagePhotoUrl,
+		&i.PickupLatitude,
+		&i.PickupLongitude,
+		&i.DropoffLatitude,
+		&i.DropoffLongitude,
+		&i.SelectedRouteID,
+		&i.SelectedRateCardID,
+		&i.PriceIsEstimate,
+		&i.BookingSource,
+		&i.DeliverySpeed,
+		&i.DistanceKm,
+		&i.RequestStatus,
+		&i.TrackingCode,
+		&i.RiderLinkToken,
+		&i.DeclinedAt,
+		&i.AcceptedAt,
+	)
+	return i, err
+}
+
 const createDelivery = `-- name: CreateDelivery :one
 INSERT INTO deliveries (
   company_id, sender_name, sender_phone, receiver_name, receiver_phone,
@@ -34,7 +193,7 @@ WHERE NULLIF($14::uuid, '00000000-0000-0000-0000-000000000000'::uuid) IS NULL
        AND d.company_id = $1::uuid
        AND d.status = 'active'
    )
-RETURNING id, company_id, sender_name, sender_phone, receiver_name, receiver_phone, pickup_address, dropoff_address, item_description, declared_value_minor, delivery_price_minor, payer, is_paid, payment_method, assigned_driver_id, status, created_by, created_at, updated_at, package_category, weight_kg, additional_instructions, package_photo_url, pickup_latitude, pickup_longitude, dropoff_latitude, dropoff_longitude, selected_route_id, selected_rate_card_id, price_is_estimate, booking_source, delivery_speed, distance_km
+RETURNING id, company_id, sender_name, sender_phone, receiver_name, receiver_phone, pickup_address, dropoff_address, item_description, declared_value_minor, delivery_price_minor, payer, is_paid, payment_method, assigned_driver_id, status, created_by, created_at, updated_at, package_category, weight_kg, additional_instructions, package_photo_url, pickup_latitude, pickup_longitude, dropoff_latitude, dropoff_longitude, selected_route_id, selected_rate_card_id, price_is_estimate, booking_source, delivery_speed, distance_km, request_status, tracking_code, rider_link_token, declined_at, accepted_at
 `
 
 type CreateDeliveryParams struct {
@@ -110,13 +269,177 @@ func (q *Queries) CreateDelivery(ctx context.Context, arg CreateDeliveryParams) 
 		&i.BookingSource,
 		&i.DeliverySpeed,
 		&i.DistanceKm,
+		&i.RequestStatus,
+		&i.TrackingCode,
+		&i.RiderLinkToken,
+		&i.DeclinedAt,
+		&i.AcceptedAt,
+	)
+	return i, err
+}
+
+const declineBookingRequest = `-- name: DeclineBookingRequest :one
+UPDATE deliveries
+SET request_status = 'declined', status = 'cancelled', declined_at = now(), updated_at = now()
+WHERE company_id = $1 AND id = $2 AND request_status = 'pending'
+RETURNING id, company_id, sender_name, sender_phone, receiver_name, receiver_phone, pickup_address, dropoff_address, item_description, declared_value_minor, delivery_price_minor, payer, is_paid, payment_method, assigned_driver_id, status, created_by, created_at, updated_at, package_category, weight_kg, additional_instructions, package_photo_url, pickup_latitude, pickup_longitude, dropoff_latitude, dropoff_longitude, selected_route_id, selected_rate_card_id, price_is_estimate, booking_source, delivery_speed, distance_km, request_status, tracking_code, rider_link_token, declined_at, accepted_at
+`
+
+type DeclineBookingRequestParams struct {
+	CompanyID uuid.UUID `json:"company_id"`
+	ID        uuid.UUID `json:"id"`
+}
+
+func (q *Queries) DeclineBookingRequest(ctx context.Context, arg DeclineBookingRequestParams) (Delivery, error) {
+	row := q.db.QueryRow(ctx, declineBookingRequest, arg.CompanyID, arg.ID)
+	var i Delivery
+	err := row.Scan(
+		&i.ID,
+		&i.CompanyID,
+		&i.SenderName,
+		&i.SenderPhone,
+		&i.ReceiverName,
+		&i.ReceiverPhone,
+		&i.PickupAddress,
+		&i.DropoffAddress,
+		&i.ItemDescription,
+		&i.DeclaredValueMinor,
+		&i.DeliveryPriceMinor,
+		&i.Payer,
+		&i.IsPaid,
+		&i.PaymentMethod,
+		&i.AssignedDriverID,
+		&i.Status,
+		&i.CreatedBy,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.PackageCategory,
+		&i.WeightKg,
+		&i.AdditionalInstructions,
+		&i.PackagePhotoUrl,
+		&i.PickupLatitude,
+		&i.PickupLongitude,
+		&i.DropoffLatitude,
+		&i.DropoffLongitude,
+		&i.SelectedRouteID,
+		&i.SelectedRateCardID,
+		&i.PriceIsEstimate,
+		&i.BookingSource,
+		&i.DeliverySpeed,
+		&i.DistanceKm,
+		&i.RequestStatus,
+		&i.TrackingCode,
+		&i.RiderLinkToken,
+		&i.DeclinedAt,
+		&i.AcceptedAt,
+	)
+	return i, err
+}
+
+const getCompanyDelivery = `-- name: GetCompanyDelivery :one
+SELECT d.id, d.company_id, d.sender_name, d.sender_phone, d.receiver_name, d.receiver_phone, d.pickup_address, d.dropoff_address, d.item_description, d.declared_value_minor, d.delivery_price_minor, d.payer, d.is_paid, d.payment_method, d.assigned_driver_id, d.status, d.created_by, d.created_at, d.updated_at, d.package_category, d.weight_kg, d.additional_instructions, d.package_photo_url, d.pickup_latitude, d.pickup_longitude, d.dropoff_latitude, d.dropoff_longitude, d.selected_route_id, d.selected_rate_card_id, d.price_is_estimate, d.booking_source, d.delivery_speed, d.distance_km, d.request_status, d.tracking_code, d.rider_link_token, d.declined_at, d.accepted_at, driver.full_name AS assigned_driver_name
+FROM deliveries d
+LEFT JOIN driver_profiles driver ON driver.id = d.assigned_driver_id
+WHERE d.company_id = $1 AND d.id = $2
+`
+
+type GetCompanyDeliveryParams struct {
+	CompanyID uuid.UUID `json:"company_id"`
+	ID        uuid.UUID `json:"id"`
+}
+
+type GetCompanyDeliveryRow struct {
+	ID                     uuid.UUID      `json:"id"`
+	CompanyID              uuid.UUID      `json:"company_id"`
+	SenderName             string         `json:"sender_name"`
+	SenderPhone            string         `json:"sender_phone"`
+	ReceiverName           string         `json:"receiver_name"`
+	ReceiverPhone          string         `json:"receiver_phone"`
+	PickupAddress          string         `json:"pickup_address"`
+	DropoffAddress         string         `json:"dropoff_address"`
+	ItemDescription        string         `json:"item_description"`
+	DeclaredValueMinor     int64          `json:"declared_value_minor"`
+	DeliveryPriceMinor     int64          `json:"delivery_price_minor"`
+	Payer                  string         `json:"payer"`
+	IsPaid                 bool           `json:"is_paid"`
+	PaymentMethod          *string        `json:"payment_method"`
+	AssignedDriverID       *uuid.UUID     `json:"assigned_driver_id"`
+	Status                 string         `json:"status"`
+	CreatedBy              *uuid.UUID     `json:"created_by"`
+	CreatedAt              time.Time      `json:"created_at"`
+	UpdatedAt              time.Time      `json:"updated_at"`
+	PackageCategory        string         `json:"package_category"`
+	WeightKg               pgtype.Numeric `json:"weight_kg"`
+	AdditionalInstructions string         `json:"additional_instructions"`
+	PackagePhotoUrl        *string        `json:"package_photo_url"`
+	PickupLatitude         pgtype.Numeric `json:"pickup_latitude"`
+	PickupLongitude        pgtype.Numeric `json:"pickup_longitude"`
+	DropoffLatitude        pgtype.Numeric `json:"dropoff_latitude"`
+	DropoffLongitude       pgtype.Numeric `json:"dropoff_longitude"`
+	SelectedRouteID        *uuid.UUID     `json:"selected_route_id"`
+	SelectedRateCardID     *uuid.UUID     `json:"selected_rate_card_id"`
+	PriceIsEstimate        bool           `json:"price_is_estimate"`
+	BookingSource          string         `json:"booking_source"`
+	DeliverySpeed          string         `json:"delivery_speed"`
+	DistanceKm             pgtype.Numeric `json:"distance_km"`
+	RequestStatus          string         `json:"request_status"`
+	TrackingCode           *string        `json:"tracking_code"`
+	RiderLinkToken         *string        `json:"rider_link_token"`
+	DeclinedAt             *time.Time     `json:"declined_at"`
+	AcceptedAt             *time.Time     `json:"accepted_at"`
+	AssignedDriverName     *string        `json:"assigned_driver_name"`
+}
+
+func (q *Queries) GetCompanyDelivery(ctx context.Context, arg GetCompanyDeliveryParams) (GetCompanyDeliveryRow, error) {
+	row := q.db.QueryRow(ctx, getCompanyDelivery, arg.CompanyID, arg.ID)
+	var i GetCompanyDeliveryRow
+	err := row.Scan(
+		&i.ID,
+		&i.CompanyID,
+		&i.SenderName,
+		&i.SenderPhone,
+		&i.ReceiverName,
+		&i.ReceiverPhone,
+		&i.PickupAddress,
+		&i.DropoffAddress,
+		&i.ItemDescription,
+		&i.DeclaredValueMinor,
+		&i.DeliveryPriceMinor,
+		&i.Payer,
+		&i.IsPaid,
+		&i.PaymentMethod,
+		&i.AssignedDriverID,
+		&i.Status,
+		&i.CreatedBy,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.PackageCategory,
+		&i.WeightKg,
+		&i.AdditionalInstructions,
+		&i.PackagePhotoUrl,
+		&i.PickupLatitude,
+		&i.PickupLongitude,
+		&i.DropoffLatitude,
+		&i.DropoffLongitude,
+		&i.SelectedRouteID,
+		&i.SelectedRateCardID,
+		&i.PriceIsEstimate,
+		&i.BookingSource,
+		&i.DeliverySpeed,
+		&i.DistanceKm,
+		&i.RequestStatus,
+		&i.TrackingCode,
+		&i.RiderLinkToken,
+		&i.DeclinedAt,
+		&i.AcceptedAt,
+		&i.AssignedDriverName,
 	)
 	return i, err
 }
 
 const listCompanyDeliveries = `-- name: ListCompanyDeliveries :many
 SELECT
-  d.id, d.company_id, d.sender_name, d.sender_phone, d.receiver_name, d.receiver_phone, d.pickup_address, d.dropoff_address, d.item_description, d.declared_value_minor, d.delivery_price_minor, d.payer, d.is_paid, d.payment_method, d.assigned_driver_id, d.status, d.created_by, d.created_at, d.updated_at, d.package_category, d.weight_kg, d.additional_instructions, d.package_photo_url, d.pickup_latitude, d.pickup_longitude, d.dropoff_latitude, d.dropoff_longitude, d.selected_route_id, d.selected_rate_card_id, d.price_is_estimate, d.booking_source, d.delivery_speed, d.distance_km,
+  d.id, d.company_id, d.sender_name, d.sender_phone, d.receiver_name, d.receiver_phone, d.pickup_address, d.dropoff_address, d.item_description, d.declared_value_minor, d.delivery_price_minor, d.payer, d.is_paid, d.payment_method, d.assigned_driver_id, d.status, d.created_by, d.created_at, d.updated_at, d.package_category, d.weight_kg, d.additional_instructions, d.package_photo_url, d.pickup_latitude, d.pickup_longitude, d.dropoff_latitude, d.dropoff_longitude, d.selected_route_id, d.selected_rate_card_id, d.price_is_estimate, d.booking_source, d.delivery_speed, d.distance_km, d.request_status, d.tracking_code, d.rider_link_token, d.declined_at, d.accepted_at,
   driver.full_name AS assigned_driver_name
 FROM deliveries d
 LEFT JOIN driver_profiles driver ON driver.id = d.assigned_driver_id
@@ -159,6 +482,11 @@ type ListCompanyDeliveriesRow struct {
 	BookingSource          string         `json:"booking_source"`
 	DeliverySpeed          string         `json:"delivery_speed"`
 	DistanceKm             pgtype.Numeric `json:"distance_km"`
+	RequestStatus          string         `json:"request_status"`
+	TrackingCode           *string        `json:"tracking_code"`
+	RiderLinkToken         *string        `json:"rider_link_token"`
+	DeclinedAt             *time.Time     `json:"declined_at"`
+	AcceptedAt             *time.Time     `json:"accepted_at"`
 	AssignedDriverName     *string        `json:"assigned_driver_name"`
 }
 
@@ -205,6 +533,11 @@ func (q *Queries) ListCompanyDeliveries(ctx context.Context, companyID uuid.UUID
 			&i.BookingSource,
 			&i.DeliverySpeed,
 			&i.DistanceKm,
+			&i.RequestStatus,
+			&i.TrackingCode,
+			&i.RiderLinkToken,
+			&i.DeclinedAt,
+			&i.AcceptedAt,
 			&i.AssignedDriverName,
 		); err != nil {
 			return nil, err
@@ -215,4 +548,305 @@ func (q *Queries) ListCompanyDeliveries(ctx context.Context, companyID uuid.UUID
 		return nil, err
 	}
 	return items, nil
+}
+
+const listCompanyRequests = `-- name: ListCompanyRequests :many
+SELECT d.id, d.company_id, d.sender_name, d.sender_phone, d.receiver_name, d.receiver_phone, d.pickup_address, d.dropoff_address, d.item_description, d.declared_value_minor, d.delivery_price_minor, d.payer, d.is_paid, d.payment_method, d.assigned_driver_id, d.status, d.created_by, d.created_at, d.updated_at, d.package_category, d.weight_kg, d.additional_instructions, d.package_photo_url, d.pickup_latitude, d.pickup_longitude, d.dropoff_latitude, d.dropoff_longitude, d.selected_route_id, d.selected_rate_card_id, d.price_is_estimate, d.booking_source, d.delivery_speed, d.distance_km, d.request_status, d.tracking_code, d.rider_link_token, d.declined_at, d.accepted_at, driver.full_name AS assigned_driver_name
+FROM deliveries d
+LEFT JOIN driver_profiles driver ON driver.id = d.assigned_driver_id
+WHERE d.company_id = $1
+  AND d.booking_source = 'booking_page'
+ORDER BY d.created_at DESC
+LIMIT 200
+`
+
+type ListCompanyRequestsRow struct {
+	ID                     uuid.UUID      `json:"id"`
+	CompanyID              uuid.UUID      `json:"company_id"`
+	SenderName             string         `json:"sender_name"`
+	SenderPhone            string         `json:"sender_phone"`
+	ReceiverName           string         `json:"receiver_name"`
+	ReceiverPhone          string         `json:"receiver_phone"`
+	PickupAddress          string         `json:"pickup_address"`
+	DropoffAddress         string         `json:"dropoff_address"`
+	ItemDescription        string         `json:"item_description"`
+	DeclaredValueMinor     int64          `json:"declared_value_minor"`
+	DeliveryPriceMinor     int64          `json:"delivery_price_minor"`
+	Payer                  string         `json:"payer"`
+	IsPaid                 bool           `json:"is_paid"`
+	PaymentMethod          *string        `json:"payment_method"`
+	AssignedDriverID       *uuid.UUID     `json:"assigned_driver_id"`
+	Status                 string         `json:"status"`
+	CreatedBy              *uuid.UUID     `json:"created_by"`
+	CreatedAt              time.Time      `json:"created_at"`
+	UpdatedAt              time.Time      `json:"updated_at"`
+	PackageCategory        string         `json:"package_category"`
+	WeightKg               pgtype.Numeric `json:"weight_kg"`
+	AdditionalInstructions string         `json:"additional_instructions"`
+	PackagePhotoUrl        *string        `json:"package_photo_url"`
+	PickupLatitude         pgtype.Numeric `json:"pickup_latitude"`
+	PickupLongitude        pgtype.Numeric `json:"pickup_longitude"`
+	DropoffLatitude        pgtype.Numeric `json:"dropoff_latitude"`
+	DropoffLongitude       pgtype.Numeric `json:"dropoff_longitude"`
+	SelectedRouteID        *uuid.UUID     `json:"selected_route_id"`
+	SelectedRateCardID     *uuid.UUID     `json:"selected_rate_card_id"`
+	PriceIsEstimate        bool           `json:"price_is_estimate"`
+	BookingSource          string         `json:"booking_source"`
+	DeliverySpeed          string         `json:"delivery_speed"`
+	DistanceKm             pgtype.Numeric `json:"distance_km"`
+	RequestStatus          string         `json:"request_status"`
+	TrackingCode           *string        `json:"tracking_code"`
+	RiderLinkToken         *string        `json:"rider_link_token"`
+	DeclinedAt             *time.Time     `json:"declined_at"`
+	AcceptedAt             *time.Time     `json:"accepted_at"`
+	AssignedDriverName     *string        `json:"assigned_driver_name"`
+}
+
+func (q *Queries) ListCompanyRequests(ctx context.Context, companyID uuid.UUID) ([]ListCompanyRequestsRow, error) {
+	rows, err := q.db.Query(ctx, listCompanyRequests, companyID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListCompanyRequestsRow{}
+	for rows.Next() {
+		var i ListCompanyRequestsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.CompanyID,
+			&i.SenderName,
+			&i.SenderPhone,
+			&i.ReceiverName,
+			&i.ReceiverPhone,
+			&i.PickupAddress,
+			&i.DropoffAddress,
+			&i.ItemDescription,
+			&i.DeclaredValueMinor,
+			&i.DeliveryPriceMinor,
+			&i.Payer,
+			&i.IsPaid,
+			&i.PaymentMethod,
+			&i.AssignedDriverID,
+			&i.Status,
+			&i.CreatedBy,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.PackageCategory,
+			&i.WeightKg,
+			&i.AdditionalInstructions,
+			&i.PackagePhotoUrl,
+			&i.PickupLatitude,
+			&i.PickupLongitude,
+			&i.DropoffLatitude,
+			&i.DropoffLongitude,
+			&i.SelectedRouteID,
+			&i.SelectedRateCardID,
+			&i.PriceIsEstimate,
+			&i.BookingSource,
+			&i.DeliverySpeed,
+			&i.DistanceKm,
+			&i.RequestStatus,
+			&i.TrackingCode,
+			&i.RiderLinkToken,
+			&i.DeclinedAt,
+			&i.AcceptedAt,
+			&i.AssignedDriverName,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listDeliveryTimeline = `-- name: ListDeliveryTimeline :many
+SELECT event.id, event.delivery_id, event.company_id, event.status, event.note, event.created_by, event.created_at
+FROM delivery_timeline_events event
+JOIN deliveries delivery ON delivery.id = event.delivery_id
+WHERE delivery.company_id = $1 AND event.delivery_id = $2
+ORDER BY event.created_at ASC
+`
+
+type ListDeliveryTimelineParams struct {
+	CompanyID  uuid.UUID `json:"company_id"`
+	DeliveryID uuid.UUID `json:"delivery_id"`
+}
+
+func (q *Queries) ListDeliveryTimeline(ctx context.Context, arg ListDeliveryTimelineParams) ([]DeliveryTimelineEvent, error) {
+	rows, err := q.db.Query(ctx, listDeliveryTimeline, arg.CompanyID, arg.DeliveryID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []DeliveryTimelineEvent{}
+	for rows.Next() {
+		var i DeliveryTimelineEvent
+		if err := rows.Scan(
+			&i.ID,
+			&i.DeliveryID,
+			&i.CompanyID,
+			&i.Status,
+			&i.Note,
+			&i.CreatedBy,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const updateCompanyDelivery = `-- name: UpdateCompanyDelivery :one
+UPDATE deliveries
+SET sender_name = $3, sender_phone = $4, receiver_name = $5, receiver_phone = $6,
+    pickup_address = $7, dropoff_address = $8, item_description = $9,
+    delivery_price_minor = $10, declared_value_minor = $11,
+    package_category = $12, weight_kg = $13, additional_instructions = $14,
+    updated_at = now()
+WHERE company_id = $1 AND id = $2
+RETURNING id, company_id, sender_name, sender_phone, receiver_name, receiver_phone, pickup_address, dropoff_address, item_description, declared_value_minor, delivery_price_minor, payer, is_paid, payment_method, assigned_driver_id, status, created_by, created_at, updated_at, package_category, weight_kg, additional_instructions, package_photo_url, pickup_latitude, pickup_longitude, dropoff_latitude, dropoff_longitude, selected_route_id, selected_rate_card_id, price_is_estimate, booking_source, delivery_speed, distance_km, request_status, tracking_code, rider_link_token, declined_at, accepted_at
+`
+
+type UpdateCompanyDeliveryParams struct {
+	CompanyID              uuid.UUID      `json:"company_id"`
+	ID                     uuid.UUID      `json:"id"`
+	SenderName             string         `json:"sender_name"`
+	SenderPhone            string         `json:"sender_phone"`
+	ReceiverName           string         `json:"receiver_name"`
+	ReceiverPhone          string         `json:"receiver_phone"`
+	PickupAddress          string         `json:"pickup_address"`
+	DropoffAddress         string         `json:"dropoff_address"`
+	ItemDescription        string         `json:"item_description"`
+	DeliveryPriceMinor     int64          `json:"delivery_price_minor"`
+	DeclaredValueMinor     int64          `json:"declared_value_minor"`
+	PackageCategory        string         `json:"package_category"`
+	WeightKg               pgtype.Numeric `json:"weight_kg"`
+	AdditionalInstructions string         `json:"additional_instructions"`
+}
+
+func (q *Queries) UpdateCompanyDelivery(ctx context.Context, arg UpdateCompanyDeliveryParams) (Delivery, error) {
+	row := q.db.QueryRow(ctx, updateCompanyDelivery,
+		arg.CompanyID,
+		arg.ID,
+		arg.SenderName,
+		arg.SenderPhone,
+		arg.ReceiverName,
+		arg.ReceiverPhone,
+		arg.PickupAddress,
+		arg.DropoffAddress,
+		arg.ItemDescription,
+		arg.DeliveryPriceMinor,
+		arg.DeclaredValueMinor,
+		arg.PackageCategory,
+		arg.WeightKg,
+		arg.AdditionalInstructions,
+	)
+	var i Delivery
+	err := row.Scan(
+		&i.ID,
+		&i.CompanyID,
+		&i.SenderName,
+		&i.SenderPhone,
+		&i.ReceiverName,
+		&i.ReceiverPhone,
+		&i.PickupAddress,
+		&i.DropoffAddress,
+		&i.ItemDescription,
+		&i.DeclaredValueMinor,
+		&i.DeliveryPriceMinor,
+		&i.Payer,
+		&i.IsPaid,
+		&i.PaymentMethod,
+		&i.AssignedDriverID,
+		&i.Status,
+		&i.CreatedBy,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.PackageCategory,
+		&i.WeightKg,
+		&i.AdditionalInstructions,
+		&i.PackagePhotoUrl,
+		&i.PickupLatitude,
+		&i.PickupLongitude,
+		&i.DropoffLatitude,
+		&i.DropoffLongitude,
+		&i.SelectedRouteID,
+		&i.SelectedRateCardID,
+		&i.PriceIsEstimate,
+		&i.BookingSource,
+		&i.DeliverySpeed,
+		&i.DistanceKm,
+		&i.RequestStatus,
+		&i.TrackingCode,
+		&i.RiderLinkToken,
+		&i.DeclinedAt,
+		&i.AcceptedAt,
+	)
+	return i, err
+}
+
+const updateCompanyDeliveryStatus = `-- name: UpdateCompanyDeliveryStatus :one
+UPDATE deliveries
+SET status = $3, updated_at = now()
+WHERE company_id = $1 AND id = $2
+RETURNING id, company_id, sender_name, sender_phone, receiver_name, receiver_phone, pickup_address, dropoff_address, item_description, declared_value_minor, delivery_price_minor, payer, is_paid, payment_method, assigned_driver_id, status, created_by, created_at, updated_at, package_category, weight_kg, additional_instructions, package_photo_url, pickup_latitude, pickup_longitude, dropoff_latitude, dropoff_longitude, selected_route_id, selected_rate_card_id, price_is_estimate, booking_source, delivery_speed, distance_km, request_status, tracking_code, rider_link_token, declined_at, accepted_at
+`
+
+type UpdateCompanyDeliveryStatusParams struct {
+	CompanyID uuid.UUID `json:"company_id"`
+	ID        uuid.UUID `json:"id"`
+	Status    string    `json:"status"`
+}
+
+func (q *Queries) UpdateCompanyDeliveryStatus(ctx context.Context, arg UpdateCompanyDeliveryStatusParams) (Delivery, error) {
+	row := q.db.QueryRow(ctx, updateCompanyDeliveryStatus, arg.CompanyID, arg.ID, arg.Status)
+	var i Delivery
+	err := row.Scan(
+		&i.ID,
+		&i.CompanyID,
+		&i.SenderName,
+		&i.SenderPhone,
+		&i.ReceiverName,
+		&i.ReceiverPhone,
+		&i.PickupAddress,
+		&i.DropoffAddress,
+		&i.ItemDescription,
+		&i.DeclaredValueMinor,
+		&i.DeliveryPriceMinor,
+		&i.Payer,
+		&i.IsPaid,
+		&i.PaymentMethod,
+		&i.AssignedDriverID,
+		&i.Status,
+		&i.CreatedBy,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.PackageCategory,
+		&i.WeightKg,
+		&i.AdditionalInstructions,
+		&i.PackagePhotoUrl,
+		&i.PickupLatitude,
+		&i.PickupLongitude,
+		&i.DropoffLatitude,
+		&i.DropoffLongitude,
+		&i.SelectedRouteID,
+		&i.SelectedRateCardID,
+		&i.PriceIsEstimate,
+		&i.BookingSource,
+		&i.DeliverySpeed,
+		&i.DistanceKm,
+		&i.RequestStatus,
+		&i.TrackingCode,
+		&i.RiderLinkToken,
+		&i.DeclinedAt,
+		&i.AcceptedAt,
+	)
+	return i, err
 }

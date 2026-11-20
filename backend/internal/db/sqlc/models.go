@@ -138,6 +138,20 @@ type CompanyBookingRoute struct {
 	Status                  string         `json:"status"`
 	CreatedAt               time.Time      `json:"created_at"`
 	UpdatedAt               time.Time      `json:"updated_at"`
+	TransportationMethod    string         `json:"transportation_method"`
+	PricingModel            string         `json:"pricing_model"`
+	OriginBranchID          *uuid.UUID     `json:"origin_branch_id"`
+	DestinationBranchID     *uuid.UUID     `json:"destination_branch_id"`
+	EstimatedTransitTime    *string        `json:"estimated_transit_time"`
+	DepartureSchedule       *string        `json:"departure_schedule"`
+	PickupAvailable         bool           `json:"pickup_available"`
+	DeliveryAvailable       bool           `json:"delivery_available"`
+	Description             *string        `json:"description"`
+	MaxWeightKg             pgtype.Numeric `json:"max_weight_kg"`
+	MaxLengthCm             pgtype.Numeric `json:"max_length_cm"`
+	MaxWidthCm              pgtype.Numeric `json:"max_width_cm"`
+	MaxHeightCm             pgtype.Numeric `json:"max_height_cm"`
+	PriceIsEstimate         bool           `json:"price_is_estimate"`
 }
 
 type CompanyBranding struct {
@@ -272,6 +286,21 @@ type Delivery struct {
 	BookingSource          string         `json:"booking_source"`
 	DeliverySpeed          string         `json:"delivery_speed"`
 	DistanceKm             pgtype.Numeric `json:"distance_km"`
+	RequestStatus          string         `json:"request_status"`
+	TrackingCode           *string        `json:"tracking_code"`
+	RiderLinkToken         *string        `json:"rider_link_token"`
+	DeclinedAt             *time.Time     `json:"declined_at"`
+	AcceptedAt             *time.Time     `json:"accepted_at"`
+}
+
+type DeliveryTimelineEvent struct {
+	ID         uuid.UUID  `json:"id"`
+	DeliveryID uuid.UUID  `json:"delivery_id"`
+	CompanyID  uuid.UUID  `json:"company_id"`
+	Status     string     `json:"status"`
+	Note       *string    `json:"note"`
+	CreatedBy  *uuid.UUID `json:"created_by"`
+	CreatedAt  time.Time  `json:"created_at"`
 }
 
 type DriverProfile struct {
@@ -316,6 +345,35 @@ type InvitationBranch struct {
 	BranchID     uuid.UUID `json:"branch_id"`
 }
 
+type LastMileServiceArea struct {
+	ID                   uuid.UUID      `json:"id"`
+	CompanyID            uuid.UUID      `json:"company_id"`
+	Name                 string         `json:"name"`
+	State                *string        `json:"state"`
+	City                 *string        `json:"city"`
+	CoverageStatus       string         `json:"coverage_status"`
+	PricingModel         string         `json:"pricing_model"`
+	FlatPriceMinor       pgtype.Int8    `json:"flat_price_minor"`
+	BaseDeliveryFeeMinor pgtype.Int8    `json:"base_delivery_fee_minor"`
+	PricePerKmMinor      pgtype.Int8    `json:"price_per_km_minor"`
+	MinimumFeeMinor      pgtype.Int8    `json:"minimum_fee_minor"`
+	MaximumDistanceKm    pgtype.Numeric `json:"maximum_distance_km"`
+	MaximumFeeMinor      pgtype.Int8    `json:"maximum_fee_minor"`
+	VolumetricDivisor    pgtype.Numeric `json:"volumetric_divisor"`
+	PriceIsEstimate      bool           `json:"price_is_estimate"`
+	MaxWeightKg          pgtype.Numeric `json:"max_weight_kg"`
+	MaxLengthCm          pgtype.Numeric `json:"max_length_cm"`
+	MaxWidthCm           pgtype.Numeric `json:"max_width_cm"`
+	MaxHeightCm          pgtype.Numeric `json:"max_height_cm"`
+	ExpressAvailable     bool           `json:"express_available"`
+	PickupAvailable      bool           `json:"pickup_available"`
+	DeliveryAvailable    bool           `json:"delivery_available"`
+	OperatingHours       []byte         `json:"operating_hours"`
+	SupportedParcelTypes []string       `json:"supported_parcel_types"`
+	CreatedAt            time.Time      `json:"created_at"`
+	UpdatedAt            time.Time      `json:"updated_at"`
+}
+
 type MemberRole struct {
 	MemberID uuid.UUID `json:"member_id"`
 	RoleID   uuid.UUID `json:"role_id"`
@@ -348,6 +406,25 @@ type Permission struct {
 	CreatedAt   time.Time `json:"created_at"`
 }
 
+type PricingQuoteVersion struct {
+	ID                         uuid.UUID   `json:"id"`
+	CompanyID                  uuid.UUID   `json:"company_id"`
+	ServiceType                string      `json:"service_type"`
+	RouteID                    *uuid.UUID  `json:"route_id"`
+	AreaID                     *uuid.UUID  `json:"area_id"`
+	PricingModel               string      `json:"pricing_model"`
+	InputSnapshot              []byte      `json:"input_snapshot"`
+	CalculationSnapshot        []byte      `json:"calculation_snapshot"`
+	BasePriceMinor             pgtype.Int8 `json:"base_price_minor"`
+	AdditionalChargesMinor     int64       `json:"additional_charges_minor"`
+	TotalMinor                 pgtype.Int8 `json:"total_minor"`
+	Currency                   string      `json:"currency"`
+	IsEstimate                 bool        `json:"is_estimate"`
+	PhysicalInspectionRequired bool        `json:"physical_inspection_required"`
+	ConfirmationRequired       bool        `json:"confirmation_required"`
+	CreatedAt                  time.Time   `json:"created_at"`
+}
+
 type PricingRule struct {
 	ID                   uuid.UUID      `json:"id"`
 	RateCardVersionID    uuid.UUID      `json:"rate_card_version_id"`
@@ -372,6 +449,15 @@ type PricingRule struct {
 	DeletedAt            *time.Time     `json:"deleted_at"`
 }
 
+type PricingSizeCategory struct {
+	ID                  uuid.UUID   `json:"id"`
+	RouteID             uuid.UUID   `json:"route_id"`
+	Name                string      `json:"name"`
+	PriceMinor          pgtype.Int8 `json:"price_minor"`
+	RequiresManualQuote bool        `json:"requires_manual_quote"`
+	CreatedAt           time.Time   `json:"created_at"`
+}
+
 type PricingTier struct {
 	ID                uuid.UUID      `json:"id"`
 	RateCardVersionID uuid.UUID      `json:"rate_card_version_id"`
@@ -382,6 +468,25 @@ type PricingTier struct {
 	Description       *string        `json:"description"`
 	CreatedAt         time.Time      `json:"created_at"`
 	DeletedAt         *time.Time     `json:"deleted_at"`
+}
+
+type PricingWeightBracket struct {
+	ID          uuid.UUID      `json:"id"`
+	RouteID     uuid.UUID      `json:"route_id"`
+	MinWeightKg pgtype.Numeric `json:"min_weight_kg"`
+	MaxWeightKg pgtype.Numeric `json:"max_weight_kg"`
+	PriceMinor  int64          `json:"price_minor"`
+	CreatedAt   time.Time      `json:"created_at"`
+}
+
+type PricingZoneRate struct {
+	ID         uuid.UUID `json:"id"`
+	AreaID     uuid.UUID `json:"area_id"`
+	FromZoneID uuid.UUID `json:"from_zone_id"`
+	ToZoneID   uuid.UUID `json:"to_zone_id"`
+	PriceMinor int64     `json:"price_minor"`
+	CreatedAt  time.Time `json:"created_at"`
+	UpdatedAt  time.Time `json:"updated_at"`
 }
 
 type QuoteCharge struct {
@@ -468,6 +573,19 @@ type Role struct {
 type RolePermission struct {
 	RoleID       uuid.UUID `json:"role_id"`
 	PermissionID uuid.UUID `json:"permission_id"`
+}
+
+type ServiceZone struct {
+	ID             uuid.UUID `json:"id"`
+	AreaID         uuid.UUID `json:"area_id"`
+	Name           string    `json:"name"`
+	Neighbourhoods []string  `json:"neighbourhoods"`
+	State          *string   `json:"state"`
+	City           *string   `json:"city"`
+	Lga            *string   `json:"lga"`
+	CustomLocation *string   `json:"custom_location"`
+	CreatedAt      time.Time `json:"created_at"`
+	UpdatedAt      time.Time `json:"updated_at"`
 }
 
 type ShippingQuote struct {

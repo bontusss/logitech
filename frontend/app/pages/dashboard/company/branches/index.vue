@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { CircleAlert, Loader2, Plus, Search, SlidersHorizontal } from 'lucide-vue-next'
 import type { Branch, BranchInput, StaffMember } from '~/types/auth'
+import { parseProviderBusinessTypes } from '~/utils/providerBusinessTypes'
 
 definePageMeta({ middleware: 'auth', layout: 'app' })
 useSeoMeta({ title: 'Branches' })
@@ -16,6 +17,11 @@ const search = ref('')
 const status = ref<'all' | 'active' | 'inactive'>('all')
 const formOpen = ref(false)
 const saving = ref(false)
+
+const lastMileOnly = computed(() => {
+  const types = parseProviderBusinessTypes(detail.value?.company.business_type ?? '')
+  return types.length === 1 && types[0] === 'lastmile'
+})
 
 onMounted(async () => {
   await load()
@@ -105,7 +111,7 @@ async function toggleBranch(branch: Branch) {
       <div class="flex items-center gap-2">
         <LookupRefreshButton :loading="loading" @refresh="fetchData" />
         <button
-          v-if="can('branches.create')"
+          v-if="can('branches.create') && !lastMileOnly"
           type="button"
           class="inline-flex items-center gap-1.5 rounded-lg bg-brand-500 px-3.5 py-2.5 text-[12.5px] font-semibold text-white transition hover:bg-brand-600"
           @click="formOpen = true"
@@ -120,7 +126,7 @@ async function toggleBranch(branch: Branch) {
     </p>
 
     <BranchForm
-      v-if="formOpen"
+      v-if="formOpen && !lastMileOnly"
       class="mt-5"
       :members="members"
       :saving="saving"
@@ -159,7 +165,7 @@ async function toggleBranch(branch: Branch) {
       :branches="filtered"
       :members="members"
       :loading="loading"
-      :can-create="can('branches.create')"
+      :can-create="can('branches.create') && !lastMileOnly"
       :can-update="can('branches.update')"
       :can-deactivate="can('branches.deactivate')"
       @create="formOpen = true"

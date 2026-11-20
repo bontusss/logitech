@@ -38,10 +38,24 @@ type deliveryDTO struct {
 	DeliverySpeed          string     `json:"delivery_speed"`
 	DistanceKm             float64    `json:"distance_km"`
 	Status                 string     `json:"status"`
+	RequestStatus          string     `json:"request_status"`
+	TrackingCode           *string    `json:"tracking_code"`
+	RiderLinkToken         *string    `json:"rider_link_token"`
+	TrackingURL            *string    `json:"tracking_url"`
+	RiderURL               *string    `json:"rider_url"`
 	CreatedAt              time.Time  `json:"created_at"`
+	UpdatedAt              time.Time  `json:"updated_at"`
 }
 
-func deliveryFromList(row db.ListCompanyDeliveriesRow) deliveryDTO {
+func deliveryTrackingURL(code *string, appURL string) *string {
+	if code == nil {
+		return nil
+	}
+	value := strings.TrimRight(appURL, "/") + "/track/" + *code
+	return &value
+}
+
+func deliveryFromList(row db.ListCompanyDeliveriesRow, appURL string) deliveryDTO {
 	return deliveryDTO{
 		ID:                     row.ID,
 		SenderName:             row.SenderName,
@@ -67,7 +81,12 @@ func deliveryFromList(row db.ListCompanyDeliveriesRow) deliveryDTO {
 		DeliverySpeed:          row.DeliverySpeed,
 		DistanceKm:             numericToFloat64(row.DistanceKm),
 		Status:                 row.Status,
+		RequestStatus:          row.RequestStatus,
+		TrackingCode:           row.TrackingCode,
+		RiderLinkToken:         row.RiderLinkToken,
+		TrackingURL:            deliveryTrackingURL(row.TrackingCode, appURL),
 		CreatedAt:              row.CreatedAt,
+		UpdatedAt:              row.UpdatedAt,
 	}
 }
 
@@ -80,7 +99,7 @@ func (a *API) listDeliveries(c *gin.Context) {
 	}
 	result := make([]deliveryDTO, 0, len(deliveries))
 	for _, delivery := range deliveries {
-		result = append(result, deliveryFromList(delivery))
+		result = append(result, deliveryFromList(delivery, a.cfg.AppURL))
 	}
 	c.JSON(http.StatusOK, gin.H{"deliveries": result})
 }
@@ -194,6 +213,9 @@ func (a *API) createDelivery(c *gin.Context) {
 		PaymentMethod:      delivery.PaymentMethod,
 		AssignedDriverID:   delivery.AssignedDriverID,
 		Status:             delivery.Status,
+		RequestStatus:      delivery.RequestStatus,
+		TrackingCode:       delivery.TrackingCode,
+		RiderLinkToken:     delivery.RiderLinkToken,
 		CreatedAt:          delivery.CreatedAt,
 	}})
 }

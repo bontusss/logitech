@@ -22,11 +22,41 @@ var (
 	currencyPattern = regexp.MustCompile(`^[A-Z]{3}$`)
 )
 
+func normalizeProviderBusinessTypes(values []string, legacy string) (string, bool) {
+	types := make(map[string]bool)
+	for _, value := range append(values, legacy) {
+		normalized := strings.ToLower(strings.TrimSpace(value))
+		for _, part := range strings.FieldsFunc(normalized, func(r rune) bool {
+			return r == ',' || r == ';' || r == '|'
+		}) {
+			part = strings.TrimSpace(part)
+			if strings.Contains(part, "intercity") {
+				types["intercity"] = true
+			}
+			if strings.Contains(part, "lastmile") || strings.Contains(part, "last mile") {
+				types["lastmile"] = true
+			}
+		}
+	}
+	if len(types) == 0 {
+		return "", false
+	}
+	result := make([]string, 0, 2)
+	if types["intercity"] {
+		result = append(result, "intercity")
+	}
+	if types["lastmile"] {
+		result = append(result, "lastmile")
+	}
+	return strings.Join(result, ","), true
+}
+
 type companyRegistrationRequest struct {
 	CompanyName   string `json:"company_name" binding:"required,min=2,max=160"`
 	BusinessEmail string `json:"business_email" binding:"required,email,max=254"`
 	Phone         string `json:"phone" binding:"required,max=30"`
-	BusinessType  string `json:"business_type" binding:"required,max=80"`
+	BusinessType  string   `json:"business_type" binding:"omitempty,max=80"`
+	BusinessTypes []string `json:"business_types"`
 	Country       string `json:"country" binding:"omitempty,max=2"`
 	State         string `json:"state" binding:"required,max=80"`
 	City          string `json:"city" binding:"required,max=80"`
@@ -86,11 +116,17 @@ func (a *API) registerCompany(c *gin.Context) {
 		return
 	}
 
+	businessType, ok := normalizeProviderBusinessTypes(req.BusinessTypes, req.BusinessType)
+	if !ok {
+		fail(c, http.StatusUnprocessableEntity, "invalid_business_type", "Select intercity, last mile, or both.")
+		return
+	}
+
 	session, err := a.svc.RegisterCompany(c.Request.Context(), service.CompanyRegistration{
 		CompanyName:   req.CompanyName,
 		BusinessEmail: req.BusinessEmail,
 		Phone:         req.Phone,
-		BusinessType:  req.BusinessType,
+		BusinessType:  businessType,
 		Country:       strings.ToUpper(req.Country),
 		State:         req.State,
 		City:          req.City,
@@ -151,6 +187,7 @@ func (a *API) updateCompany(c *gin.Context) {
 		BusinessEmail   *string         `json:"business_email" binding:"omitempty,email"`
 		Phone           *string         `json:"phone" binding:"omitempty,max=30"`
 		BusinessType    *string         `json:"business_type" binding:"omitempty,max=80"`
+		BusinessTypes   []string        `json:"business_types"`
 		CACBusinessName *string         `json:"cac_business_name" binding:"omitempty,max=200"`
 		Country         *string         `json:"country" binding:"omitempty,max=2"`
 		State           *string         `json:"state" binding:"omitempty,max=80"`
@@ -167,7 +204,12 @@ func (a *API) updateCompany(c *gin.Context) {
 	name := valueOr(req.Name, current.Name)
 	email := valueOr(req.BusinessEmail, current.BusinessEmail)
 	phone := valueOr(req.Phone, current.Phone)
-	businessType := valueOr(req.BusinessType, current.BusinessType)
+	businessTypeInput := valueOr(req.BusinessType, current.BusinessType)
+	businessType, ok := normalizeProviderBusinessTypes(req.BusinessTypes, businessTypeInput)
+	if !ok {
+		fail(c, http.StatusUnprocessableEntity, "invalid_business_type", "Select intercity, last mile, or both.")
+		return
+	}
 	country := strings.ToUpper(valueOr(req.Country, current.Country))
 	state := valueOr(req.State, deref(current.State))
 	city := valueOr(req.City, deref(current.City))

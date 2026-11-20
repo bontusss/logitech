@@ -28,7 +28,7 @@ INSERT INTO deliveries (
   company_id, sender_name, sender_phone, receiver_name, receiver_phone,
   pickup_address, dropoff_address, item_description, declared_value_minor,
   delivery_price_minor, payer, is_paid, payment_method, assigned_driver_id,
-  status, created_by, package_category, weight_kg, additional_instructions,
+  status, created_by, request_status, package_category, weight_kg, additional_instructions,
   package_photo_url, pickup_latitude, pickup_longitude, dropoff_latitude,
   dropoff_longitude, selected_route_id, selected_rate_card_id, price_is_estimate, booking_source,
   delivery_speed, distance_km
@@ -38,7 +38,7 @@ SELECT
   $4, $5, $6,
   $7, $8, $9,
   $10, 'sender', false, NULL, NULL,
-  'requested', NULL, $11, $12,
+  'requested', NULL, 'pending', $11, $12,
   $13, NULLIF($14::text, ''),
   $15, $16,
   $17, $18,
@@ -51,7 +51,7 @@ WHERE $19::uuid IS NULL
        AND r.company_id = $1::uuid
        AND r.status = 'active'
    )
-RETURNING id, company_id, sender_name, sender_phone, receiver_name, receiver_phone, pickup_address, dropoff_address, item_description, declared_value_minor, delivery_price_minor, payer, is_paid, payment_method, assigned_driver_id, status, created_by, created_at, updated_at, package_category, weight_kg, additional_instructions, package_photo_url, pickup_latitude, pickup_longitude, dropoff_latitude, dropoff_longitude, selected_route_id, selected_rate_card_id, price_is_estimate, booking_source, delivery_speed, distance_km
+RETURNING id, company_id, sender_name, sender_phone, receiver_name, receiver_phone, pickup_address, dropoff_address, item_description, declared_value_minor, delivery_price_minor, payer, is_paid, payment_method, assigned_driver_id, status, created_by, created_at, updated_at, package_category, weight_kg, additional_instructions, package_photo_url, pickup_latitude, pickup_longitude, dropoff_latitude, dropoff_longitude, selected_route_id, selected_rate_card_id, price_is_estimate, booking_source, delivery_speed, distance_km, request_status, tracking_code, rider_link_token, declined_at, accepted_at
 `
 
 type CreatePublicBookingDeliveryParams struct {
@@ -141,6 +141,11 @@ func (q *Queries) CreatePublicBookingDelivery(ctx context.Context, arg CreatePub
 		&i.BookingSource,
 		&i.DeliverySpeed,
 		&i.DistanceKm,
+		&i.RequestStatus,
+		&i.TrackingCode,
+		&i.RiderLinkToken,
+		&i.DeclinedAt,
+		&i.AcceptedAt,
 	)
 	return i, err
 }

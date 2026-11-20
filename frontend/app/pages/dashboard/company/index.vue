@@ -13,6 +13,7 @@ import {
   Users,
 } from 'lucide-vue-next'
 import type { Company } from '~/types/auth'
+import { parseProviderBusinessTypes } from '~/utils/providerBusinessTypes'
 
 definePageMeta({ middleware: 'auth', layout: 'app' })
 useSeoMeta({ title: 'Company profile' })
@@ -25,6 +26,11 @@ const verificationError = ref('')
 
 onMounted(() => load())
 
+const lastMileOnly = computed(() => {
+  const types = parseProviderBusinessTypes(detail.value?.company.business_type ?? '')
+  return types.length === 1 && types[0] === 'lastmile'
+})
+
 const links = computed(() => [
   { label: 'Branches', description: 'Locations, managers and staff assignments', to: '/dashboard/company/branches', icon: MapPin, permission: 'branches.view' },
   { label: 'Staff', description: 'Invite, assign and suspend team members', to: '/dashboard/company/staff', icon: Users, permission: 'staff.view' },
@@ -32,7 +38,7 @@ const links = computed(() => [
   { label: 'Booking page', description: 'A public page where customers can reach you', to: '/dashboard/company/booking', icon: CalendarCheck, permission: 'bookings.manage' },
   { label: 'Branding', description: 'Colours, logo and company subdomain', to: '/dashboard/company/branding', icon: Palette, permission: 'branding.manage' },
   { label: 'Settings', description: 'Timezone, currency and notifications', to: '/dashboard/company/settings', icon: Settings, permission: 'company.settings.manage' },
-].filter((link) => can(link.permission)))
+].filter((link) => can(link.permission) && !(link.label === 'Branches' && lastMileOnly.value)))
 
 const statusTone = computed(() => {
   switch (detail.value?.company.status) {

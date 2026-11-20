@@ -12,6 +12,10 @@ import {
   Truck,
   UserRound,
   X,
+  MessageCircle,
+  ExternalLink,
+  Clock3,
+  Link,
 } from 'lucide-vue-next'
 import type { CompanyDetail } from '~/types/auth'
 
@@ -52,15 +56,34 @@ interface Delivery {
   distance_km?: number
   status: 'requested' | 'created' | 'assigned' | 'picked_up' | 'in_transit' | 'delivered' | 'cancelled'
   created_at: string
+  tracking_code?: string | null
+  tracking_url?: string | null
+  rider_url?: string | null
+  updated_at?: string
 }
 
 type DeliveryTab = 'dispatch' | 'all'
+type DispatchStage = 'inbox' | 'active' | 'done'
+
+interface BookingRequest {
+  id: string
+  created_at: string
+  sender_name: string
+  receiver_name: string
+  pickup_address: string
+  dropoff_address: string
+  item_description: string
+  delivery_price_minor: number
+  request_status: 'pending' | 'accepted' | 'declined'
+}
 
 const { api } = useApi()
 const { detail, load, can } = useWorkspace()
 
-const activeTab = ref<DeliveryTab>('all')
+const activeTab = ref<DeliveryTab>('dispatch')
+const dispatchStage = ref<DispatchStage>('inbox')
 const deliveries = ref<Delivery[]>([])
+const bookingRequests = ref<BookingRequest[]>([])
 const drivers = ref<Driver[]>([])
 const loading = ref(true)
 const saving = ref(false)
@@ -86,6 +109,22 @@ const form = reactive({
 })
 
 const availableDrivers = computed(() => drivers.value.filter((driver) => driver.status === 'active'))
+const pendingRequests = computed(() =>
+  bookingRequests.value.filter((request) => request.request_status === 'pending'),
+)
+const activeDeliveries = computed(() =>
+  deliveries.value.filter((delivery) =>
+    Boolean(delivery.assigned_driver_id) && !['delivered', 'cancelled'].includes(delivery.status),
+  ),
+)
+const doneTodayDeliveries = computed(() => {
+  const today = new Date().toDateString()
+  return deliveries.value.filter((delivery) =>
+    delivery.status === 'delivered'
+    && delivery.updated_at
+    && new Date(delivery.updated_at).toDateString() === today,
+  )
+})
 const filteredDeliveries = computed(() => {
   const query = searchQuery.value.trim().toLocaleLowerCase()
   if (!query) return deliveries.value
@@ -110,12 +149,23 @@ const formDeclaredValueMinor = computed(() => toMinorUnits(form.declared_value))
 
 onMounted(async () => {
   await load()
-  await Promise.all([fetchDeliveries(), fetchDrivers()])
+  await Promise.all([fetchDeliveries(), fetchDrivers(), fetchBookingRequests()])
+  if (detailOpenId.value) {
+    try { timeline.value=(await api<{events:Array<{status:string;note:string|null;created_at:string}>}>(`/companies/me/deliveries/${detailOpenId.value}/timeline`)).events } catch { timeline.value=[] }
+  }
   if (route.query.create === '1' && can('shipments.create')) formOpen.value = true
   window.addEventListener('keydown', onModalKeydown)
 })
 
 const route = useRoute()
+const detailOpenId = ref<string>(String(route.query.id || ''))
+const timeline = ref<Array<{ status: string; note: string | null; created_at: string }>>([])
+
+watch(detailOpenId, async (id) => {
+  if (!id) { timeline.value=[]; return }
+  try { timeline.value=(await api<{events:Array<{status:string;note:string|null;created_at:string}>}>(`/companies/me/deliveries/${id}/timeline`)).events }
+  catch { timeline.value=[] }
+})
 onBeforeUnmount(() => window.removeEventListener('keydown', onModalKeydown))
 
 function toMinorUnits(amount: string) {
@@ -142,6 +192,25 @@ function onModalKeydown(event: KeyboardEvent) {
   if (event.key === 'Escape') closeForm()
 }
 
+function whatsappHref(phone: string, message: string) {
+  const digits = phone.replace(/[^0-9]/g, '').replace(/^0/, '234')
+  return `https://wa.me/${digits}?text=${encodeURIComponent(message)}`
+}
+
+async function reassignDriver(delivery: Delivery, driverId: string) {
+  try {
+    await api(`/companies/me/deliveries/${delivery.id}/driver`, { method: 'PUT', body: { driver_id: driverId || null } })
+    await fetchDeliveries()
+  } catch (err) { error.value = apiErrorMessage(err, 'Could not update the assigned driver.') }
+}
+
+async function updateDeliveryStatus(delivery: Delivery, status: Delivery['status']) {
+  try {
+    await api(`/companies/me/deliveries/${delivery.id}/status`, { method: 'PATCH', body: { status } })
+    await fetchDeliveries()
+  } catch (err) { error.value = apiErrorMessage(err, 'Could not update the delivery status.') }
+}
+
 async function fetchDeliveries() {
   loading.value = true
   try {
@@ -158,6 +227,14 @@ async function fetchDrivers() {
     drivers.value = (await api<{ drivers: Driver[] }>('/companies/me/drivers')).drivers
   } catch (err) {
     error.value = apiErrorMessage(err, 'Could not load drivers for assignment.')
+  }
+}
+
+async function fetchBookingRequests() {
+  try {
+    bookingRequests.value = (await api<{ requests: BookingRequest[] }>('/companies/me/requests')).requests
+  } catch (err) {
+    error.value = apiErrorMessage(err, 'Could not load booking requests for the dispatch inbox.')
   }
 }
 
@@ -273,15 +350,128 @@ function paymentLabel(delivery: Delivery) {
       </button>
     </div>
 
-    <section v-if="activeTab === 'dispatch'" class="mt-5 rounded-xl border border-ink-900/10 bg-white p-8 text-center">
-      <Truck :size="22" class="mx-auto text-ink-900/25" />
-      <h2 class="mt-3 text-[13px] font-semibold">Dispatch board is next</h2>
-      <p class="mx-auto mt-1 max-w-md text-[11.5px] leading-relaxed text-ink-900/45">
-        The dispatch-board layout will be designed next. Your delivery records are available in All deliveries.
-      </p>
-      <button type="button" class="mt-4 text-[11.5px] font-semibold text-brand-700" @click="activeTab = 'all'">
-        View all deliveries
-      </button>
+    <section v-if="activeTab === 'dispatch'" class="mt-5">
+      <div class="grid grid-cols-3 gap-2" role="tablist" aria-label="Dispatch stages">
+        <button
+          v-for="stage in ([
+            { id: 'inbox', label: 'Inbox', count: pendingRequests.length },
+            { id: 'active', label: 'Active', count: activeDeliveries.length },
+            { id: 'done', label: 'Done today', count: doneTodayDeliveries.length },
+          ] as const)"
+          :key="stage.id"
+          type="button"
+          role="tab"
+          :aria-selected="dispatchStage === stage.id"
+          class="rounded-xl border px-3 py-3 text-left transition sm:px-4"
+          :class="dispatchStage === stage.id ? 'border-brand-300 bg-brand-50 text-brand-800' : 'border-ink-900/10 bg-white text-ink-900/65 hover:border-ink-900/20'"
+          @click="dispatchStage = stage.id"
+        >
+          <span class="block text-[9px] font-semibold uppercase tracking-wide opacity-65 sm:text-[10px]">{{ stage.label }}</span>
+          <span class="mt-1 block text-[20px] font-semibold leading-none">{{ stage.count }}</span>
+        </button>
+      </div>
+
+      <div class="mt-4 overflow-hidden rounded-xl border border-ink-900/10 bg-white">
+        <div class="flex flex-wrap items-center justify-between gap-3 border-b border-ink-900/8 p-4">
+          <div>
+            <h2 class="text-[13px] font-semibold">
+              {{ dispatchStage === 'inbox' ? 'Booking requests' : dispatchStage === 'active' ? 'Active deliveries' : 'Completed today' }}
+            </h2>
+            <p class="mt-0.5 text-[10.5px] text-ink-900/40">
+              {{ dispatchStage === 'inbox' ? 'New bookings from your provider page' : dispatchStage === 'active' ? 'Deliveries currently assigned to a driver' : 'Deliveries marked delivered today' }}
+            </p>
+          </div>
+          <button
+            v-if="dispatchStage === 'inbox' && pendingRequests.length"
+            type="button"
+            class="rounded-lg border border-brand-200 px-3 py-2 text-[10.5px] font-semibold text-brand-700"
+            @click="navigateTo('/dashboard/requests')"
+          >
+            Manage requests
+          </button>
+          <button
+            v-if="dispatchStage === 'active' || dispatchStage === 'done'"
+            type="button"
+            class="rounded-lg border border-ink-900/10 px-3 py-2 text-[10.5px] font-semibold text-ink-900/60"
+            @click="activeTab = 'all'"
+          >
+            View all deliveries
+          </button>
+        </div>
+
+        <div v-if="loading" class="flex items-center justify-center gap-2 p-10 text-[12px] text-ink-900/50">
+          <Loader2 :size="15" class="animate-spin" /> Loading dispatch board…
+        </div>
+        <div
+          v-else-if="dispatchStage === 'inbox' && pendingRequests.length === 0"
+          class="p-8 text-center"
+        >
+          <ClipboardList :size="22" class="mx-auto text-ink-900/25" />
+          <h3 class="mt-3 text-[13px] font-semibold">Inbox is clear</h3>
+          <p class="mt-1 text-[11.5px] text-ink-900/45">New bookings from your provider page will appear here.</p>
+        </div>
+        <div v-else-if="dispatchStage === 'inbox'" class="divide-y divide-ink-900/8">
+          <article v-for="request in pendingRequests" :key="request.id" class="p-4 sm:p-5">
+            <div class="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <p class="text-[9.5px] text-ink-900/40">{{ new Date(request.created_at).toLocaleString() }}</p>
+                <h3 class="mt-1 text-[12px] font-semibold">{{ request.sender_name }} → {{ request.receiver_name }}</h3>
+              </div>
+              <span class="rounded-full bg-amber-50 px-2.5 py-1 text-[9px] font-semibold text-amber-700">New request</span>
+            </div>
+            <div class="mt-3 grid gap-2 text-[10.5px] sm:grid-cols-2">
+              <p class="break-words text-ink-900/55"><span class="font-semibold text-ink-900/75">From:</span> {{ request.pickup_address }}</p>
+              <p class="break-words text-ink-900/55"><span class="font-semibold text-ink-900/75">To:</span> {{ request.dropoff_address }}</p>
+            </div>
+            <div class="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-ink-900/8 pt-3">
+              <div>
+                <p class="text-[10.5px] text-ink-900/55">{{ request.item_description }}</p>
+                <p class="mt-1 text-[11.5px] font-semibold">{{ request.delivery_price_minor ? formatMoney(request.delivery_price_minor) : 'Price to confirm' }}</p>
+              </div>
+              <button type="button" class="rounded-lg bg-brand-600 px-3 py-2 text-[10.5px] font-semibold text-white" @click="navigateTo('/dashboard/requests')">Review request</button>
+            </div>
+          </article>
+        </div>
+        <div
+          v-else-if="dispatchStage === 'active' && activeDeliveries.length === 0"
+          class="p-8 text-center"
+        >
+          <Truck :size="22" class="mx-auto text-ink-900/25" />
+          <h3 class="mt-3 text-[13px] font-semibold">No active deliveries</h3>
+          <p class="mt-1 text-[11.5px] text-ink-900/45">Deliveries assigned to a driver will appear here.</p>
+        </div>
+        <div v-else-if="dispatchStage === 'active'" class="divide-y divide-ink-900/8">
+          <article v-for="delivery in activeDeliveries" :key="delivery.id" class="flex flex-wrap items-center justify-between gap-3 p-4 sm:px-5">
+            <div class="min-w-0">
+              <p class="text-[9.5px] text-ink-900/40">{{ deliveryReference(delivery.id) }} · {{ new Date(delivery.created_at).toLocaleString() }}</p>
+              <h3 class="mt-1 truncate text-[12px] font-semibold">{{ delivery.sender_name }} → {{ delivery.receiver_name }}</h3>
+              <p class="mt-1 truncate text-[10.5px] text-ink-900/45">{{ delivery.pickup_address }} → {{ delivery.dropoff_address }}</p>
+              <p class="mt-1 text-[10.5px] font-medium text-brand-700">{{ delivery.assigned_driver_name || 'Driver assigned' }} · <span class="capitalize">{{ statusLabel(delivery.status) }}</span></p>
+            </div>
+            <button type="button" class="shrink-0 rounded-lg border border-brand-200 px-3 py-2 text-[10.5px] font-semibold text-brand-700" @click="activeTab = 'all'; detailOpenId = delivery.id">
+              Manage delivery
+            </button>
+          </article>
+        </div>
+        <div
+          v-else-if="dispatchStage === 'done' && doneTodayDeliveries.length === 0"
+          class="p-8 text-center"
+        >
+          <Check :size="22" class="mx-auto text-ink-900/25" />
+          <h3 class="mt-3 text-[13px] font-semibold">Nothing completed today yet</h3>
+          <p class="mt-1 text-[11.5px] text-ink-900/45">Deliveries marked delivered today will be summarized here.</p>
+        </div>
+        <div v-else class="divide-y divide-ink-900/8">
+          <article v-for="delivery in doneTodayDeliveries" :key="delivery.id" class="flex flex-wrap items-center justify-between gap-3 p-4 sm:px-5">
+            <div class="min-w-0">
+              <p class="text-[9.5px] text-ink-900/40">{{ new Date(delivery.updated_at || delivery.created_at).toLocaleTimeString() }} · {{ deliveryReference(delivery.id) }}</p>
+              <h3 class="mt-1 truncate text-[12px] font-semibold">{{ delivery.sender_name }} → {{ delivery.receiver_name }}</h3>
+              <p class="mt-1 truncate text-[10.5px] text-ink-900/45">{{ delivery.pickup_address }} → {{ delivery.dropoff_address }}</p>
+            </div>
+            <span class="rounded-full bg-emerald-50 px-2.5 py-1 text-[9px] font-semibold text-emerald-700">Delivered · {{ formatMoney(delivery.delivery_price_minor) }}</span>
+          </article>
+        </div>
+      </div>
     </section>
 
     <section v-else class="mt-5 overflow-hidden rounded-xl border border-ink-900/10 bg-white">
@@ -351,6 +541,24 @@ function paymentLabel(delivery: Delivery) {
             </span>
           </div>
           <p v-if="delivery.additional_instructions" class="mt-2 text-[10.5px] leading-5 text-ink-900/50">{{ delivery.additional_instructions }}</p>
+          <div class="mt-3 flex flex-wrap items-center gap-2 border-t border-ink-900/8 pt-3">
+            <select :value="delivery.assigned_driver_id || ''" :disabled="!can('shipments.update')" class="rounded-lg border border-ink-900/10 bg-white px-2.5 py-2 text-[10.5px]" @change="reassignDriver(delivery, ($event.target as HTMLSelectElement).value)">
+              <option value="">Remove driver</option>
+              <option v-for="driver in availableDrivers" :key="driver.id" :value="driver.id">{{ driver.full_name }} · {{ driver.vehicle_plate }}</option>
+            </select>
+            <select :value="delivery.status" :disabled="!can('shipments.update')" class="rounded-lg border border-ink-900/10 bg-white px-2.5 py-2 text-[10.5px]" @change="updateDeliveryStatus(delivery, ($event.target as HTMLSelectElement).value as Delivery['status'])">
+              <option value="created">Created</option><option value="assigned">Assigned</option><option value="picked_up">Picked up</option><option value="in_transit">In transit</option><option value="delivered">Delivered</option><option value="cancelled">Cancelled</option>
+            </select>
+            <a :href="whatsappHref(delivery.sender_phone, `Hello ${delivery.sender_name}, here is an update for your delivery ${deliveryReference(delivery.id)}.`)" target="_blank" rel="noopener" class="inline-flex items-center gap-1 rounded-lg border border-emerald-200 px-2.5 py-2 text-[10.5px] font-semibold text-emerald-700"><MessageCircle :size="12" />Sender</a>
+            <a :href="whatsappHref(delivery.receiver_phone, `Hello ${delivery.receiver_name}, here is an update for your delivery ${deliveryReference(delivery.id)}.`)" target="_blank" rel="noopener" class="inline-flex items-center gap-1 rounded-lg border border-emerald-200 px-2.5 py-2 text-[10.5px] font-semibold text-emerald-700"><MessageCircle :size="12" />Receiver</a>
+            <button type="button" class="inline-flex items-center gap-1 rounded-lg border border-ink-900/10 px-2.5 py-2 text-[10.5px] font-semibold" @click="detailOpenId=detailOpenId===delivery.id ? '' : delivery.id"><Clock3 :size="12" />Timeline</button>
+            <a v-if="delivery.tracking_url" :href="delivery.tracking_url" target="_blank" rel="noopener" class="inline-flex items-center gap-1 rounded-lg border border-brand-200 px-2.5 py-2 text-[10.5px] font-semibold text-brand-700"><ExternalLink :size="12" />Tracking</a>
+          </div>
+          <div v-if="detailOpenId===delivery.id" class="mt-3 rounded-xl border border-ink-900/8 bg-canvas p-3">
+            <p class="text-[10.5px] font-semibold">Journey timeline</p>
+            <div v-if="timeline.length" class="mt-2 space-y-2"><div v-for="event in timeline" :key="event.created_at" class="flex gap-2 text-[10.5px]"><span class="mt-1 size-1.5 shrink-0 rounded-full bg-brand-500"/><div><p class="font-medium capitalize">{{ statusLabel(event.status as Delivery['status']) }}</p><p class="text-ink-900/40">{{ event.note || 'Status updated' }} · {{ new Date(event.created_at).toLocaleString() }}</p></div></div></div>
+            <p v-else class="mt-2 text-[10.5px] text-ink-900/40">No timeline events yet.</p>
+          </div>
         </article>
       </div>
     </section>
