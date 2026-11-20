@@ -34,31 +34,36 @@ async function submit() {
 
 <template>
   <div>
-    <p class="flex items-center gap-1.5 text-[11px] font-semibold tracking-[0.2em] text-brand-600 uppercase">
-      <ShieldCheck :size="13" /> Platform administration
-    </p>
-    <h1 class="mt-2 text-[1.8rem] leading-[1.1] font-semibold tracking-[-0.035em]">
+    <div class="flex items-center gap-3">
+      <span class="flex size-11 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-600 to-violet-600 text-white shadow-md shadow-brand-600/25">
+        <ShieldCheck :size="19" />
+      </span>
+      <p class="text-[10px] font-bold tracking-[0.2em] text-brand-600 uppercase">
+        Platform administration
+      </p>
+    </div>
+    <h1 class="mt-4 text-[1.75rem] leading-[1.1] font-semibold tracking-[-0.035em]">
       Admin sign in
     </h1>
-    <p class="mt-3 text-[13.5px] leading-relaxed text-ink-900/50">
+    <p class="mt-3 text-[13.5px] font-medium leading-relaxed text-ink-900/65">
       Review marketplace customers, approve logistics providers and manage admin accounts.
     </p>
 
     <form class="mt-7 space-y-4" @submit.prevent="submit">
       <label class="block">
-        <span class="mb-1.5 block text-[11.5px] font-medium text-ink-900/60">Admin email</span>
+        <span class="mb-1.5 block text-[11.5px] font-semibold text-ink-900/75">Admin email</span>
         <input
           v-model="email"
           type="email"
           required
           autocomplete="email"
-          class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm transition hover:border-slate-400 focus:border-brand-500"
+          class="w-full rounded-xl border border-slate-200 bg-canvas px-3.5 py-2.5 text-sm transition placeholder:text-ink-900/35 hover:border-slate-300 focus:border-brand-500 dark:border-white/10 dark:bg-white/5"
           placeholder="admin@bol.example"
         />
       </label>
 
       <label class="block">
-        <span class="mb-1.5 block text-[11.5px] font-medium text-ink-900/60">Password</span>
+        <span class="mb-1.5 block text-[11.5px] font-semibold text-ink-900/75">Password</span>
         <PasswordInput v-model="password" required autocomplete="current-password" placeholder="Your password" />
       </label>
 
@@ -70,7 +75,7 @@ async function submit() {
       <button
         type="submit"
         :disabled="pending"
-        class="flex w-full items-center justify-center gap-2 rounded-lg bg-brand-500 px-4 py-3 text-sm font-semibold text-white transition hover:bg-brand-600 disabled:opacity-60"
+        class="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-brand-600 to-violet-600 px-4 py-3 text-sm font-semibold text-white shadow-[0_12px_26px_-16px_rgba(43,75,255,0.9)] transition hover:-translate-y-0.5 disabled:translate-y-0 disabled:opacity-60"
       >
         <Loader2 v-if="pending" :size="15" class="animate-spin" />
         {{ pending ? 'Signing in…' : 'Sign in to admin' }}
@@ -78,15 +83,15 @@ async function submit() {
       </button>
     </form>
 
-    <p class="mt-6 text-center text-[12.5px] text-ink-900/50">
+    <p class="mt-6 text-center text-[12.5px] font-medium text-ink-900/65">
       Customer or company account?
       <NuxtLink to="/login" class="font-semibold text-brand-600 hover:text-brand-700">
         Use the workspace sign in
       </NuxtLink>
     </p>
 
-    <p class="mt-4 flex items-start gap-2 rounded-lg border border-ink-900/8 bg-canvas px-3 py-2.5 text-[11px] leading-relaxed text-ink-900/45">
-      <UserPlus :size="14" class="mt-0.5 shrink-0 text-ink-900/35" />
+    <p class="mt-4 flex items-start gap-2 rounded-xl border border-violet-200/60 bg-gradient-to-br from-violet-50/80 to-cyan-50/60 px-3 py-2.5 text-[11px] leading-relaxed text-ink-900/50 dark:border-white/10 dark:from-violet-400/10 dark:to-cyan-400/5">
+      <UserPlus :size="14" class="mt-0.5 shrink-0 text-violet-500 dark:text-violet-300" />
       Admin accounts are created by the super administrator inside the admin dashboard.
     </p>
   </div>

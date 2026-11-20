@@ -166,29 +166,32 @@ onMounted(load)
 </script>
 
 <template>
-  <div>
-    <div class="flex flex-wrap items-start justify-between gap-4">
-      <div>
-        <p class="flex items-center gap-1.5 text-[10.5px] font-semibold tracking-[0.18em] text-brand-600 uppercase">
-          <ShieldCheck :size="13" /> Platform administration
-        </p>
-        <h1 class="mt-1.5 text-[1.65rem] leading-tight font-semibold tracking-[-0.03em]">
-          Marketplace overview
-        </h1>
-        <p class="mt-1 text-[13px] text-ink-900/50">
-          Customers, logistics providers and staff accounts across BOL.
-        </p>
+  <div class="dash-page">
+    <section class="dash-hero relative isolate overflow-hidden rounded-3xl border p-5 sm:p-6">
+      <div class="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <p class="dash-eyebrow inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-semibold tracking-[0.18em] uppercase">
+            <ShieldCheck :size="13" /> Platform administration
+          </p>
+          <h1 class="mt-3 text-[clamp(1.5rem,2.6vw,1.9rem)] leading-tight font-semibold tracking-[-0.035em]">
+            Marketplace overview
+          </h1>
+          <p class="mt-1.5 max-w-[520px] text-[13px] leading-relaxed text-ink-900/55">
+            Customers, logistics providers and staff accounts across BOL.
+          </p>
+        </div>
+        <button
+          type="button"
+          class="inline-flex items-center gap-1.5 rounded-xl border border-ink-900/10 bg-white/75 px-3 py-2 text-[12px] font-semibold shadow-sm backdrop-blur-sm transition hover:-translate-y-0.5 hover:border-brand-200 hover:text-brand-700 disabled:translate-y-0 disabled:opacity-50"
+          :disabled="loading"
+          @click="load"
+        >
+          <RefreshCw :size="14" :class="loading ? 'animate-spin' : ''" />
+          Refresh
+        </button>
       </div>
-      <button
-        type="button"
-        class="inline-flex items-center gap-1.5 rounded-lg border border-ink-900/10 bg-white px-3 py-2 text-[12px] font-medium transition hover:border-ink-900/20 disabled:opacity-50"
-        :disabled="loading"
-        @click="load"
-      >
-        <RefreshCw :size="14" :class="loading ? 'animate-spin' : ''" />
-        Refresh
-      </button>
-    </div>
+      <div aria-hidden="true" class="pointer-events-none absolute -top-20 right-[-3rem] -z-10 size-48 rounded-full bg-white/40 blur-3xl dark:bg-white/5" />
+    </section>
 
     <p v-if="loadError" role="alert" class="mt-5 flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2.5 text-[12px] text-red-700">
       <CircleAlert :size="14" class="mt-0.5 shrink-0" /> {{ loadError }}
@@ -199,44 +202,56 @@ onMounted(load)
     </div>
 
     <template v-else-if="overview">
-      <div class="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <div class="rounded-xl border border-ink-900/8 bg-white p-4">
+      <div class="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div class="dash-stat dash-stat--violet rounded-2xl border p-4">
           <div class="flex items-center justify-between">
-            <p class="text-[11px] font-medium text-ink-900/45">Providers</p>
-            <Building2 :size="15" class="text-ink-900/25" />
+            <p class="text-[11px] font-semibold text-ink-900/55">Providers</p>
+            <span class="flex size-8 items-center justify-center rounded-xl bg-white/70 text-violet-600 shadow-sm dark:bg-white/10 dark:text-violet-200">
+              <Building2 :size="15" />
+            </span>
           </div>
-          <p class="mt-2 text-2xl font-semibold tracking-[-0.02em]">{{ overview.providers.length }}</p>
+          <p class="mt-3 text-[1.7rem] leading-none font-semibold tracking-[-0.03em]">{{ overview.providers.length }}</p>
+          <p class="mt-2 text-[10.5px] text-ink-900/40">Companies on the platform</p>
         </div>
-        <div class="rounded-xl border border-ink-900/8 bg-white p-4">
+        <div class="dash-stat dash-stat--peach rounded-2xl border p-4">
           <div class="flex items-center justify-between">
-            <p class="text-[11px] font-medium text-ink-900/45">Awaiting approval</p>
-            <CircleAlert :size="15" class="text-amber-500" />
+            <p class="text-[11px] font-semibold text-ink-900/55">Awaiting approval</p>
+            <span class="flex size-8 items-center justify-center rounded-xl bg-white/70 text-amber-600 shadow-sm dark:bg-white/10 dark:text-amber-200">
+              <CircleAlert :size="15" />
+            </span>
           </div>
-          <p class="mt-2 text-2xl font-semibold tracking-[-0.02em]">{{ pendingProviders.length }}</p>
+          <p class="mt-3 text-[1.7rem] leading-none font-semibold tracking-[-0.03em]">{{ pendingProviders.length }}</p>
+          <p class="mt-2 text-[10.5px] text-ink-900/40">Needs a review decision</p>
         </div>
-        <div class="rounded-xl border border-ink-900/8 bg-white p-4">
+        <div class="dash-stat dash-stat--blue rounded-2xl border p-4">
           <div class="flex items-center justify-between">
-            <p class="text-[11px] font-medium text-ink-900/45">Customers</p>
-            <Users :size="15" class="text-ink-900/25" />
+            <p class="text-[11px] font-semibold text-ink-900/55">Customers</p>
+            <span class="flex size-8 items-center justify-center rounded-xl bg-white/70 text-sky-600 shadow-sm dark:bg-white/10 dark:text-sky-200">
+              <Users :size="15" />
+            </span>
           </div>
-          <p class="mt-2 text-2xl font-semibold tracking-[-0.02em]">{{ overview.customers.length }}</p>
+          <p class="mt-3 text-[1.7rem] leading-none font-semibold tracking-[-0.03em]">{{ overview.customers.length }}</p>
+          <p class="mt-2 text-[10.5px] text-ink-900/40">Marketplace shippers</p>
         </div>
-        <div class="rounded-xl border border-ink-900/8 bg-white p-4">
+        <div class="dash-stat dash-stat--mint rounded-2xl border p-4">
           <div class="flex items-center justify-between">
-            <p class="text-[11px] font-medium text-ink-900/45">Admin accounts</p>
-            <ShieldCheck :size="15" class="text-ink-900/25" />
+            <p class="text-[11px] font-semibold text-ink-900/55">Admin accounts</p>
+            <span class="flex size-8 items-center justify-center rounded-xl bg-white/70 text-emerald-600 shadow-sm dark:bg-white/10 dark:text-emerald-200">
+              <ShieldCheck :size="15" />
+            </span>
           </div>
-          <p class="mt-2 text-2xl font-semibold tracking-[-0.02em]">{{ overview.admins.length }}</p>
+          <p class="mt-3 text-[1.7rem] leading-none font-semibold tracking-[-0.03em]">{{ overview.admins.length }}</p>
+          <p class="mt-2 text-[10.5px] text-ink-900/40">Dashboard access holders</p>
         </div>
       </div>
 
-      <div class="mt-6 flex gap-1 overflow-x-auto rounded-lg border border-ink-900/8 bg-white p-1">
+      <div class="dash-panel mt-4 flex gap-1 overflow-x-auto rounded-2xl border p-1.5">
         <button
           v-for="item in tabs"
           :key="item.key"
           type="button"
-          class="inline-flex shrink-0 items-center gap-1.5 rounded-md px-3 py-2 text-[12px] font-medium transition"
-          :class="tab === item.key ? 'bg-brand-500 text-white' : 'text-ink-900/55 hover:bg-canvas'"
+          class="inline-flex shrink-0 items-center gap-1.5 rounded-xl px-3 py-2 text-[12px] font-semibold transition"
+          :class="tab === item.key ? 'bg-gradient-to-r from-brand-600 to-violet-600 text-white shadow-sm shadow-brand-600/25' : 'text-ink-900/55 hover:bg-canvas dark:hover:bg-white/5'"
           @click="tab = item.key"
         >
           <component :is="item.icon" :size="14" />
@@ -244,7 +259,7 @@ onMounted(load)
           <span
             v-if="item.key === 'providers' && pendingProviders.length"
             class="rounded-full px-1.5 text-[10px] font-semibold"
-            :class="tab === 'providers' ? 'bg-white/20' : 'bg-amber-100 text-amber-700'"
+            :class="tab === 'providers' ? 'bg-white/25' : 'bg-amber-100 text-amber-700 dark:bg-amber-400/15 dark:text-amber-200'"
           >
             {{ pendingProviders.length }}
           </span>
@@ -252,11 +267,16 @@ onMounted(load)
       </div>
 
       <!-- Providers -->
-      <section v-if="tab === 'providers'" class="mt-3 overflow-hidden rounded-xl border border-ink-900/8 bg-white">
-        <div class="flex flex-wrap items-center justify-between gap-2 border-b border-ink-900/8 px-4 py-3">
-          <div>
-            <h2 class="text-[13.5px] font-semibold">Logistics providers</h2>
-            <p class="text-[11px] text-ink-900/40">Approve a provider to move it into the marketplace.</p>
+      <section v-if="tab === 'providers'" class="dash-panel mt-3 overflow-hidden rounded-2xl border">
+        <div class="flex flex-wrap items-center justify-between gap-2 border-b border-ink-900/8 px-4 py-3.5 dark:border-white/10">
+          <div class="flex items-center gap-2.5">
+            <span class="flex size-8 items-center justify-center rounded-xl bg-violet-100 text-violet-700 dark:bg-violet-400/15 dark:text-violet-200">
+              <Store :size="15" />
+            </span>
+            <div>
+              <h2 class="text-[13.5px] font-semibold">Logistics providers</h2>
+              <p class="text-[11px] text-ink-900/40">Approve a provider to move it into the marketplace.</p>
+            </div>
           </div>
           <p v-if="!canApprove" class="text-[11px] text-ink-900/40">Support accounts have read-only access.</p>
         </div>
@@ -267,7 +287,7 @@ onMounted(load)
 
         <div v-else class="overflow-x-auto">
           <table class="w-full min-w-[820px] text-left">
-            <thead class="bg-canvas/60 text-[10.5px] tracking-[0.06em] text-ink-900/40 uppercase">
+            <thead class="bg-canvas/70 text-[10.5px] tracking-[0.06em] text-ink-900/40 uppercase dark:bg-white/5">
               <tr>
                 <th class="px-4 py-2.5 font-medium">Company</th>
                 <th class="px-4 py-2.5 font-medium">CAC name</th>
@@ -307,7 +327,7 @@ onMounted(load)
                   <button
                     v-if="provider.status !== 'verified'"
                     type="button"
-                    class="inline-flex items-center gap-1.5 rounded-lg bg-brand-500 px-3 py-1.5 text-[11.5px] font-semibold text-white transition hover:bg-brand-600 disabled:opacity-50"
+                    class="inline-flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-brand-600 to-violet-600 px-3 py-1.5 text-[11.5px] font-semibold text-white shadow-sm shadow-brand-600/20 transition hover:-translate-y-0.5 disabled:translate-y-0 disabled:opacity-50"
                     :disabled="!canApprove || approvingId === provider.id"
                     @click="approve(provider)"
                   >
@@ -325,10 +345,15 @@ onMounted(load)
       </section>
 
       <!-- Customers -->
-      <section v-else-if="tab === 'customers'" class="mt-3 overflow-hidden rounded-xl border border-ink-900/8 bg-white">
-        <div class="border-b border-ink-900/8 px-4 py-3">
-          <h2 class="text-[13.5px] font-semibold">Customers</h2>
-          <p class="text-[11px] text-ink-900/40">People booking deliveries through the marketplace.</p>
+      <section v-else-if="tab === 'customers'" class="dash-panel mt-3 overflow-hidden rounded-2xl border">
+        <div class="flex items-center gap-2.5 border-b border-ink-900/8 px-4 py-3.5 dark:border-white/10">
+          <span class="flex size-8 items-center justify-center rounded-xl bg-sky-100 text-sky-700 dark:bg-sky-400/15 dark:text-sky-200">
+            <Users :size="15" />
+          </span>
+          <div>
+            <h2 class="text-[13.5px] font-semibold">Customers</h2>
+            <p class="text-[11px] text-ink-900/40">People booking deliveries through the marketplace.</p>
+          </div>
         </div>
 
         <div v-if="!overview.customers.length" class="px-4 py-10 text-center text-[12.5px] text-ink-900/40">
@@ -337,7 +362,7 @@ onMounted(load)
 
         <div v-else class="overflow-x-auto">
           <table class="w-full min-w-[680px] text-left">
-            <thead class="bg-canvas/60 text-[10.5px] tracking-[0.06em] text-ink-900/40 uppercase">
+            <thead class="bg-canvas/70 text-[10.5px] tracking-[0.06em] text-ink-900/40 uppercase dark:bg-white/5">
               <tr>
                 <th class="px-4 py-2.5 font-medium">Customer</th>
                 <th class="px-4 py-2.5 font-medium">Phone</th>
@@ -371,14 +396,19 @@ onMounted(load)
 
       <!-- Admins -->
       <section v-else class="mt-3 grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,360px)]">
-        <div class="overflow-hidden rounded-xl border border-ink-900/8 bg-white">
-          <div class="border-b border-ink-900/8 px-4 py-3">
-            <h2 class="text-[13.5px] font-semibold">Admin accounts</h2>
-            <p class="text-[11px] text-ink-900/40">Everyone who can sign in to this dashboard.</p>
+        <div class="dash-panel overflow-hidden rounded-2xl border">
+          <div class="flex items-center gap-2.5 border-b border-ink-900/8 px-4 py-3.5 dark:border-white/10">
+            <span class="flex size-8 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700 dark:bg-emerald-400/15 dark:text-emerald-200">
+              <ShieldCheck :size="15" />
+            </span>
+            <div>
+              <h2 class="text-[13.5px] font-semibold">Admin accounts</h2>
+              <p class="text-[11px] text-ink-900/40">Everyone who can sign in to this dashboard.</p>
+            </div>
           </div>
           <ul class="divide-y divide-ink-900/6">
             <li v-for="admin in overview.admins" :key="admin.id" class="flex items-center gap-3 px-4 py-3">
-              <div class="grid size-8 shrink-0 place-items-center rounded-full bg-brand-50 text-brand-700">
+              <div class="grid size-8 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-violet-100 to-cyan-50 text-violet-700 dark:from-violet-400/15 dark:to-cyan-400/10 dark:text-violet-200">
                 <ShieldCheck :size="14" />
               </div>
               <div class="min-w-0 flex-1">
@@ -392,25 +422,28 @@ onMounted(load)
           </ul>
         </div>
 
-        <div class="rounded-xl border border-ink-900/8 bg-white p-4">
-          <h2 class="flex items-center gap-1.5 text-[13.5px] font-semibold">
-            <UserPlus :size="15" class="text-brand-600" /> Add an admin
+        <div class="dash-soft rounded-2xl border p-4">
+          <h2 class="flex items-center gap-2 text-[13.5px] font-semibold">
+            <span class="flex size-8 items-center justify-center rounded-xl bg-gradient-to-br from-brand-600 to-violet-600 text-white shadow-sm shadow-brand-600/25">
+              <UserPlus :size="15" />
+            </span>
+            Add an admin
           </h2>
           <p v-if="!isSuperAdmin" class="mt-2 text-[11.5px] leading-relaxed text-ink-900/45">
             Only the super administrator can create admin accounts.
           </p>
-          <form v-else class="mt-3 space-y-3" @submit.prevent="createAdmin">
+          <form v-else class="mt-4 space-y-3" @submit.prevent="createAdmin">
             <label class="block">
               <span class="mb-1 block text-[11px] font-medium text-ink-900/55">Full name</span>
-              <input v-model="adminForm.full_name" type="text" required minlength="2" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-[12.5px] focus:border-brand-500" />
+              <input v-model="adminForm.full_name" type="text" required minlength="2" class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-[12.5px] transition hover:border-slate-300 focus:border-brand-500 dark:border-white/10 dark:bg-white/5" />
             </label>
             <label class="block">
               <span class="mb-1 block text-[11px] font-medium text-ink-900/55">Email</span>
-              <input v-model="adminForm.email" type="email" required class="w-full rounded-lg border border-slate-300 px-3 py-2 text-[12.5px] focus:border-brand-500" />
+              <input v-model="adminForm.email" type="email" required class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-[12.5px] transition hover:border-slate-300 focus:border-brand-500 dark:border-white/10 dark:bg-white/5" />
             </label>
             <label class="block">
               <span class="mb-1 block text-[11px] font-medium text-ink-900/55">Role</span>
-              <select v-model="adminForm.role" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-[12.5px] focus:border-brand-500">
+              <select v-model="adminForm.role" class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-[12.5px] transition hover:border-slate-300 focus:border-brand-500 dark:border-white/10 dark:bg-white/5">
                 <option value="admin">Admin — approve and manage</option>
                 <option value="support">Support — read only</option>
               </select>
@@ -423,7 +456,7 @@ onMounted(load)
                 :minlength="8"
                 autocomplete="new-password"
                 placeholder="At least 8 characters"
-                input-class="w-full rounded-lg border border-slate-300 px-3 py-2 text-[12.5px] focus:border-brand-500"
+                input-class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-[12.5px] transition hover:border-slate-300 focus:border-brand-500 dark:border-white/10 dark:bg-white/5"
               />
             </label>
 
@@ -434,7 +467,7 @@ onMounted(load)
             <button
               type="submit"
               :disabled="creatingAdmin"
-              class="flex w-full items-center justify-center gap-2 rounded-lg bg-brand-500 px-3 py-2.5 text-[12px] font-semibold text-white transition hover:bg-brand-600 disabled:opacity-60"
+              class="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-brand-600 to-violet-600 px-3 py-2.5 text-[12px] font-semibold text-white shadow-[0_10px_24px_-16px_rgba(43,75,255,0.9)] transition hover:-translate-y-0.5 disabled:translate-y-0 disabled:opacity-60"
             >
               <Loader2 v-if="creatingAdmin" :size="14" class="animate-spin" />
               Create admin account

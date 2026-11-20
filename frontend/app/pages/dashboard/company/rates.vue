@@ -357,7 +357,7 @@ async function toggleStatus(route: BookingRoute) {
 </script>
 
 <template>
-  <div class="rates-workspace">
+  <div class="rates-workspace dash-page">
     <header class="rates-page-hero relative overflow-hidden rounded-2xl border p-5 sm:p-6">
       <div class="pointer-events-none absolute -top-20 right-12 size-48 rounded-full bg-fuchsia-400/15 blur-3xl" />
       <div class="pointer-events-none absolute -right-10 -bottom-28 size-56 rounded-full bg-cyan-400/15 blur-3xl" />

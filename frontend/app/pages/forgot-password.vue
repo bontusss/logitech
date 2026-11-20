@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ArrowLeft, ArrowRight, CheckCircle2 } from 'lucide-vue-next'
+import { ArrowLeft, ArrowRight, CheckCircle2, KeyRound } from 'lucide-vue-next'
 
 definePageMeta({ layout: 'auth' })
 useSeoMeta({ title: 'Reset password' })
@@ -51,22 +51,22 @@ async function resetPassword() {
 }
 
 const inputClass =
-  'w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm transition hover:border-slate-400 focus:border-brand-500'
+  'w-full rounded-xl border border-slate-200 bg-canvas px-3.5 py-2.5 text-sm transition placeholder:text-ink-900/35 hover:border-slate-300 focus:border-brand-500 dark:border-white/10 dark:bg-white/5'
 </script>
 
 <template>
   <div>
-    <NuxtLink to="/login" class="inline-flex items-center gap-1.5 text-[12px] font-medium text-ink-900/45 hover:text-ink-900">
+    <NuxtLink to="/login" class="inline-flex items-center gap-1.5 rounded-full border border-ink-900/10 bg-white/70 px-3 py-1.5 text-[12px] font-semibold text-ink-900/65 transition hover:-translate-x-0.5 hover:text-ink-900 dark:border-white/10 dark:bg-white/5">
       <ArrowLeft :size="13" />
       Back to sign in
     </NuxtLink>
 
     <template v-if="done">
-      <div class="mt-6 flex size-11 items-center justify-center rounded-full bg-brand-50 text-brand-600">
+      <div class="mt-6 flex size-12 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-500 text-white shadow-lg">
         <CheckCircle2 :size="22" />
       </div>
       <h1 class="mt-4 text-[1.7rem] font-semibold tracking-[-0.03em]">Password updated</h1>
-      <p class="mt-3 text-[13.5px] leading-relaxed text-ink-900/50">
+      <p class="mt-3 text-[13.5px] font-medium leading-relaxed text-ink-900/65">
         Your password has been reset and existing sessions were signed out.
       </p>
       <AppButton to="/login" class="mt-6">
@@ -76,14 +76,17 @@ const inputClass =
     </template>
 
     <template v-else-if="token">
-      <h1 class="mt-5 text-[1.7rem] font-semibold tracking-[-0.03em]">Choose a new password</h1>
-      <p class="mt-3 text-[13.5px] leading-relaxed text-ink-900/50">
+      <div class="mt-6 flex size-11 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-100 to-cyan-50 text-violet-700 shadow-sm dark:from-violet-400/15 dark:to-cyan-400/10 dark:text-violet-200">
+        <KeyRound :size="19" />
+      </div>
+      <h1 class="mt-4 text-[1.7rem] font-semibold tracking-[-0.03em]">Choose a new password</h1>
+      <p class="mt-3 text-[13.5px] font-medium leading-relaxed text-ink-900/65">
         Use at least 8 characters. Resetting will sign out your other sessions.
       </p>
 
       <form class="mt-6 space-y-4" @submit.prevent="resetPassword">
         <label class="block">
-          <span class="mb-1.5 block text-[11.5px] font-medium text-ink-900/60">New password</span>
+          <span class="mb-1.5 block text-[11.5px] font-semibold text-ink-900/75">New password</span>
           <PasswordInput v-model="password" required :minlength="8" autocomplete="new-password" :input-class="inputClass" placeholder="At least 8 characters" />
         </label>
 
@@ -94,7 +97,7 @@ const inputClass =
         <button
           type="submit"
           :disabled="pending"
-          class="flex w-full items-center justify-center gap-2 rounded-lg bg-brand-500 px-4 py-3 text-sm font-semibold text-white transition hover:bg-brand-600 disabled:opacity-60"
+          class="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-brand-600 to-violet-600 px-4 py-3 text-sm font-semibold text-white shadow-[0_12px_26px_-16px_rgba(43,75,255,0.9)] transition hover:-translate-y-0.5 disabled:translate-y-0 disabled:opacity-60"
         >
           {{ pending ? 'Saving…' : 'Set new password' }}
         </button>
@@ -102,14 +105,17 @@ const inputClass =
     </template>
 
     <template v-else>
-      <h1 class="mt-5 text-[1.7rem] font-semibold tracking-[-0.03em]">Reset your password</h1>
-      <p class="mt-3 text-[13.5px] leading-relaxed text-ink-900/50">
+      <div class="mt-6 flex size-11 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-100 to-cyan-50 text-violet-700 shadow-sm dark:from-violet-400/15 dark:to-cyan-400/10 dark:text-violet-200">
+        <KeyRound :size="19" />
+      </div>
+      <h1 class="mt-4 text-[1.7rem] font-semibold tracking-[-0.03em]">Reset your password</h1>
+      <p class="mt-3 text-[13.5px] font-medium leading-relaxed text-ink-900/65">
         Enter the email on your account and we will send a reset link.
       </p>
 
       <form class="mt-6 space-y-4" @submit.prevent="requestReset">
         <label class="block">
-          <span class="mb-1.5 block text-[11.5px] font-medium text-ink-900/60">Email address</span>
+          <span class="mb-1.5 block text-[11.5px] font-semibold text-ink-900/75">Email address</span>
           <input v-model="email" type="email" required autocomplete="email" :class="inputClass" placeholder="you@company.com" />
         </label>
 
@@ -130,7 +136,7 @@ const inputClass =
         <button
           type="submit"
           :disabled="pending"
-          class="flex w-full items-center justify-center gap-2 rounded-lg bg-brand-500 px-4 py-3 text-sm font-semibold text-white transition hover:bg-brand-600 disabled:opacity-60"
+          class="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-brand-600 to-violet-600 px-4 py-3 text-sm font-semibold text-white shadow-[0_12px_26px_-16px_rgba(43,75,255,0.9)] transition hover:-translate-y-0.5 disabled:translate-y-0 disabled:opacity-60"
         >
           {{ pending ? 'Sending…' : 'Send reset link' }}
           <ArrowRight v-if="!pending" :size="15" />

@@ -66,10 +66,14 @@ function toggleMember(memberID: string) {
 </script>
 
 <template>
-  <div class="space-y-5">
-    <div class="rounded-xl border border-ink-900/10 bg-white p-5">
+  <div class="space-y-4">
+    <div class="dash-panel rounded-2xl border p-5">
       <div class="flex flex-wrap items-start justify-between gap-3">
-        <div>
+        <div class="flex items-start gap-3">
+          <span class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-sky-100 to-cyan-50 text-sky-700 dark:from-sky-400/15 dark:to-cyan-400/10 dark:text-sky-200">
+            <MapPin :size="18" />
+          </span>
+          <div>
           <div class="flex flex-wrap items-center gap-2">
             <h1 class="text-[19px] font-semibold tracking-[-0.03em]">{{ branch.name }}</h1>
             <span class="rounded border border-ink-900/10 bg-canvas px-1.5 py-0.5 font-mono text-[9.5px] uppercase text-ink-900/45">
@@ -87,6 +91,7 @@ function toggleMember(memberID: string) {
           <p class="mt-1.5 text-[11.5px] text-ink-900/45">
             {{ branch.address }}, {{ branch.city }}, {{ branch.state }}, {{ branch.country }}
           </p>
+          </div>
         </div>
         <div class="flex gap-2">
           <button
@@ -111,24 +116,24 @@ function toggleMember(memberID: string) {
       </div>
 
       <dl class="mt-5 grid gap-3 border-t border-ink-900/8 pt-4 text-[11.5px] sm:grid-cols-2 lg:grid-cols-3">
-        <div class="flex items-start gap-2">
-          <MapPin :size="14" class="mt-0.5 shrink-0 text-ink-900/30" />
+        <div class="flex items-start gap-2 rounded-xl bg-sky-50/50 p-2.5 dark:bg-sky-400/5">
+          <MapPin :size="14" class="mt-0.5 shrink-0 text-sky-600 dark:text-sky-300" />
           <div><dt class="text-ink-900/40">Address</dt><dd class="mt-0.5 font-medium">{{ branch.address }}</dd></div>
         </div>
-        <div class="flex items-start gap-2">
-          <UserRound :size="14" class="mt-0.5 shrink-0 text-ink-900/30" />
+        <div class="flex items-start gap-2 rounded-xl bg-violet-50/50 p-2.5 dark:bg-violet-400/5">
+          <UserRound :size="14" class="mt-0.5 shrink-0 text-violet-600 dark:text-violet-300" />
           <div><dt class="text-ink-900/40">Manager</dt><dd class="mt-0.5 font-medium">{{ managerName }}</dd></div>
         </div>
-        <div class="flex items-start gap-2">
-          <Clock3 :size="14" class="mt-0.5 shrink-0 text-ink-900/30" />
+        <div class="flex items-start gap-2 rounded-xl bg-amber-50/50 p-2.5 dark:bg-amber-400/5">
+          <Clock3 :size="14" class="mt-0.5 shrink-0 text-amber-600 dark:text-amber-300" />
           <div><dt class="text-ink-900/40">Operating hours</dt><dd class="mt-0.5 font-medium">{{ hoursSummary }}</dd></div>
         </div>
-        <div class="flex items-start gap-2">
-          <Phone :size="14" class="mt-0.5 shrink-0 text-ink-900/30" />
+        <div class="flex items-start gap-2 rounded-xl bg-emerald-50/50 p-2.5 dark:bg-emerald-400/5">
+          <Phone :size="14" class="mt-0.5 shrink-0 text-emerald-600 dark:text-emerald-300" />
           <div><dt class="text-ink-900/40">Phone</dt><dd class="mt-0.5 font-medium">{{ branch.phone || 'Not set' }}</dd></div>
         </div>
-        <div class="flex items-start gap-2">
-          <Mail :size="14" class="mt-0.5 shrink-0 text-ink-900/30" />
+        <div class="flex items-start gap-2 rounded-xl bg-rose-50/50 p-2.5 dark:bg-rose-400/5">
+          <Mail :size="14" class="mt-0.5 shrink-0 text-rose-600 dark:text-rose-300" />
           <div><dt class="text-ink-900/40">Email</dt><dd class="mt-0.5 font-medium">{{ branch.email || 'Not set' }}</dd></div>
         </div>
       </dl>
@@ -145,7 +150,7 @@ function toggleMember(memberID: string) {
       </div>
     </div>
 
-    <div class="rounded-xl border border-ink-900/10 bg-white p-5">
+    <div class="dash-panel rounded-2xl border p-5">
       <div class="flex items-center justify-between gap-3">
         <div>
           <h2 class="text-[14px] font-semibold">Branch staff</h2>
@@ -182,7 +187,7 @@ function toggleMember(memberID: string) {
           <button
             type="button"
             :disabled="saving"
-            class="rounded-lg bg-brand-500 px-3.5 py-2 text-[12px] font-semibold text-white transition hover:bg-brand-600 disabled:opacity-60"
+            class="rounded-lg bg-brand-600 px-3.5 py-2 text-[12px] font-semibold text-white shadow-sm shadow-brand-600/20 transition hover:bg-brand-700 disabled:opacity-60"
             @click="$emit('assign', selected)"
           >
             Save staff assignments
@@ -192,7 +197,7 @@ function toggleMember(memberID: string) {
 
       <ul v-else-if="staff.length" class="mt-4 divide-y divide-ink-900/8">
         <li v-for="member in staff" :key="member.id" class="flex items-center gap-2.5 py-2.5">
-          <span class="flex size-7 items-center justify-center rounded-full bg-ink-900/5 text-[10px] font-semibold">
+          <span class="flex size-7 items-center justify-center rounded-full bg-gradient-to-br from-violet-100 to-sky-100 text-[10px] font-semibold text-violet-800 dark:from-violet-400/20 dark:to-sky-400/20 dark:text-violet-100">
             {{ member.full_name.slice(0, 2).toUpperCase() }}
           </span>
           <div class="min-w-0 flex-1">

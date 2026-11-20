@@ -57,14 +57,14 @@ async function resendVerification() {
 }
 
 const inputClass =
-  'w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm transition hover:border-slate-400 focus:border-brand-500'
+  'w-full rounded-xl border border-slate-200 bg-canvas px-3.5 py-2.5 text-sm transition placeholder:text-ink-900/35 hover:border-slate-300 focus:border-brand-500 dark:border-white/10 dark:bg-white/5'
 </script>
 
 <template>
   <div>
     <div
-      class="flex size-11 items-center justify-center rounded-xl border"
-      :class="state === 'success' ? 'border-emerald-200 bg-emerald-50 text-emerald-600' : 'border-brand-100 bg-brand-50 text-brand-600'"
+      class="flex size-12 items-center justify-center rounded-2xl shadow-sm"
+      :class="state === 'success' ? 'bg-gradient-to-br from-emerald-100 to-teal-50 text-emerald-700 dark:from-emerald-400/20 dark:to-teal-400/10 dark:text-emerald-200' : 'bg-gradient-to-br from-violet-100 to-cyan-50 text-violet-700 dark:from-violet-400/15 dark:to-cyan-400/10 dark:text-violet-200'"
     >
       <CheckCircle2 v-if="state === 'success'" :size="21" />
       <MailCheck v-else :size="21" />
@@ -75,7 +75,7 @@ const inputClass =
     </h1>
 
     <template v-if="state === 'success'">
-      <p class="mt-3 text-[13.5px] leading-relaxed text-ink-900/50">
+      <p class="mt-3 text-[13.5px] font-medium leading-relaxed text-ink-900/65">
         Your email is confirmed. You can now complete company onboarding and submit your company
         for review.
       </p>
@@ -89,14 +89,14 @@ const inputClass =
     </template>
 
     <template v-else>
-      <p class="mt-3 text-[13.5px] leading-relaxed text-ink-900/50">
+      <p class="mt-3 text-[13.5px] font-medium leading-relaxed text-ink-900/65">
         Open the verification link in your inbox. You can also paste the token from the email
         below.
       </p>
 
       <form class="mt-6 space-y-4" @submit.prevent="verify">
         <label class="block">
-          <span class="mb-1.5 block text-[11.5px] font-medium text-ink-900/60">Verification token</span>
+          <span class="mb-1.5 block text-[11.5px] font-semibold text-ink-900/75">Verification token</span>
           <input v-model="tokenInput" type="text" required :class="inputClass" placeholder="Paste the token from your email" />
         </label>
 
@@ -112,7 +112,7 @@ const inputClass =
         <button
           type="submit"
           :disabled="state === 'pending'"
-          class="flex w-full items-center justify-center gap-2 rounded-lg bg-brand-500 px-4 py-3 text-sm font-semibold text-white transition hover:bg-brand-600 disabled:opacity-60"
+          class="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-brand-600 to-violet-600 px-4 py-3 text-sm font-semibold text-white shadow-[0_12px_26px_-16px_rgba(43,75,255,0.9)] transition hover:-translate-y-0.5 disabled:translate-y-0 disabled:opacity-60"
         >
           {{ state === 'pending' ? 'Verifying…' : 'Verify email' }}
         </button>
@@ -127,12 +127,12 @@ const inputClass =
         >
           {{ resending ? 'Sending…' : 'Resend verification email' }}
         </button>
-        <p v-if="resendMessage" role="status" class="mt-2 text-[11.5px] text-ink-900/55">
+        <p v-if="resendMessage" role="status" class="mt-2 text-[11.5px] text-ink-900/70">
           {{ resendMessage }}
         </p>
       </div>
 
-      <p class="mt-5 text-[11.5px] leading-relaxed text-ink-900/40">
+      <p class="mt-5 text-[11.5px] leading-relaxed text-ink-900/55">
         If the email does not arrive shortly, check your spam folder or request another link.
       </p>
     </template>

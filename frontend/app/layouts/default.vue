@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-dvh bg-canvas text-ink-900">
+  <div class="site-page min-h-dvh bg-canvas text-ink-900">
     <AppNavbar />
     <main id="main">
       <slot />

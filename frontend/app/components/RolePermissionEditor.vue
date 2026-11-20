@@ -102,19 +102,24 @@ function permissionLabel(key: string) {
 </script>
 
 <template>
-  <div class="space-y-5">
-    <div class="flex flex-wrap items-start justify-between gap-3 rounded-xl border border-ink-900/10 bg-white p-5">
-      <div>
-        <h2 class="text-[15px] font-semibold">Roles and permissions</h2>
-        <p class="mt-1 max-w-2xl text-[11.5px] leading-relaxed text-ink-900/45">
-          System roles are fixed. Custom roles let you grant a precise set of permissions for a
-          company function. You can only grant permissions you hold yourself.
-        </p>
+  <div class="space-y-4">
+    <div class="dash-panel flex flex-wrap items-start justify-between gap-3 rounded-2xl border p-5">
+      <div class="flex items-start gap-3">
+        <span class="flex size-9 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700 dark:bg-emerald-400/15 dark:text-emerald-200">
+          <ShieldCheck :size="16" />
+        </span>
+        <div>
+          <h2 class="text-[15px] font-semibold">Roles and permissions</h2>
+          <p class="mt-1 max-w-2xl text-[11.5px] leading-relaxed text-ink-900/45">
+            System roles are fixed. Custom roles let you grant a precise set of permissions for a
+            company function. You can only grant permissions you hold yourself.
+          </p>
+        </div>
       </div>
       <button
         v-if="canManage"
         type="button"
-        class="inline-flex items-center gap-1.5 rounded-lg bg-brand-500 px-3.5 py-2 text-[12px] font-semibold text-white transition hover:bg-brand-600"
+        class="inline-flex items-center gap-1.5 rounded-lg bg-brand-600 px-3.5 py-2 text-[12px] font-semibold text-white shadow-sm shadow-brand-600/20 transition hover:bg-brand-700"
         @click="startCreate"
       >
         <Plus :size="14" /> New role
@@ -123,7 +128,7 @@ function permissionLabel(key: string) {
 
     <form
       v-if="creating || editing"
-      class="rounded-xl border border-brand-200 bg-brand-50/30 p-5"
+      class="rounded-2xl border border-violet-200/70 bg-gradient-to-br from-violet-50/70 via-white to-cyan-50/40 p-5 dark:border-violet-400/20 dark:from-violet-400/10 dark:via-transparent dark:to-cyan-400/5"
       @submit.prevent="submit"
     >
       <div class="flex items-start justify-between gap-3">
@@ -190,10 +195,15 @@ function permissionLabel(key: string) {
     </form>
 
     <div class="grid gap-3 lg:grid-cols-2">
-      <article v-for="role in roles" :key="role.id" class="rounded-xl border border-ink-900/10 bg-white p-4">
+      <article v-for="role in roles" :key="role.id" class="dash-card rounded-2xl border p-4">
         <div class="flex items-start justify-between gap-2">
           <div class="flex items-start gap-2.5">
-            <span class="flex size-8 shrink-0 items-center justify-center rounded-lg" :class="role.key === 'owner' ? 'bg-amber-50 text-amber-600' : 'bg-ink-900/5 text-ink-900/45'">
+            <span
+              class="flex size-8 shrink-0 items-center justify-center rounded-lg"
+              :class="role.key === 'owner'
+                ? 'bg-amber-100 text-amber-700 dark:bg-amber-400/15 dark:text-amber-200'
+                : 'bg-gradient-to-br from-violet-100 to-sky-50 text-violet-700 dark:from-violet-400/15 dark:to-sky-400/10 dark:text-violet-200'"
+            >
               <ShieldCheck :size="15" />
             </span>
             <div>
@@ -233,8 +243,8 @@ function permissionLabel(key: string) {
       </article>
     </div>
 
-    <div class="flex items-start gap-2 rounded-xl border border-ink-900/10 bg-canvas p-4 text-[11px] leading-relaxed text-ink-900/45">
-      <KeyRound :size="14" class="mt-0.5 shrink-0" />
+    <div class="dash-soft flex items-start gap-2 rounded-2xl border p-4 text-[11px] leading-relaxed text-ink-900/45">
+      <KeyRound :size="14" class="mt-0.5 shrink-0 text-brand-500" />
       Custom roles can be selected when inviting staff or changing a member's role. Deleting a role
       requires moving its members first.
     </div>

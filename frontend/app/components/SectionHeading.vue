@@ -15,9 +15,13 @@ withDefaults(
   <div :class="align === 'center' ? 'mx-auto max-w-2xl text-center' : 'max-w-2xl'">
     <p
       v-if="eyebrow"
-      class="text-[11px] font-semibold tracking-[0.22em] uppercase"
-      :class="tone === 'light' ? 'text-brand-200' : 'text-brand-600'"
+      class="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-semibold tracking-[0.18em] uppercase"
+      :class="tone === 'light' ? 'border-white/15 bg-white/5 text-brand-200' : 'border-brand-200/70 bg-brand-50/70 text-brand-700 dark:border-brand-400/20 dark:bg-brand-400/10 dark:text-indigo-200'"
     >
+      <span
+        class="size-1.5 rounded-full bg-gradient-to-r"
+        :class="tone === 'light' ? 'from-brand-300 to-cyan-300' : 'from-brand-500 to-violet-500'"
+      />
       {{ eyebrow }}
     </p>
     <h2

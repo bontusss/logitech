@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { CircleAlert, Loader2 } from 'lucide-vue-next'
+import { CircleAlert, Loader2, ShieldCheck, Sparkles } from 'lucide-vue-next'
 import type { PermissionInfo, Role, RoleSavePayload } from '~/types/auth'
 
 definePageMeta({ middleware: 'auth', layout: 'app' })
@@ -67,32 +67,43 @@ async function removeRole(role: Role) {
 </script>
 
 <template>
-  <div>
-    <div class="flex flex-wrap items-start justify-between gap-4">
-      <div>
-        <p class="text-[10.5px] font-semibold tracking-[0.2em] text-brand-600 uppercase">Company management</p>
-        <h1 class="mt-2 text-[clamp(1.6rem,3vw,2.1rem)] leading-tight font-semibold tracking-[-0.035em]">
-          Roles & permissions
-        </h1>
-        <p class="mt-2 max-w-2xl text-[13.5px] leading-relaxed text-ink-900/50">
-          Control exactly what each staff role can see and change. Administrators cannot grant
-          permissions beyond their own authority, and ownership can never be delegated here.
-        </p>
+  <div class="dash-page">
+    <header class="dash-hero relative overflow-hidden rounded-2xl border p-5 sm:p-6">
+      <div class="pointer-events-none absolute -top-16 right-10 size-44 rounded-full bg-fuchsia-400/15 blur-3xl" />
+      <div class="pointer-events-none absolute -right-8 -bottom-24 size-52 rounded-full bg-cyan-400/15 blur-3xl" />
+      <div class="relative flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <p class="dash-eyebrow inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-semibold tracking-wide">
+            <Sparkles :size="12" /> ACCESS CONTROL
+          </p>
+          <h1 class="mt-2 text-[clamp(1.45rem,2.5vw,1.8rem)] leading-tight font-semibold tracking-[-0.04em]">
+            Roles &amp; permissions
+          </h1>
+          <p class="mt-1.5 max-w-xl text-[12px] leading-relaxed text-ink-900/65">
+            Control exactly what each staff role can see and change. Administrators cannot grant
+            permissions beyond their own authority, and ownership can never be delegated here.
+          </p>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="hidden items-center gap-1.5 rounded-full border border-white/70 bg-white/70 px-3 py-1.5 text-[11px] font-semibold text-ink-900/60 sm:inline-flex dark:border-white/10 dark:bg-white/5">
+            <ShieldCheck :size="13" /> {{ roles.length }} roles
+          </span>
+          <LookupRefreshButton :loading="loading" @refresh="fetchRoles" />
+        </div>
       </div>
-      <LookupRefreshButton :loading="loading" @refresh="fetchRoles" />
-    </div>
+    </header>
 
-    <p v-if="error" role="alert" class="mt-5 flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-3.5 py-2.5 text-[12px] text-red-700">
+    <p v-if="error" role="alert" class="mt-4 flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 px-3.5 py-2.5 text-[12px] text-red-700">
       <CircleAlert :size="14" class="mt-0.5 shrink-0" /> {{ error }}
     </p>
 
-    <div v-if="loading && !roles.length" class="mt-5 flex items-center gap-2 rounded-xl border border-ink-900/10 bg-white p-6 text-[12.5px] text-ink-900/45">
+    <div v-if="loading && !roles.length" class="dash-panel mt-4 flex items-center gap-2 rounded-2xl border p-6 text-[12.5px] text-ink-900/45">
       <Loader2 :size="15" class="animate-spin" /> Loading roles…
     </div>
 
     <RolePermissionEditor
       v-else
-      class="mt-5"
+      class="mt-4"
       :roles="roles"
       :permissions="permissions"
       :can-manage="can('staff.roles.manage')"

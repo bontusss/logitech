@@ -37,9 +37,11 @@ function isOwner(member: StaffMember) {
 </script>
 
 <template>
-  <div class="overflow-hidden rounded-xl border border-ink-900/10 bg-white">
+  <div class="dash-panel overflow-hidden rounded-2xl border">
     <div v-if="members.length === 0" class="px-5 py-12 text-center">
-      <UserRound :size="22" class="mx-auto text-ink-900/25" />
+      <span class="mx-auto flex size-11 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-100 to-cyan-50 text-violet-700 dark:from-violet-400/15 dark:to-cyan-400/10 dark:text-violet-200">
+        <UserRound :size="19" />
+      </span>
       <p class="mt-3 text-[13px] font-semibold">No staff match this view</p>
       <p class="mt-1 text-[11.5px] text-ink-900/45">Invite staff or clear the filters to see your team.</p>
     </div>
@@ -47,7 +49,7 @@ function isOwner(member: StaffMember) {
     <div v-else class="overflow-x-auto">
       <table class="w-full min-w-[760px] text-left">
         <thead>
-          <tr class="border-b border-ink-900/8 bg-canvas/60 text-[9px] tracking-[0.08em] text-ink-900/40 uppercase">
+          <tr class="border-b border-ink-900/8 bg-gradient-to-r from-violet-50/60 via-white to-cyan-50/40 text-[9px] tracking-[0.08em] text-ink-900/40 uppercase dark:from-violet-400/5 dark:via-transparent dark:to-cyan-400/5">
             <th class="px-4 py-2.5 font-semibold">Staff member</th>
             <th class="px-3 py-2.5 font-semibold">Role</th>
             <th class="px-3 py-2.5 font-semibold">Branches</th>
@@ -56,10 +58,10 @@ function isOwner(member: StaffMember) {
           </tr>
         </thead>
         <tbody>
-          <tr v-for="member in members" :key="member.id" class="border-b border-ink-900/6 last:border-0">
+          <tr v-for="member in members" :key="member.id" class="border-b border-ink-900/6 transition last:border-0 hover:bg-brand-50/25">
             <td class="px-4 py-3">
               <div class="flex items-center gap-2.5">
-                <span class="flex size-7 shrink-0 items-center justify-center rounded-full bg-ink-900/5 text-[10px] font-semibold">
+                <span class="flex size-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-violet-100 to-sky-100 text-[10px] font-semibold text-violet-800 dark:from-violet-400/20 dark:to-sky-400/20 dark:text-violet-100">
                   {{ member.full_name.slice(0, 2).toUpperCase() }}
                 </span>
                 <div class="min-w-0">
@@ -74,7 +76,7 @@ function isOwner(member: StaffMember) {
                   v-for="role in member.roles"
                   :key="role"
                   class="rounded border px-1.5 py-0.5 text-[9.5px] font-medium capitalize"
-                  :class="role === 'owner' ? 'border-amber-200 bg-amber-50 text-amber-700' : 'border-ink-900/10 bg-canvas text-ink-900/55'"
+                  :class="role === 'owner' ? 'border-amber-200 bg-amber-50 text-amber-700' : 'border-violet-200/70 bg-violet-50/70 text-violet-700 dark:border-violet-400/20 dark:bg-violet-400/10 dark:text-violet-200'"
                 >
                   {{ role.replaceAll('_', ' ') }}
                 </span>

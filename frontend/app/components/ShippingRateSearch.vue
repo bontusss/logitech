@@ -22,7 +22,7 @@ const form = reactive({
 const searched = ref(false)
 
 const fieldClass =
-  'w-full rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-[13px] font-medium text-ink-900 transition placeholder:text-ink-900/35 hover:border-slate-300 focus:border-brand-500'
+  'w-full rounded-xl border border-slate-200 bg-canvas px-3.5 py-3 text-[13px] font-medium text-ink-900 transition placeholder:text-ink-900/35 hover:border-slate-300 focus:border-brand-500 dark:border-white/10 dark:bg-white/5'
 const labelClass = 'mb-1.5 block text-[11px] font-semibold text-ink-900/55'
 
 function swapCities() {
@@ -39,16 +39,16 @@ function submitSearch() {
 <template>
   <div
     id="rate-search"
-    class="w-full max-w-[540px] rounded-[1.4rem] border border-white/80 bg-white p-5 shadow-[0_35px_90px_-45px_rgba(27,40,90,0.42)] sm:p-7"
+    class="site-panel w-full max-w-[540px] rounded-[1.4rem] border p-5 sm:p-7"
   >
     <div class="flex items-start justify-between gap-4">
       <div>
         <p class="text-[10px] font-bold tracking-[0.18em] text-brand-600 uppercase">Start here</p>
         <h2 class="mt-1.5 text-[19px] font-semibold tracking-[-0.03em]">Where are you sending?</h2>
-        <p class="mt-1 text-[12.5px] text-ink-900/50">Enter your shipment to check delivery options.</p>
+        <p class="mt-1 text-[12.5px] text-ink-900/65">Enter your shipment to check delivery options.</p>
       </div>
-      <div class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-600">
-        <PackageCheck :size="19" />
+      <div class="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-100 to-cyan-50 text-violet-700 shadow-sm dark:from-violet-400/15 dark:to-cyan-400/10 dark:text-violet-200">
+        <PackageCheck :size="20" />
       </div>
     </div>
 
@@ -68,7 +68,7 @@ function submitSearch() {
         </label>
         <button
           type="button"
-          class="mb-1 flex size-9 shrink-0 items-center justify-center rounded-xl border border-slate-200 text-ink-900/50 transition hover:border-brand-200 hover:text-brand-600"
+          class="mb-1 flex size-9 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-canvas text-ink-900/50 transition hover:-translate-y-0.5 hover:border-brand-200 hover:text-brand-600 dark:border-white/10 dark:bg-white/5"
           aria-label="Swap origin and destination"
           @click="swapCities"
         >
@@ -138,7 +138,7 @@ function submitSearch() {
 
       <button
         type="submit"
-        class="flex w-full items-center justify-center gap-2 rounded-xl bg-brand-500 px-4 py-3.5 text-[14px] font-semibold text-white shadow-[0_14px_28px_-16px_rgba(43,75,255,0.9)] transition hover:bg-brand-600"
+        class="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-brand-600 to-violet-600 px-4 py-3.5 text-[14px] font-semibold text-white shadow-[0_14px_28px_-16px_rgba(43,75,255,0.9)] transition hover:-translate-y-0.5 hover:shadow-[0_18px_32px_-16px_rgba(43,75,255,0.95)]"
       >
         <Search :size="16" />
         Compare delivery options
@@ -154,7 +154,7 @@ function submitSearch() {
       v-if="searched"
       role="status"
       aria-live="polite"
-      class="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3.5 text-[12px] leading-relaxed text-amber-900"
+      class="mt-4 rounded-xl border border-amber-200/80 bg-gradient-to-br from-amber-50 to-orange-50/60 p-3.5 text-[12px] leading-relaxed text-amber-900 dark:border-amber-400/20 dark:from-amber-400/10 dark:to-orange-400/5 dark:text-amber-200"
     >
       <p class="font-semibold">{{ form.origin }} → {{ form.destination }} is ready to search.</p>
       <p class="mt-1 text-amber-900/75">

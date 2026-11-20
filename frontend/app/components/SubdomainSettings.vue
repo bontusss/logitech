@@ -86,10 +86,10 @@ async function save() {
 </script>
 
 <template>
-  <div class="rounded-xl border border-ink-900/10 bg-white p-5">
+  <div class="dash-panel rounded-2xl border p-5">
     <div class="flex items-start gap-2.5">
-      <span class="flex size-8 shrink-0 items-center justify-center rounded-lg bg-ink-900/5 text-ink-900/45">
-        <Globe2 :size="15" />
+      <span class="flex size-9 shrink-0 items-center justify-center rounded-xl bg-sky-100 text-sky-700 dark:bg-sky-400/15 dark:text-sky-200">
+        <Globe2 :size="16" />
       </span>
       <div>
         <h2 class="text-[14px] font-semibold">Company subdomain</h2>
@@ -122,7 +122,7 @@ async function save() {
         v-if="canManage"
         type="button"
         :disabled="checking || saving"
-        class="inline-flex items-center gap-1.5 rounded-lg bg-brand-500 px-3.5 py-2.5 text-[12px] font-semibold text-white transition hover:bg-brand-600 disabled:opacity-60"
+        class="inline-flex items-center gap-1.5 rounded-lg bg-brand-600 px-3.5 py-2.5 text-[12px] font-semibold text-white shadow-sm shadow-brand-600/20 transition hover:bg-brand-700 disabled:opacity-60"
         @click="save"
       >
         <Loader2 v-if="saving || checking" :size="14" class="animate-spin" />

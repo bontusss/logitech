@@ -145,7 +145,7 @@ async function toggleStatus(driver: Driver) {
 </script>
 
 <template>
-  <div class="driver-workspace">
+  <div class="driver-workspace dash-page">
     <div class="driver-page-hero flex flex-wrap items-center justify-between gap-4 rounded-2xl border p-5 sm:p-6">
       <div>
         <p class="inline-flex items-center gap-1.5 rounded-full bg-white/70 px-2.5 py-1 text-[10px] font-semibold tracking-wide text-brand-700 dark:bg-slate-950/30 dark:text-indigo-200">YOUR PEOPLE, ON THE MOVE</p>

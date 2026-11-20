@@ -31,10 +31,13 @@ function submit() {
 </script>
 
 <template>
-  <div class="mx-auto max-w-[1100px] px-5 py-14 sm:px-8 sm:py-20">
+  <div class="marketing-hero relative overflow-hidden">
+    <div aria-hidden="true" class="pointer-events-none absolute -top-40 right-[-6rem] size-[420px] rounded-full bg-brand-500/12 blur-[110px]" />
+    <div aria-hidden="true" class="pointer-events-none absolute bottom-[-14rem] left-[-8rem] size-[420px] rounded-full bg-amber-300/20 blur-[110px]" />
+    <div class="relative mx-auto max-w-[1100px] px-5 py-14 sm:px-8 sm:py-20">
     <NuxtLink
       to="/"
-      class="inline-flex items-center gap-1.5 text-[12.5px] font-medium text-ink-900/50 transition hover:text-ink-900"
+      class="inline-flex items-center gap-1.5 rounded-full border border-white/70 bg-white/60 px-3 py-1.5 text-[12.5px] font-medium text-ink-900/55 transition hover:-translate-x-0.5 hover:text-ink-900 dark:border-white/10 dark:bg-white/5"
     >
       <ArrowLeft :size="14" />
       Back to home
@@ -42,7 +45,8 @@ function submit() {
 
     <div class="mt-8 grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,0.9fr)]">
       <div>
-        <p class="text-[11px] font-semibold tracking-[0.2em] text-brand-600 uppercase">
+        <p class="inline-flex items-center gap-1.5 rounded-full border border-white/80 bg-white/70 px-2.5 py-1 text-[10px] font-bold tracking-[0.18em] text-brand-700 uppercase shadow-sm dark:border-white/10 dark:bg-white/5 dark:text-indigo-200">
+          <span class="size-1.5 rounded-full bg-gradient-to-r from-brand-500 to-violet-500" />
           Book a demo
         </p>
         <h1 class="mt-3 text-[clamp(1.9rem,4.4vw,2.9rem)] leading-[1.05] font-semibold tracking-[-0.04em]">
@@ -63,12 +67,14 @@ function submit() {
             :key="item"
             class="flex items-start gap-2.5 text-[13.5px] text-ink-900/65"
           >
-            <CheckCircle2 :size="16" class="mt-0.5 shrink-0 text-brand-600" />
+            <span class="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-lg bg-emerald-100 text-emerald-700 dark:bg-emerald-400/15 dark:text-emerald-200">
+              <CheckCircle2 :size="13" />
+            </span>
             {{ item }}
           </li>
         </ul>
 
-        <div class="mt-8 rounded-xl border border-ink-900/10 bg-white p-4">
+        <div class="site-panel mt-8 rounded-2xl border p-4">
           <p class="text-[12px] font-semibold">Prefer email?</p>
           <a
             href="mailto:hello@basedonlogistics.com?subject=BOL%20demo%20request"
@@ -80,9 +86,9 @@ function submit() {
         </div>
       </div>
 
-      <div class="rounded-2xl border border-ink-900/10 bg-white p-5 shadow-[0_24px_60px_-45px_rgba(10,18,32,0.4)] sm:p-6">
+      <div class="site-panel rounded-3xl border p-5 sm:p-6">
         <div v-if="sent" role="status" class="py-8 text-center">
-          <div class="mx-auto flex size-11 items-center justify-center rounded-full bg-brand-50 text-brand-600">
+          <div class="mx-auto flex size-12 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-500 text-white shadow-lg">
             <CheckCircle2 :size="22" />
           </div>
           <h2 class="mt-4 text-[17px] font-semibold">Request captured</h2>
@@ -149,7 +155,7 @@ function submit() {
 
           <button
             type="submit"
-            class="flex w-full items-center justify-center gap-2 rounded-lg bg-brand-500 px-4 py-3 text-sm font-semibold text-white shadow-[0_10px_28px_-14px_rgba(43,75,255,0.85)] transition hover:bg-brand-600"
+            class="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-brand-600 to-violet-600 px-4 py-3 text-sm font-semibold text-white shadow-[0_12px_26px_-16px_rgba(43,75,255,0.9)] transition hover:-translate-y-0.5"
           >
             Request Demo
             <ArrowRight :size="15" />
@@ -161,6 +167,7 @@ function submit() {
           </p>
         </form>
       </div>
+    </div>
     </div>
   </div>
 </template>

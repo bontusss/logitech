@@ -1,5 +1,18 @@
 <script setup lang="ts">
-import { CircleAlert, Loader2, Search, Send, SlidersHorizontal, UserPlus, X } from 'lucide-vue-next'
+import {
+  CheckCircle2,
+  CircleAlert,
+  Loader2,
+  Mail,
+  Search,
+  Send,
+  SlidersHorizontal,
+  Sparkles,
+  UserPlus,
+  Users,
+  UserX,
+  X,
+} from 'lucide-vue-next'
 import type { Branch, CompanyInvitation, Role, StaffMember } from '~/types/auth'
 
 definePageMeta({ middleware: 'auth', layout: 'app' })
@@ -199,39 +212,81 @@ async function revoke(invitation: CompanyInvitation) {
 </script>
 
 <template>
-  <div>
-    <div class="flex flex-wrap items-start justify-between gap-4">
-      <div>
-        <p class="text-[10.5px] font-semibold tracking-[0.2em] text-brand-600 uppercase">Company management</p>
-        <h1 class="mt-2 text-[clamp(1.6rem,3vw,2.1rem)] leading-tight font-semibold tracking-[-0.035em]">Staff</h1>
-        <p class="mt-2 max-w-2xl text-[13.5px] leading-relaxed text-ink-900/50">
-          Invite team members, assign them to branches and keep roles precise. Suspended members lose
-          access immediately; invitations expire after seven days.
-        </p>
+  <div class="dash-page">
+    <header class="dash-hero relative overflow-hidden rounded-2xl border p-5 sm:p-6">
+      <div class="pointer-events-none absolute -top-16 right-10 size-44 rounded-full bg-fuchsia-400/15 blur-3xl" />
+      <div class="pointer-events-none absolute -right-8 -bottom-24 size-52 rounded-full bg-cyan-400/15 blur-3xl" />
+      <div class="relative flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <p class="dash-eyebrow inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-semibold tracking-wide">
+            <Sparkles :size="12" /> YOUR TEAM
+          </p>
+          <h1 class="mt-2 text-[clamp(1.45rem,2.5vw,1.8rem)] leading-tight font-semibold tracking-[-0.04em]">Staff</h1>
+          <p class="mt-1.5 max-w-xl text-[12px] leading-relaxed text-ink-900/65">
+            Invite team members, assign them to branches and keep roles precise. Suspended members
+            lose access immediately; invitations expire after seven days.
+          </p>
+        </div>
+        <div class="flex items-center gap-2">
+          <LookupRefreshButton :loading="loading" @refresh="fetchData" />
+          <button
+            v-if="can('staff.invite')"
+            type="button"
+            class="inline-flex min-h-10 items-center gap-1.5 rounded-xl bg-brand-600 px-4 py-2.5 text-[12px] font-semibold text-white shadow-sm shadow-brand-600/20 transition hover:-translate-y-0.5 hover:bg-brand-700"
+            @click="inviteOpen = true"
+          >
+            <UserPlus :size="14" /> Invite staff
+          </button>
+        </div>
       </div>
-      <div class="flex items-center gap-2">
-        <LookupRefreshButton :loading="loading" @refresh="fetchData" />
-        <button
-          v-if="can('staff.invite')"
-          type="button"
-          class="inline-flex items-center gap-1.5 rounded-lg bg-brand-500 px-3.5 py-2.5 text-[12.5px] font-semibold text-white transition hover:bg-brand-600"
-          @click="inviteOpen = true"
-        >
-          <UserPlus :size="14" /> Invite staff
-        </button>
-      </div>
-    </div>
+    </header>
 
-    <p v-if="error" role="alert" class="mt-5 flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-3.5 py-2.5 text-[12px] text-red-700">
+    <p v-if="error" role="alert" class="mt-4 flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 px-3.5 py-2.5 text-[12px] text-red-700">
       <CircleAlert :size="14" class="mt-0.5 shrink-0" /> {{ error }}
     </p>
 
-    <div class="mt-5 flex flex-wrap items-center gap-2">
+    <section class="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4" aria-label="Staff summary">
+      <article class="dash-stat dash-stat--violet rounded-xl border p-4">
+        <div class="flex items-center justify-between gap-2">
+          <p class="text-[10px] font-semibold tracking-wide text-ink-900/50 uppercase">Team members</p>
+          <span class="flex size-6 items-center justify-center rounded-lg bg-white/80 text-violet-700 dark:bg-white/10 dark:text-violet-200"><Users :size="12" /></span>
+        </div>
+        <p class="mt-2 text-[22px] leading-none font-semibold tracking-tight">{{ members.length }}</p>
+      </article>
+      <article class="dash-stat dash-stat--mint rounded-xl border p-4">
+        <div class="flex items-center justify-between gap-2">
+          <p class="text-[10px] font-semibold tracking-wide text-ink-900/50 uppercase">Active</p>
+          <span class="flex size-6 items-center justify-center rounded-lg bg-white/80 text-emerald-700 dark:bg-white/10 dark:text-emerald-200"><CheckCircle2 :size="12" /></span>
+        </div>
+        <p class="mt-2 text-[22px] leading-none font-semibold tracking-tight">
+          {{ members.filter((member) => member.status === 'active').length }}
+        </p>
+      </article>
+      <article class="dash-stat dash-stat--rose rounded-xl border p-4">
+        <div class="flex items-center justify-between gap-2">
+          <p class="text-[10px] font-semibold tracking-wide text-ink-900/50 uppercase">Suspended</p>
+          <span class="flex size-6 items-center justify-center rounded-lg bg-white/80 text-rose-700 dark:bg-white/10 dark:text-rose-200"><UserX :size="12" /></span>
+        </div>
+        <p class="mt-2 text-[22px] leading-none font-semibold tracking-tight">
+          {{ members.filter((member) => member.status === 'suspended').length }}
+        </p>
+      </article>
+      <article class="dash-stat dash-stat--amber rounded-xl border p-4">
+        <div class="flex items-center justify-between gap-2">
+          <p class="text-[10px] font-semibold tracking-wide text-ink-900/50 uppercase">Invitations</p>
+          <span class="flex size-6 items-center justify-center rounded-lg bg-white/80 text-amber-700 dark:bg-white/10 dark:text-amber-200"><Mail :size="12" /></span>
+        </div>
+        <p class="mt-2 text-[22px] leading-none font-semibold tracking-tight">{{ invitations.length }}</p>
+        <p class="mt-1 text-[10px] text-ink-900/45">Waiting to be accepted</p>
+      </article>
+    </section>
+
+    <div class="mt-4 flex flex-wrap items-center gap-2">
       <label class="relative min-w-[200px] flex-1">
         <Search :size="14" class="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-ink-900/30" />
-        <input v-model="search" type="search" class="w-full rounded-lg border border-slate-300 bg-white py-2.5 pr-3 pl-8 text-[12.5px] focus:border-brand-500" placeholder="Search name, email or title" />
+        <input v-model="search" type="search" class="w-full rounded-xl border border-ink-900/10 bg-white py-2.5 pr-3 pl-8 text-[12.5px] shadow-sm outline-none focus:border-brand-500 dark:bg-white/5" placeholder="Search name, email or title" />
       </label>
-      <label class="flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-2.5 py-2 text-[11.5px]">
+      <label class="flex items-center gap-1.5 rounded-xl border border-ink-900/10 bg-white px-2.5 py-2 text-[11.5px] shadow-sm dark:bg-white/5">
         <SlidersHorizontal :size="13" class="text-ink-900/35" />
         <select v-model="status" class="bg-transparent text-[11.5px] outline-none">
           <option value="all">All statuses</option>
@@ -239,23 +294,23 @@ async function revoke(invitation: CompanyInvitation) {
           <option value="suspended">Suspended</option>
         </select>
       </label>
-      <label class="rounded-lg border border-slate-300 bg-white px-2.5 py-2">
+      <label class="rounded-xl border border-ink-900/10 bg-white px-2.5 py-2 shadow-sm dark:bg-white/5">
         <select v-model="branchFilter" class="bg-transparent text-[11.5px] outline-none">
           <option value="all">All branches</option>
           <option value="none">No branch assigned</option>
           <option v-for="branch in branches" :key="branch.id" :value="branch.id">{{ branch.name }}</option>
         </select>
       </label>
-      <span class="text-[10.5px] text-ink-900/35">{{ filtered.length }} shown</span>
+      <span class="text-[10.5px] text-ink-900/40">{{ filtered.length }} shown</span>
     </div>
 
-    <div v-if="loading && !members.length" class="mt-5 flex items-center gap-2 rounded-xl border border-ink-900/10 bg-white p-6 text-[12.5px] text-ink-900/45">
+    <div v-if="loading && !members.length" class="dash-panel mt-4 flex items-center gap-2 rounded-2xl border p-6 text-[12.5px] text-ink-900/45">
       <Loader2 :size="15" class="animate-spin" /> Loading staff…
     </div>
 
     <StaffTable
       v-else
-      class="mt-5"
+      class="mt-4"
       :members="filtered"
       :branches="branches"
       :can-update="can('staff.update')"
@@ -266,30 +321,30 @@ async function revoke(invitation: CompanyInvitation) {
       @remove="removeMember"
     />
 
-    <div v-if="devInviteToken" class="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4">
-      <p class="text-[11.5px] font-semibold text-amber-900">Development invitation link</p>
-      <p class="mt-1 text-[10.5px] leading-relaxed text-amber-800/80">
+    <div v-if="devInviteToken" class="mt-4 rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50/60 p-4 dark:border-amber-400/20 dark:from-amber-400/10 dark:to-orange-400/5">
+      <p class="text-[11.5px] font-semibold text-amber-900 dark:text-amber-200">Development invitation link</p>
+      <p class="mt-1 text-[10.5px] leading-relaxed text-amber-800/80 dark:text-amber-200/70">
         Email delivery is logged in development. Share this one-time link with the invited staff member.
       </p>
-      <NuxtLink :to="`/invitations/${devInviteToken}`" class="mt-2 inline-block break-all text-[11px] font-semibold text-amber-900 underline underline-offset-2">
+      <NuxtLink :to="`/invitations/${devInviteToken}`" class="mt-2 inline-block break-all text-[11px] font-semibold text-amber-900 underline underline-offset-2 dark:text-amber-200">
         /invitations/{{ devInviteToken }}
       </NuxtLink>
     </div>
 
-    <div v-if="can('staff.invite')" class="mt-6 rounded-xl border border-ink-900/10 bg-white">
+    <div v-if="can('staff.invite')" class="dash-panel mt-4 overflow-hidden rounded-2xl border">
       <div class="flex items-center justify-between gap-3 border-b border-ink-900/8 px-4 py-3.5">
         <div>
           <h2 class="text-[13.5px] font-semibold">Pending invitations</h2>
           <p class="mt-0.5 text-[10.5px] text-ink-900/40">Unaccepted links expire automatically.</p>
         </div>
-        <span class="text-[10.5px] text-ink-900/40">{{ invitations.length }}</span>
+        <span class="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700 dark:bg-amber-400/10 dark:text-amber-200">{{ invitations.length }}</span>
       </div>
 
       <div v-if="invitations.length === 0" class="px-4 py-8 text-center text-[11.5px] text-ink-900/40">
         No pending invitations.
       </div>
       <ul v-else class="divide-y divide-ink-900/8">
-        <li v-for="invitation in invitations" :key="invitation.id" class="flex flex-wrap items-center gap-2 px-4 py-3">
+        <li v-for="invitation in invitations" :key="invitation.id" class="flex flex-wrap items-center gap-2 px-4 py-3 transition hover:bg-brand-50/20">
           <div class="min-w-0 flex-1">
             <p class="truncate text-[12px] font-medium">{{ invitation.email }}</p>
             <p class="mt-0.5 text-[10px] text-ink-900/40">
@@ -326,13 +381,19 @@ async function revoke(invitation: CompanyInvitation) {
         aria-label="Edit staff member"
         @click.self="editing = null"
       >
-        <form class="max-h-full w-full max-w-lg overflow-y-auto rounded-2xl border border-ink-900/10 bg-white p-5 shadow-2xl" @submit.prevent="saveMember">
+        <form class="dash-modal max-h-full w-full max-w-lg overflow-y-auto rounded-2xl border p-5 shadow-2xl" @submit.prevent="saveMember">
           <div class="flex items-start justify-between gap-3">
-            <div>
-              <h2 class="text-[16px] font-semibold">Edit staff member</h2>
-              <p class="mt-1 text-[11.5px] text-ink-900/45">{{ editing.full_name }} · {{ editing.email }}</p>
+            <div class="flex items-start gap-3">
+              <span class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-violet-100 text-violet-700 dark:bg-violet-400/15 dark:text-violet-200">
+                <Users :size="18" />
+              </span>
+              <div>
+                <p class="text-[9.5px] font-semibold tracking-[0.16em] text-brand-700 uppercase dark:text-indigo-200">TEAM MEMBER</p>
+                <h2 class="mt-1 text-[16px] font-semibold">Edit staff member</h2>
+                <p class="mt-1 text-[11.5px] text-ink-900/45">{{ editing.full_name }} · {{ editing.email }}</p>
+              </div>
             </div>
-            <button type="button" class="text-ink-900/35 hover:text-ink-900" aria-label="Close" @click="editing = null">
+            <button type="button" class="rounded-lg p-1.5 text-ink-900/35 hover:bg-ink-900/5 hover:text-ink-900" aria-label="Close" @click="editing = null">
               <X :size="16" />
             </button>
           </div>
@@ -382,7 +443,7 @@ async function revoke(invitation: CompanyInvitation) {
 
           <div class="mt-5 flex justify-end gap-2">
             <button type="button" class="rounded-lg border border-slate-300 px-3.5 py-2 text-[12.5px] font-medium transition hover:bg-slate-50" @click="editing = null">Cancel</button>
-            <button type="submit" :disabled="editingSaving" class="inline-flex items-center gap-1.5 rounded-lg bg-brand-500 px-4 py-2.5 text-[12.5px] font-semibold text-white transition hover:bg-brand-600 disabled:opacity-60">
+            <button type="submit" :disabled="editingSaving" class="inline-flex items-center gap-1.5 rounded-lg bg-brand-600 px-4 py-2.5 text-[12.5px] font-semibold text-white transition hover:bg-brand-700 disabled:opacity-60">
               <Loader2 v-if="editingSaving" :size="14" class="animate-spin" />
               <Send v-else :size="14" />
               Save changes

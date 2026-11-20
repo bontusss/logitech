@@ -49,8 +49,10 @@ const socials = [
 </script>
 
 <template>
-  <footer id="contact" class="border-t border-white/10 bg-ink-950 text-white">
-    <div class="mx-auto max-w-[1200px] px-5 py-14 sm:px-8">
+  <footer id="contact" class="relative border-t border-white/10 bg-ink-950 text-white">
+    <div aria-hidden="true" class="h-px w-full bg-gradient-to-r from-transparent via-brand-500/50 to-transparent" />
+    <div aria-hidden="true" class="pointer-events-none absolute -top-24 right-10 size-72 rounded-full bg-brand-500/10 blur-3xl" />
+    <div class="relative mx-auto max-w-[1200px] px-5 py-14 sm:px-8">
       <div class="grid gap-12 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,2fr)]">
         <div>
           <AppLogo :size="36" tone="light" />
@@ -81,7 +83,7 @@ const socials = [
               :key="social.label"
               :href="social.to"
               :aria-label="`${social.label} (placeholder)`"
-              class="flex size-9 items-center justify-center rounded-lg border border-white/12 text-white/50 transition hover:border-white/25 hover:text-white"
+              class="flex size-9 items-center justify-center rounded-xl border border-white/12 bg-white/5 text-white/50 transition hover:-translate-y-0.5 hover:border-brand-400/40 hover:bg-brand-500/15 hover:text-white"
             >
               <component :is="social.icon" :size="15" />
             </a>
@@ -90,7 +92,8 @@ const socials = [
 
         <div class="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
           <div v-for="column in columns" :key="column.title">
-            <p class="text-[10.5px] font-semibold tracking-[0.2em] text-white/35 uppercase">
+            <p class="flex items-center gap-2 text-[10.5px] font-semibold tracking-[0.2em] text-white/40 uppercase">
+              <span class="h-px w-3 rounded-full bg-brand-400/70" />
               {{ column.title }}
             </p>
             <ul class="mt-4 space-y-2.5">
@@ -114,7 +117,7 @@ const socials = [
         <div class="flex items-center gap-4 text-[12.5px] text-white/35">
           <a href="#" class="transition hover:text-white">Terms</a>
           <a href="#" class="transition hover:text-white">Privacy</a>
-          <AppButton to="#top" variant="ghost" size="sm" class="text-white/50 hover:bg-white/10 hover:text-white">
+          <AppButton to="#top" variant="ghost" size="sm" class="rounded-full border border-white/10 text-white/55 hover:bg-white/10 hover:text-white">
             Back to top
             <ArrowRight :size="13" class="-rotate-90" />
           </AppButton>

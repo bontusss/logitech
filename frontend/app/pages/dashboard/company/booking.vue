@@ -9,6 +9,7 @@ import {
   ExternalLink,
   Loader2,
   Save,
+  Sparkles,
 } from 'lucide-vue-next'
 import * as QRCode from 'qrcode'
 
@@ -179,26 +180,32 @@ function downloadQrCode() {
 </script>
 
 <template>
-  <div>
-    <div class="flex flex-wrap items-start justify-between gap-4">
-      <div>
-        <p class="text-[10.5px] font-semibold tracking-[0.2em] text-brand-600 uppercase">
-          Company management
-        </p>
-        <h1 class="mt-2 text-[clamp(1.6rem,3vw,2.1rem)] leading-tight font-semibold tracking-[-0.035em]">
-          Booking page
-        </h1>
-        <p class="mt-2 max-w-2xl text-[13.5px] leading-relaxed text-ink-900/50">
-          A public page customers can open to learn about your business and get in touch. Your page
-          lives at <span class="font-mono text-[12.5px] text-ink-900/70">{{ publicURL }}</span>.
-        </p>
+  <div class="dash-page">
+    <header class="dash-hero relative overflow-hidden rounded-2xl border p-5 sm:p-6">
+      <div class="pointer-events-none absolute -top-16 right-10 size-44 rounded-full bg-fuchsia-400/15 blur-3xl" />
+      <div class="pointer-events-none absolute -right-8 -bottom-24 size-52 rounded-full bg-cyan-400/15 blur-3xl" />
+      <div class="relative flex flex-wrap items-start justify-between gap-4">
+        <div class="min-w-0">
+          <p class="dash-eyebrow inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-semibold tracking-wide">
+            <Sparkles :size="12" /> YOUR STOREFRONT
+          </p>
+          <h1 class="mt-2 text-[clamp(1.45rem,2.5vw,1.8rem)] leading-tight font-semibold tracking-[-0.04em]">
+            Booking page
+          </h1>
+          <p class="mt-1.5 max-w-xl text-[12px] leading-relaxed text-ink-900/65">
+            A public page customers can open to learn about your business and get in touch.
+          </p>
+          <span class="mt-2 inline-flex max-w-full items-center gap-1.5 rounded-full bg-white/70 px-2.5 py-1 font-mono text-[11px] text-ink-900/60 dark:bg-white/10">
+            <ExternalLink :size="11" class="shrink-0" /> {{ publicURL }}
+          </span>
+        </div>
+        <LookupRefreshButton :loading="pageLoading" @refresh="loadPage" />
       </div>
-      <LookupRefreshButton :loading="pageLoading" @refresh="loadPage" />
-    </div>
+    </header>
 
     <p
       v-if="loading && !detail"
-      class="mt-8 flex items-center gap-2 rounded-xl border border-ink-900/10 bg-white p-6 text-[13px] text-ink-900/50"
+      class="dash-panel mt-4 flex items-center gap-2 rounded-2xl border p-6 text-[13px] text-ink-900/50"
     >
       <Loader2 :size="16" class="animate-spin" /> Loading workspace…
     </p>
@@ -238,17 +245,22 @@ function downloadQrCode() {
         <CircleAlert :size="16" class="mt-0.5 shrink-0" /> {{ pageError }}
       </p>
 
-      <div class="mt-5 grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
+      <div class="mt-4 grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
         <form
-          class="rounded-xl border border-ink-900/10 bg-white p-5 sm:p-6"
+          class="dash-panel rounded-2xl border p-5 sm:p-6"
           @submit.prevent="save"
         >
-          <h2 class="flex items-center gap-2 text-[15px] font-semibold">
-            <CalendarCheck :size="16" /> Page details
-          </h2>
-          <p class="mt-1 text-[11.5px] text-ink-900/45">
-            Choose the link customers will see and the message shown on the page.
-          </p>
+          <div class="flex items-start gap-3">
+            <span class="flex size-9 shrink-0 items-center justify-center rounded-xl bg-cyan-100 text-cyan-700 dark:bg-cyan-400/15 dark:text-cyan-200">
+              <CalendarCheck :size="16" />
+            </span>
+            <div>
+              <h2 class="text-[15px] font-semibold">Page details</h2>
+              <p class="mt-1 text-[11.5px] text-ink-900/45">
+                Choose the link customers will see and the message shown on the page.
+              </p>
+            </div>
+          </div>
 
           <div class="mt-5 space-y-4">
             <label class="block">
@@ -356,7 +368,7 @@ function downloadQrCode() {
         </form>
 
         <aside class="space-y-4">
-          <div class="rounded-xl border border-ink-900/10 bg-white p-5">
+          <div class="dash-panel rounded-2xl border p-5">
             <h2 class="text-[13px] font-semibold">Your page link</h2>
             <p class="mt-2 break-all rounded-lg bg-canvas px-3 py-2.5 font-mono text-[11.5px] text-ink-900/70">
               {{ publicURL }}
@@ -410,8 +422,10 @@ function downloadQrCode() {
             </p>
           </div>
 
-          <div class="rounded-xl border border-ink-900/10 bg-canvas p-5 text-[11.5px] leading-relaxed text-ink-900/50">
-            <p class="font-semibold text-ink-900/70">What customers see</p>
+          <div class="dash-soft rounded-2xl border p-5 text-[11.5px] leading-relaxed text-ink-900/50">
+            <p class="flex items-center gap-1.5 font-semibold text-ink-900/70">
+              <Sparkles :size="13" class="text-brand-500" /> What customers see
+            </p>
             <p class="mt-1.5">
               Your public name, logo, colours, business details and contact options, along with the
               headline and description you set here.

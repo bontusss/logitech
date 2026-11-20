@@ -16,6 +16,7 @@ import {
   ExternalLink,
   Clock3,
   Link,
+  Sparkles,
 } from 'lucide-vue-next'
 import type { CompanyDetail } from '~/types/auth'
 
@@ -304,36 +305,42 @@ function paymentLabel(delivery: Delivery) {
 </script>
 
 <template>
-  <div class="delivery-workspace">
-    <header class="delivery-page-hero flex flex-wrap items-center justify-between gap-4 rounded-2xl border p-5 sm:p-6">
-      <div>
-        <p class="inline-flex items-center gap-1.5 rounded-full bg-white/70 px-2.5 py-1 text-[10px] font-semibold tracking-wide text-brand-700 dark:bg-slate-950/30 dark:text-indigo-200">MOVE IT FORWARD</p>
-        <h1 class="mt-2 text-[clamp(1.45rem,2.5vw,1.8rem)] leading-tight font-semibold tracking-[-0.04em]">Deliveries</h1>
-        <p class="mt-1.5 max-w-2xl text-[12px] leading-relaxed text-ink-900/60">
-          Every pickup, handoff and payment detail, in one place.
-        </p>
+  <div class="delivery-workspace dash-page">
+    <header class="delivery-page-hero relative overflow-hidden rounded-2xl border p-5 sm:p-6">
+      <div class="pointer-events-none absolute -top-20 right-12 size-48 rounded-full bg-fuchsia-400/15 blur-3xl" />
+      <div class="pointer-events-none absolute -right-10 -bottom-28 size-56 rounded-full bg-cyan-400/15 blur-3xl" />
+      <div class="relative flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <p class="dash-eyebrow inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-semibold tracking-wide">
+            <Sparkles :size="12" /> MOVE IT FORWARD
+          </p>
+          <h1 class="mt-2 text-[clamp(1.45rem,2.5vw,1.8rem)] leading-tight font-semibold tracking-[-0.04em]">Deliveries</h1>
+          <p class="mt-1.5 max-w-xl text-[12px] leading-relaxed text-ink-900/65">
+            Every pickup, handoff and payment detail, in one place.
+          </p>
+        </div>
+        <button
+          v-if="can('shipments.create')"
+          type="button"
+          class="inline-flex min-h-10 items-center gap-1.5 rounded-xl bg-brand-600 px-4 py-2.5 text-[12px] font-semibold text-white shadow-sm shadow-brand-600/20 transition hover:-translate-y-0.5 hover:bg-brand-700"
+          @click="formOpen = true"
+        >
+          <Plus :size="14" /> Create delivery
+        </button>
       </div>
-      <button
-        v-if="can('shipments.create')"
-        type="button"
-        class="inline-flex min-h-10 items-center gap-1.5 rounded-xl bg-brand-600 px-4 py-2.5 text-[12px] font-semibold text-white shadow-sm shadow-brand-600/20 transition hover:-translate-y-0.5 hover:bg-brand-700"
-        @click="formOpen = true"
-      >
-        <Plus :size="14" /> Create delivery
-      </button>
     </header>
 
     <p v-if="error && !formOpen" role="alert" class="mt-5 flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-3.5 py-2.5 text-[12px] text-red-700">
       <CircleAlert :size="14" class="mt-0.5 shrink-0" /> {{ error }}
     </p>
 
-    <div class="mt-6 flex gap-1 border-b border-ink-900/10" role="tablist" aria-label="Delivery views">
+    <div class="mt-5 inline-flex rounded-xl border border-ink-900/10 bg-white p-1 dark:bg-white/5" role="tablist" aria-label="Delivery views">
       <button
         type="button"
         role="tab"
         :aria-selected="activeTab === 'dispatch'"
-        class="inline-flex items-center gap-2 border-b-2 px-3.5 py-3 text-[12px] font-semibold transition"
-        :class="activeTab === 'dispatch' ? 'border-brand-600 text-brand-700' : 'border-transparent text-ink-900/45 hover:text-ink-900'"
+        class="inline-flex items-center gap-2 rounded-lg px-3.5 py-2 text-[12px] font-semibold transition"
+        :class="activeTab === 'dispatch' ? 'bg-brand-600 text-white shadow-sm shadow-brand-600/25' : 'text-ink-900/55 hover:text-ink-900'"
         @click="activeTab = 'dispatch'"
       >
         <Truck :size="14" /> Dispatch board
@@ -342,8 +349,8 @@ function paymentLabel(delivery: Delivery) {
         type="button"
         role="tab"
         :aria-selected="activeTab === 'all'"
-        class="inline-flex items-center gap-2 border-b-2 px-3.5 py-3 text-[12px] font-semibold transition"
-        :class="activeTab === 'all' ? 'border-brand-600 text-brand-700' : 'border-transparent text-ink-900/45 hover:text-ink-900'"
+        class="inline-flex items-center gap-2 rounded-lg px-3.5 py-2 text-[12px] font-semibold transition"
+        :class="activeTab === 'all' ? 'bg-brand-600 text-white shadow-sm shadow-brand-600/25' : 'text-ink-900/55 hover:text-ink-900'"
         @click="activeTab = 'all'"
       >
         <ClipboardList :size="14" /> All deliveries
@@ -351,27 +358,32 @@ function paymentLabel(delivery: Delivery) {
     </div>
 
     <section v-if="activeTab === 'dispatch'" class="mt-5">
-      <div class="grid grid-cols-3 gap-2" role="tablist" aria-label="Dispatch stages">
+      <div class="grid grid-cols-3 gap-2 sm:gap-3" role="tablist" aria-label="Dispatch stages">
         <button
           v-for="stage in ([
-            { id: 'inbox', label: 'Inbox', count: pendingRequests.length },
-            { id: 'active', label: 'Active', count: activeDeliveries.length },
-            { id: 'done', label: 'Done today', count: doneTodayDeliveries.length },
+            { id: 'inbox', label: 'Inbox', count: pendingRequests.length, icon: ClipboardList, tone: 'amber' },
+            { id: 'active', label: 'Active', count: activeDeliveries.length, icon: Truck, tone: 'blue' },
+            { id: 'done', label: 'Done today', count: doneTodayDeliveries.length, icon: Check, tone: 'mint' },
           ] as const)"
           :key="stage.id"
           type="button"
           role="tab"
           :aria-selected="dispatchStage === stage.id"
-          class="rounded-xl border px-3 py-3 text-left transition sm:px-4"
-          :class="dispatchStage === stage.id ? 'border-brand-300 bg-brand-50 text-brand-800' : 'border-ink-900/10 bg-white text-ink-900/65 hover:border-ink-900/20'"
+          class="dash-stat rounded-xl border p-3.5 text-left sm:p-4"
+          :class="[`dash-stat--${stage.tone}`, dispatchStage === stage.id ? 'dash-stat--active' : '']"
           @click="dispatchStage = stage.id"
         >
-          <span class="block text-[9px] font-semibold uppercase tracking-wide opacity-65 sm:text-[10px]">{{ stage.label }}</span>
-          <span class="mt-1 block text-[20px] font-semibold leading-none">{{ stage.count }}</span>
+          <span class="flex items-center justify-between gap-2">
+            <span class="text-[10px] font-semibold tracking-wide text-ink-900/50 uppercase">{{ stage.label }}</span>
+            <span class="flex size-6 items-center justify-center rounded-lg bg-white/80 text-ink-900/45 dark:bg-white/10">
+              <component :is="stage.icon" :size="12" />
+            </span>
+          </span>
+          <span class="mt-2 block text-[22px] leading-none font-semibold tracking-tight">{{ stage.count }}</span>
         </button>
       </div>
 
-      <div class="mt-4 overflow-hidden rounded-xl border border-ink-900/10 bg-white">
+      <div class="dash-panel mt-4 overflow-hidden rounded-2xl border">
         <div class="flex flex-wrap items-center justify-between gap-3 border-b border-ink-900/8 p-4">
           <div>
             <h2 class="text-[13px] font-semibold">
@@ -406,7 +418,9 @@ function paymentLabel(delivery: Delivery) {
           v-else-if="dispatchStage === 'inbox' && pendingRequests.length === 0"
           class="p-8 text-center"
         >
-          <ClipboardList :size="22" class="mx-auto text-ink-900/25" />
+          <span class="mx-auto flex size-11 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-100 to-orange-50 text-amber-700 dark:from-amber-400/15 dark:to-orange-400/10 dark:text-amber-200">
+            <ClipboardList :size="19" />
+          </span>
           <h3 class="mt-3 text-[13px] font-semibold">Inbox is clear</h3>
           <p class="mt-1 text-[11.5px] text-ink-900/45">New bookings from your provider page will appear here.</p>
         </div>
@@ -474,7 +488,7 @@ function paymentLabel(delivery: Delivery) {
       </div>
     </section>
 
-    <section v-else class="mt-5 overflow-hidden rounded-xl border border-ink-900/10 bg-white">
+    <section v-else class="dash-panel mt-4 overflow-hidden rounded-2xl border">
       <div class="flex flex-col gap-3 border-b border-ink-900/8 p-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 class="text-[13px] font-semibold">All deliveries</h2>
@@ -502,17 +516,17 @@ function paymentLabel(delivery: Delivery) {
         </p>
       </div>
       <div v-else class="divide-y divide-ink-900/8">
-        <article v-for="delivery in filteredDeliveries" :key="delivery.id" class="p-4 sm:p-5">
+        <article v-for="delivery in filteredDeliveries" :key="delivery.id" class="p-4 transition hover:bg-brand-50/20 sm:p-5">
           <div class="flex flex-wrap items-start justify-between gap-3">
             <div class="flex items-center gap-2.5">
-              <span class="flex size-9 items-center justify-center rounded-lg bg-brand-50 text-brand-700"><Truck :size="16" /></span>
+              <span class="flex size-9 items-center justify-center rounded-xl bg-gradient-to-br from-sky-100 to-cyan-50 text-sky-700 dark:from-sky-400/15 dark:to-cyan-400/10 dark:text-sky-200"><Truck :size="16" /></span>
               <div>
                 <h3 class="text-[12px] font-semibold">{{ deliveryReference(delivery.id) }}</h3>
                 <p class="mt-0.5 text-[10px] capitalize text-ink-900/40">{{ statusLabel(delivery.status) }} · {{ new Date(delivery.created_at).toLocaleString() }}</p>
               </div>
             </div>
             <p v-if="delivery.price_is_estimate && !delivery.delivery_price_minor" class="rounded-full bg-amber-50 px-2.5 py-1 text-[9px] font-semibold text-amber-800">Price to confirm</p>
-            <p v-else class="text-[13px] font-semibold">{{ formatMoney(delivery.delivery_price_minor) }}</p>
+            <p v-else class="text-[14px] font-semibold tracking-tight">{{ formatMoney(delivery.delivery_price_minor) }}</p>
           </div>
           <div class="mt-4 grid gap-3 text-[11px] sm:grid-cols-2">
             <div class="flex gap-2">

@@ -301,6 +301,601 @@ html.dark .dashboard-overview {
   font-size: 0.9375rem !important;
 }
 
+/* --------------------------------------------------------------------------
+   Dashboard workspace layer
+   Shared by every dashboard page. The overview keeps its own scope; this is
+   the same visual language: soft pastel gradients, paper-white panels and a
+   calmer type scale than the public marketing pages.
+-------------------------------------------------------------------------- */
+.dash-page {
+  --dash-panel: #ffffff;
+  --dash-border: rgb(37 42 79 / 9%);
+  --dash-soft: #f8f7fd;
+  --dash-shadow: 0 1px 2px rgb(16 24 40 / 4%);
+}
+
+html.dark .dash-page {
+  --dash-panel: #111827;
+  --dash-border: rgb(203 213 225 / 12%);
+  --dash-soft: #171f2e;
+  --dash-shadow: 0 1px 2px rgb(0 0 0 / 20%);
+}
+
+.dash-page .dash-panel {
+  border-color: var(--dash-border);
+  background: var(--dash-panel);
+  box-shadow: var(--dash-shadow);
+}
+
+.dash-page .dash-hero {
+  border-color: var(--dash-border);
+  background:
+    radial-gradient(circle at 88% 8%, rgb(167 139 250 / 22%), transparent 27%),
+    radial-gradient(circle at 96% 100%, rgb(34 211 238 / 16%), transparent 30%),
+    linear-gradient(115deg, #f3efff 0%, #fff8f1 54%, #effaff 100%);
+  box-shadow: 0 22px 45px -38px rgb(43 75 255 / 60%);
+}
+
+html.dark .dash-page .dash-hero {
+  background:
+    radial-gradient(circle at 88% 8%, rgb(167 139 250 / 16%), transparent 27%),
+    radial-gradient(circle at 96% 100%, rgb(34 211 238 / 11%), transparent 30%),
+    linear-gradient(115deg, #211d3d 0%, #2a2029 54%, #112c37 100%);
+}
+
+.dash-page .dash-stat {
+  border-color: var(--dash-border);
+  transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
+}
+
+.dash-page .dash-stat:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 16px 30px -24px rgb(24 32 64 / 55%);
+}
+
+.dash-page .dash-stat--active {
+  border-color: rgb(43 75 255 / 45%);
+  box-shadow: inset 0 0 0 1px rgb(43 75 255 / 28%), 0 14px 28px -24px rgb(43 75 255 / 70%);
+}
+
+.dash-page .dash-stat--violet {
+  background: linear-gradient(145deg, #f3edff, var(--dash-panel));
+}
+
+.dash-page .dash-stat--mint {
+  background: linear-gradient(145deg, #e6faf1, var(--dash-panel));
+}
+
+.dash-page .dash-stat--peach {
+  background: linear-gradient(145deg, #fff0e6, var(--dash-panel));
+}
+
+.dash-page .dash-stat--blue {
+  background: linear-gradient(145deg, #eaf4ff, var(--dash-panel));
+}
+
+.dash-page .dash-stat--amber {
+  background: linear-gradient(145deg, #fff6df, var(--dash-panel));
+}
+
+.dash-page .dash-stat--rose {
+  background: linear-gradient(145deg, #ffeef2, var(--dash-panel));
+}
+
+html.dark .dash-page .dash-stat--violet {
+  background: linear-gradient(145deg, #29223f, var(--dash-panel));
+}
+
+html.dark .dash-page .dash-stat--mint {
+  background: linear-gradient(145deg, #15342d, var(--dash-panel));
+}
+
+html.dark .dash-page .dash-stat--peach {
+  background: linear-gradient(145deg, #3a2821, var(--dash-panel));
+}
+
+html.dark .dash-page .dash-stat--blue {
+  background: linear-gradient(145deg, #192e43, var(--dash-panel));
+}
+
+html.dark .dash-page .dash-stat--amber {
+  background: linear-gradient(145deg, #3a2f16, var(--dash-panel));
+}
+
+html.dark .dash-page .dash-stat--rose {
+  background: linear-gradient(145deg, #3b1e2a, var(--dash-panel));
+}
+
+.dash-page .dash-card {
+  border-color: var(--dash-border);
+  background: var(--dash-panel);
+  transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
+}
+
+.dash-page .dash-card:hover {
+  transform: translateY(-2px);
+  border-color: rgb(129 140 248 / 45%);
+  box-shadow: 0 18px 32px -26px rgb(24 32 64 / 55%);
+}
+
+.dash-page .dash-soft {
+  border-color: var(--dash-border);
+  background: var(--dash-soft);
+}
+
+.dash-page .dash-eyebrow {
+  background: rgb(255 255 255 / 72%);
+  color: #1930b8;
+}
+
+html.dark .dash-page .dash-eyebrow {
+  background: rgb(2 6 23 / 35%);
+  color: #c7d2fe;
+}
+
+.dash-page .dash-link-tile {
+  border-color: var(--dash-border);
+  background: var(--dash-panel);
+  transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
+}
+
+.dash-page .dash-link-tile:hover {
+  transform: translateY(-3px);
+  border-color: rgb(129 140 248 / 50%);
+  box-shadow: 0 20px 36px -28px rgb(24 32 64 / 60%);
+}
+
+/* The dashboard is information-dense; keep meta copy smaller than the
+   marketing pages, matching the overview page scale. */
+.dash-page [class~="text-[9px]"],
+.dash-page [class~="text-[9.5px]"],
+.dash-page [class~="text-[10px]"],
+.dash-page [class~="text-[10.5px]"],
+.public-booking [class~="text-[9px]"],
+.public-booking [class~="text-[9.5px]"],
+.public-booking [class~="text-[10px]"],
+.public-booking [class~="text-[10.5px]"] {
+  font-size: 0.75rem !important;
+}
+
+.dash-page [class~="text-[11px]"],
+.dash-page [class~="text-[11.5px]"],
+.public-booking [class~="text-[11px]"],
+.public-booking [class~="text-[11.5px]"] {
+  font-size: 0.8125rem !important;
+}
+
+.dash-page [class~="text-[12px]"],
+.dash-page [class~="text-[12.5px]"],
+.public-booking [class~="text-[12px]"],
+.public-booking [class~="text-[12.5px]"] {
+  font-size: 0.875rem !important;
+}
+
+.dash-page [class~="text-[13px]"],
+.dash-page [class~="text-[13.5px]"],
+.public-booking [class~="text-[13px]"],
+.public-booking [class~="text-[13.5px]"] {
+  font-size: 0.9375rem !important;
+}
+
+.dash-page .dash-modal {
+  border-color: var(--dash-border);
+  background: var(--dash-soft);
+  color: var(--color-ink-900);
+}
+
+.dash-page .dash-modal input,
+.dash-page .dash-modal select,
+.dash-page .dash-modal textarea,
+.dash-modal input,
+.dash-modal select,
+.dash-modal textarea {
+  border-color: var(--dash-border, rgb(37 42 79 / 14%));
+  background-color: var(--dash-panel, #fff);
+  color: var(--color-ink-900);
+  font-size: 0.875rem;
+}
+
+.dash-modal [class~="text-[9px]"],
+.dash-modal [class~="text-[9.5px]"],
+.dash-modal [class~="text-[10px]"],
+.dash-modal [class~="text-[10.5px]"],
+.dash-modal [class~="text-[11px]"],
+.dash-modal [class~="text-[11.5px]"],
+.dash-modal [class~="text-[12px]"],
+.dash-modal [class~="text-[12.5px]"] {
+  font-size: 0.8125rem !important;
+}
+
+.dash-modal [class~="text-[9px]"],
+.dash-modal [class~="text-[9.5px]"],
+.dash-modal [class~="text-[10px]"] {
+  font-size: 0.75rem !important;
+}
+
+/* Sidebar ---------------------------------------------------------------- */
+.app-sidebar {
+  border-color: rgb(37 42 79 / 8%);
+  background:
+    radial-gradient(circle at 8% 0%, rgb(167 139 250 / 18%), transparent 34%),
+    radial-gradient(circle at 100% 16%, rgb(56 189 248 / 13%), transparent 36%),
+    linear-gradient(180deg, #fbfaff 0%, #ffffff 46%, #f6fbff 100%);
+}
+
+html.dark .app-sidebar {
+  border-color: rgb(203 213 225 / 12%);
+  background:
+    radial-gradient(circle at 8% 0%, rgb(129 140 248 / 15%), transparent 34%),
+    radial-gradient(circle at 100% 16%, rgb(34 211 238 / 10%), transparent 36%),
+    linear-gradient(180deg, #0d1424 0%, #0b1120 50%, #0c1526 100%);
+}
+
+.app-sidebar .sidebar-company {
+  border-color: rgb(43 75 255 / 16%);
+  background: linear-gradient(120deg, #f0edff 0%, #fff8f1 100%);
+}
+
+html.dark .app-sidebar .sidebar-company {
+  border-color: rgb(129 140 248 / 22%);
+  background: linear-gradient(120deg, #211d3d 0%, #25202c 100%);
+}
+
+.app-sidebar .sidebar-link {
+  transition: background-color 150ms ease, color 150ms ease, box-shadow 150ms ease;
+}
+
+.app-sidebar .sidebar-link--active {
+  background: linear-gradient(100deg, #2b4bff 0%, #6d5bff 56%, #8b5cf6 100%);
+  color: #fff;
+  box-shadow: 0 14px 26px -18px rgb(43 75 255 / 90%);
+}
+
+.app-sidebar .sidebar-link--active:hover {
+  background: linear-gradient(100deg, #2b4bff 0%, #6d5bff 56%, #8b5cf6 100%);
+  color: #fff;
+}
+
+.app-sidebar .sidebar-icon {
+  display: flex;
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border-radius: 7px;
+  background: rgb(99 102 241 / 8%);
+  color: rgb(67 56 202 / 85%);
+  transition: background-color 150ms ease, color 150ms ease;
+}
+
+.app-sidebar .sidebar-icon--violet {
+  background: #f1eaff;
+  color: #7c3aed;
+}
+
+.app-sidebar .sidebar-icon--sky {
+  background: #e6f4ff;
+  color: #0284c7;
+}
+
+.app-sidebar .sidebar-icon--mint {
+  background: #e4faf0;
+  color: #059669;
+}
+
+.app-sidebar .sidebar-icon--amber {
+  background: #fff3d6;
+  color: #b45309;
+}
+
+.app-sidebar .sidebar-icon--rose {
+  background: #ffe9ef;
+  color: #be123c;
+}
+
+.app-sidebar .sidebar-icon--cyan {
+  background: #e2fbfb;
+  color: #0e7490;
+}
+
+html.dark .app-sidebar .sidebar-icon--violet {
+  background: rgb(139 92 246 / 18%);
+  color: #c4b5fd;
+}
+
+html.dark .app-sidebar .sidebar-icon--sky {
+  background: rgb(56 189 248 / 16%);
+  color: #7dd3fc;
+}
+
+html.dark .app-sidebar .sidebar-icon--mint {
+  background: rgb(52 211 153 / 16%);
+  color: #6ee7b7;
+}
+
+html.dark .app-sidebar .sidebar-icon--amber {
+  background: rgb(251 191 36 / 16%);
+  color: #fcd34d;
+}
+
+html.dark .app-sidebar .sidebar-icon--rose {
+  background: rgb(251 113 133 / 16%);
+  color: #fda4af;
+}
+
+html.dark .app-sidebar .sidebar-icon--cyan {
+  background: rgb(34 211 238 / 16%);
+  color: #67e8f9;
+}
+
+.app-sidebar .sidebar-link--active .sidebar-icon {
+  background: rgb(255 255 255 / 20%);
+  color: #fff;
+}
+
+.app-sidebar .sidebar-footer-link {
+  transition: background-color 150ms ease, color 150ms ease;
+}
+
+.app-sidebar [class~="text-[8.5px]"],
+.app-sidebar [class~="text-[9px]"],
+.app-sidebar [class~="text-[9.5px]"],
+.app-sidebar [class~="text-[10px]"],
+.app-sidebar [class~="text-[10.5px]"] {
+  font-size: 0.6875rem !important;
+}
+
+.app-sidebar [class~="text-[11px]"],
+.app-sidebar [class~="text-[11.5px]"],
+.app-sidebar [class~="text-[12px]"],
+.app-sidebar [class~="text-[12.5px]"] {
+  font-size: 0.8125rem !important;
+}
+
+.app-sidebar [class~="text-[13px]"],
+.app-sidebar [class~="text-[13.5px]"] {
+  font-size: 0.84375rem !important;
+}
+
+.app-topbar [class~="text-[9px]"],
+.app-topbar [class~="text-[9.5px]"],
+.app-topbar [class~="text-[10px]"],
+.app-topbar [class~="text-[10.5px]"] {
+  font-size: 0.75rem !important;
+}
+
+.app-topbar [class~="text-[11px]"],
+.app-topbar [class~="text-[11.5px]"],
+.app-topbar [class~="text-[12px]"],
+.app-topbar [class~="text-[12.5px]"],
+.app-topbar [class~="text-[13px]"] {
+  font-size: 0.875rem !important;
+}
+
+.app-topbar {
+  border-color: rgb(37 42 79 / 8%);
+  background: linear-gradient(100deg, rgb(251 251 249 / 92%), rgb(247 249 255 / 92%));
+}
+
+html.dark .app-topbar {
+  border-color: rgb(203 213 225 / 12%);
+  background: linear-gradient(100deg, rgb(11 17 32 / 92%), rgb(13 18 34 / 94%));
+}
+
+.app-main {
+  background:
+    radial-gradient(circle at 82% -6%, rgb(167 139 250 / 9%), transparent 38%),
+    radial-gradient(circle at 0% 8%, rgb(56 189 248 / 7%), transparent 34%);
+}
+
+/* Public booking page ---------------------------------------------------- */
+.booking-shell {
+  background:
+    radial-gradient(circle at 86% -8%, var(--booking-primary-soft, rgb(43 75 255 / 10%)), transparent 42%),
+    radial-gradient(circle at 0% 6%, rgb(56 189 248 / 10%), transparent 38%),
+    radial-gradient(circle at 100% 84%, rgb(251 146 60 / 8%), transparent 32%),
+    #f8f8fc;
+}
+
+html.dark .booking-shell {
+  background:
+    radial-gradient(circle at 86% -8%, var(--booking-primary-soft, rgb(43 75 255 / 18%)), transparent 42%),
+    radial-gradient(circle at 0% 6%, rgb(56 189 248 / 8%), transparent 38%),
+    radial-gradient(circle at 100% 84%, rgb(251 146 60 / 6%), transparent 32%),
+    #0b1120;
+}
+
+.booking-panel {
+  border-color: rgb(37 42 79 / 9%);
+  background: #ffffff;
+  box-shadow: 0 26px 60px -52px rgb(15 23 42 / 60%);
+}
+
+html.dark .booking-panel {
+  border-color: rgb(203 213 225 / 12%);
+  background: #111827;
+}
+
+.booking-soft {
+  border-color: rgb(37 42 79 / 8%);
+  background: linear-gradient(145deg, #f7f8fc, #ffffff);
+}
+
+html.dark .booking-soft {
+  border-color: rgb(203 213 225 / 10%);
+  background: linear-gradient(145deg, #171f2e, #111827);
+}
+
+.booking-price-card {
+  transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease;
+}
+
+.booking-price-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 16px 28px -24px rgb(24 32 64 / 55%);
+}
+
+.booking-price-card--standard {
+  background: linear-gradient(145deg, #eef5ff, #ffffff);
+}
+
+.booking-price-card--express {
+  background: linear-gradient(145deg, #fff2e4, #ffffff);
+}
+
+.booking-price-card--same-day {
+  background: linear-gradient(145deg, #f3edff, #ffffff);
+}
+
+html.dark .booking-price-card--standard {
+  background: linear-gradient(145deg, #192e43, #111827);
+}
+
+html.dark .booking-price-card--express {
+  background: linear-gradient(145deg, #3a2a1e, #111827);
+}
+
+html.dark .booking-price-card--same-day {
+  background: linear-gradient(145deg, #29223f, #111827);
+}
+
+.booking-step {
+  transition: background-color 160ms ease, border-color 160ms ease;
+}
+
+.booking-icon-tile {
+  box-shadow: 0 10px 20px -18px rgb(24 32 64 / 70%);
+}
+
+/* Public marketing site, auth and administration ------------------------- */
+.site-page [class~="text-[9px]"],
+.site-page [class~="text-[9.5px]"],
+.site-page [class~="text-[10px]"],
+.site-page [class~="text-[10.5px]"],
+.auth-page [class~="text-[9px]"],
+.auth-page [class~="text-[9.5px]"],
+.auth-page [class~="text-[10px]"],
+.auth-page [class~="text-[10.5px]"] {
+  font-size: 0.75rem !important;
+}
+
+.site-page [class~="text-[11px]"],
+.site-page [class~="text-[11.5px]"],
+.auth-page [class~="text-[11px]"],
+.auth-page [class~="text-[11.5px]"] {
+  font-size: 0.8125rem !important;
+}
+
+.site-page [class~="text-[12px]"],
+.site-page [class~="text-[12.5px]"],
+.auth-page [class~="text-[12px]"],
+.auth-page [class~="text-[12.5px]"] {
+  font-size: 0.875rem !important;
+}
+
+.site-page [class~="text-[13px]"],
+.site-page [class~="text-[13.5px]"],
+.auth-page [class~="text-[13px]"],
+.auth-page [class~="text-[13.5px]"] {
+  font-size: 0.875rem !important;
+}
+
+.marketing-hero {
+  background:
+    radial-gradient(circle at 86% 4%, rgb(167 139 250 / 24%), transparent 33%),
+    radial-gradient(circle at 8% 88%, rgb(251 191 36 / 17%), transparent 34%),
+    radial-gradient(circle at 96% 100%, rgb(34 211 238 / 16%), transparent 31%),
+    linear-gradient(140deg, #f5f1ff 0%, #fff9f2 52%, #edfbff 100%);
+}
+
+html.dark .marketing-hero {
+  background:
+    radial-gradient(circle at 86% 4%, rgb(129 140 248 / 16%), transparent 33%),
+    radial-gradient(circle at 8% 88%, rgb(251 191 36 / 10%), transparent 34%),
+    radial-gradient(circle at 96% 100%, rgb(34 211 238 / 10%), transparent 31%),
+    linear-gradient(140deg, #0c1224 0%, #111420 52%, #0b1820 100%);
+}
+
+.site-panel {
+  border-color: rgb(37 42 79 / 9%);
+  background: #ffffff;
+  box-shadow: 0 26px 60px -52px rgb(15 23 42 / 55%);
+}
+
+html.dark .site-panel {
+  border-color: rgb(203 213 225 / 12%);
+  background: #111827;
+}
+
+.site-card {
+  border-color: rgb(37 42 79 / 9%);
+  background: #ffffff;
+  transition: transform 170ms ease, box-shadow 170ms ease, border-color 170ms ease;
+}
+
+.site-card:hover {
+  transform: translateY(-2px);
+  border-color: rgb(129 140 248 / 45%);
+  box-shadow: 0 22px 40px -30px rgb(24 32 64 / 55%);
+}
+
+html.dark .site-card {
+  border-color: rgb(203 213 225 / 12%);
+  background: #111827;
+}
+
+.site-navbar {
+  border-color: rgb(37 42 79 / 8%);
+  background: linear-gradient(100deg, rgb(251 251 249 / 88%), rgb(247 249 255 / 90%));
+}
+
+html.dark .site-navbar {
+  border-color: rgb(203 213 225 / 12%);
+  background: linear-gradient(100deg, rgb(11 17 32 / 90%), rgb(13 18 34 / 92%));
+}
+
+.auth-aside {
+  background:
+    radial-gradient(circle at 82% 2%, rgb(167 139 250 / 34%), transparent 42%),
+    radial-gradient(circle at 0% 82%, rgb(251 191 36 / 22%), transparent 40%),
+    radial-gradient(circle at 100% 100%, rgb(34 211 238 / 26%), transparent 36%),
+    linear-gradient(150deg, #f4efff 0%, #fff7f0 55%, #ecfbff 100%);
+}
+
+html.dark .auth-aside {
+  background:
+    radial-gradient(circle at 82% 2%, rgb(129 140 248 / 20%), transparent 42%),
+    radial-gradient(circle at 0% 82%, rgb(251 191 36 / 12%), transparent 40%),
+    radial-gradient(circle at 100% 100%, rgb(34 211 238 / 14%), transparent 36%),
+    linear-gradient(150deg, #151230 0%, #1a1721 55%, #0d2029 100%);
+}
+
+.auth-panel {
+  border-color: rgb(37 42 79 / 9%);
+  background: #ffffff;
+  box-shadow: 0 30px 70px -58px rgb(15 23 42 / 60%);
+}
+
+html.dark .auth-panel {
+  border-color: rgb(203 213 225 / 12%);
+  background: #111827;
+}
+
+.auth-main {
+  background:
+    radial-gradient(circle at 84% 0%, rgb(167 139 250 / 12%), transparent 38%),
+    radial-gradient(circle at 0% 20%, rgb(56 189 248 / 9%), transparent 34%),
+    var(--color-canvas);
+}
+
+.admin-shell {
+  background:
+    radial-gradient(circle at 86% -6%, rgb(167 139 250 / 10%), transparent 40%),
+    radial-gradient(circle at 0% 10%, rgb(56 189 248 / 8%), transparent 36%),
+    var(--color-canvas);
+}
+
 .driver-workspace,
 .delivery-workspace,
 .rates-workspace {

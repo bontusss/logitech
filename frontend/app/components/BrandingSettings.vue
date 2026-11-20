@@ -107,13 +107,18 @@ async function upload(kind: 'logo' | 'cover' | 'favicon', event: Event) {
 
 <template>
   <div class="space-y-5">
-    <form class="rounded-xl border border-ink-900/10 bg-white p-5 sm:p-6" @submit.prevent="save">
+    <form class="dash-panel rounded-2xl border p-5 sm:p-6" @submit.prevent="save">
       <div class="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h2 class="flex items-center gap-2 text-[15px] font-semibold"><Palette :size="16" /> Brand identity</h2>
-          <p class="mt-1 text-[11.5px] text-ink-900/45">
-            Used on your public company page, workspace accents and installable app.
-          </p>
+        <div class="flex items-start gap-3">
+          <span class="flex size-9 shrink-0 items-center justify-center rounded-xl bg-rose-100 text-rose-700 dark:bg-rose-400/15 dark:text-rose-200">
+            <Palette :size="16" />
+          </span>
+          <div>
+            <h2 class="text-[15px] font-semibold">Brand identity</h2>
+            <p class="mt-1 text-[11.5px] text-ink-900/45">
+              Used on your public company page, workspace accents and installable app.
+            </p>
+          </div>
         </div>
         <span v-if="!canManage" class="rounded-md border border-ink-900/10 bg-canvas px-2 py-1 text-[10px] text-ink-900/45">Read only</span>
       </div>
@@ -213,7 +218,7 @@ async function upload(kind: 'logo' | 'cover' | 'favicon', event: Event) {
       </p>
 
       <div v-if="canManage" class="mt-5 flex justify-end">
-        <button type="submit" :disabled="saving" class="inline-flex items-center gap-1.5 rounded-lg bg-brand-500 px-4 py-2.5 text-[12.5px] font-semibold text-white transition hover:bg-brand-600 disabled:opacity-60">
+        <button type="submit" :disabled="saving" class="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-brand-600 to-violet-600 px-4 py-2.5 text-[12.5px] font-semibold text-white shadow-sm shadow-brand-600/25 transition hover:-translate-y-0.5 disabled:opacity-60">
           <Loader2 v-if="saving" :size="14" class="animate-spin" />
           <Save v-else :size="14" />
           Save branding

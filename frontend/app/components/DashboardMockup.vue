@@ -37,6 +37,13 @@ const toneClasses: Record<string, string> = {
 }
 
 const bars = [38, 52, 44, 68, 58, 76, 62, 84, 71, 92, 80, 96]
+
+const statTones = [
+  'from-violet-50 to-white dark:from-violet-400/10 dark:to-transparent',
+  'from-sky-50 to-white dark:from-sky-400/10 dark:to-transparent',
+  'from-amber-50 to-white dark:from-amber-400/10 dark:to-transparent',
+  'from-emerald-50 to-white dark:from-emerald-400/10 dark:to-transparent',
+]
 </script>
 
 <template>
@@ -79,7 +86,7 @@ const bars = [38, 52, 44, 68, 58, 76, 62, 84, 71, 92, 80, 96]
             type="button"
             tabindex="-1"
             class="flex size-8 items-center justify-center rounded-md"
-            :class="index === 0 ? 'bg-white/12 text-white' : 'text-white/35'"
+            :class="index === 0 ? 'bg-gradient-to-br from-brand-500 to-violet-500 text-white shadow-sm shadow-brand-600/40' : 'text-white/35'"
             :aria-label="`Dashboard navigation item ${index + 1} (illustrative)`"
           >
             <component :is="icon" :size="15" />
@@ -128,9 +135,10 @@ const bars = [38, 52, 44, 68, 58, 76, 62, 84, 71, 92, 80, 96]
             <!-- Stat cards -->
             <div class="grid grid-cols-2 gap-2 lg:grid-cols-4">
               <div
-                v-for="stat in stats"
+                v-for="(stat, index) in stats"
                 :key="stat.label"
-                class="rounded-lg border border-ink-900/8 bg-white p-2.5"
+                class="rounded-lg border border-ink-900/8 bg-gradient-to-br p-2.5"
+                :class="statTones[index % statTones.length]"
               >
                 <div class="flex items-center justify-between">
                   <p class="text-[9.5px] font-medium text-ink-900/45">{{ stat.label }}</p>
@@ -202,7 +210,7 @@ const bars = [38, 52, 44, 68, 58, 76, 62, 84, 71, 92, 80, 96]
                     v-for="(bar, index) in bars"
                     :key="index"
                     class="flex-1 rounded-sm"
-                    :class="index === bars.length - 1 ? 'bg-brand-500' : 'bg-brand-100'"
+                    :class="index === bars.length - 1 ? 'bg-gradient-to-t from-brand-600 to-violet-500' : 'bg-brand-100 dark:bg-brand-500/25'"
                     :style="{ height: `${bar}%` }"
                   />
                 </div>

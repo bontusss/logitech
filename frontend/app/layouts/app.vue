@@ -33,10 +33,13 @@ const isVerified = computed(
   () => (workspaceDetail.value?.company.status ?? currentCompany.value?.status) === 'verified',
 )
 
+type NavigationTone = 'violet' | 'sky' | 'mint' | 'amber' | 'rose' | 'cyan'
+
 interface NavigationItem {
   label: string
   to: string
   icon: Component
+  tone: NavigationTone
   comingSoon?: boolean
   permission?: string
 }
@@ -51,8 +54,8 @@ const navigationGroups = computed<NavigationGroup[]>(() => {
     return [{
       label: 'Workspace',
       items: [
-        { label: 'Overview', to: '/dashboard', icon: LayoutDashboard },
-        { label: 'Send a package', to: '/#rate-search', icon: Send },
+        { label: 'Overview', to: '/dashboard', icon: LayoutDashboard, tone: 'violet' },
+        { label: 'Send a package', to: '/#rate-search', icon: Send, tone: 'sky' },
       ],
     }]
   }
@@ -60,8 +63,8 @@ const navigationGroups = computed<NavigationGroup[]>(() => {
     return [{
       label: 'Workspace',
       items: [
-        { label: 'Overview', to: '/dashboard', icon: LayoutDashboard },
-        { label: 'Onboarding', to: '/onboarding', icon: ClipboardList },
+        { label: 'Overview', to: '/dashboard', icon: LayoutDashboard, tone: 'violet' },
+        { label: 'Onboarding', to: '/onboarding', icon: ClipboardList, tone: 'amber' },
       ],
     }]
   }
@@ -69,32 +72,32 @@ const navigationGroups = computed<NavigationGroup[]>(() => {
   const groups: NavigationGroup[] = [
     {
       label: 'Workspace',
-      items: [{ label: 'Overview', to: '/dashboard', icon: LayoutDashboard }],
+      items: [{ label: 'Overview', to: '/dashboard', icon: LayoutDashboard, tone: 'violet' }],
     },
     {
       label: 'Operations',
       items: [
-        { label: 'Deliveries', to: '/dashboard/deliveries', icon: Truck, permission: 'shipments.view' },
-        { label: 'Customers', to: '/dashboard/coming-soon/customers', icon: Users, comingSoon: true, permission: 'staff.view' },
-        { label: 'Requests', to: '/dashboard/requests', icon: ClipboardList, permission: 'bookings.manage' },
-        { label: 'Analytics', to: '/dashboard/coming-soon/analytics', icon: ChartNoAxesColumnIncreasing, comingSoon: true, permission: 'reports.view' },
-        { label: 'Finance', to: '/dashboard/coming-soon/finance', icon: CreditCard, comingSoon: true, permission: 'reports.view' },
-        { label: 'Drivers', to: '/dashboard/company/drivers', icon: UserRound, permission: 'staff.view' },
+        { label: 'Deliveries', to: '/dashboard/deliveries', icon: Truck, tone: 'sky', permission: 'shipments.view' },
+        { label: 'Customers', to: '/dashboard/coming-soon/customers', icon: Users, tone: 'rose', comingSoon: true, permission: 'staff.view' },
+        { label: 'Requests', to: '/dashboard/requests', icon: ClipboardList, tone: 'amber', permission: 'bookings.manage' },
+        { label: 'Analytics', to: '/dashboard/coming-soon/analytics', icon: ChartNoAxesColumnIncreasing, tone: 'mint', comingSoon: true, permission: 'reports.view' },
+        { label: 'Finance', to: '/dashboard/coming-soon/finance', icon: CreditCard, tone: 'cyan', comingSoon: true, permission: 'reports.view' },
+        { label: 'Drivers', to: '/dashboard/company/drivers', icon: UserRound, tone: 'violet', permission: 'staff.view' },
       ],
     },
     {
       label: 'Setup',
       items: [
-        { label: 'Booking page', to: '/dashboard/company/booking', icon: CalendarCheck, permission: 'bookings.manage' },
-        { label: 'Rates & Coverage', to: '/dashboard/company/rates', icon: ClipboardList, permission: 'rates.view' },
+        { label: 'Booking page', to: '/dashboard/company/booking', icon: CalendarCheck, tone: 'mint', permission: 'bookings.manage' },
+        { label: 'Rates & Coverage', to: '/dashboard/company/rates', icon: ClipboardList, tone: 'sky', permission: 'rates.view' },
       ],
     },
     {
       label: 'Settings',
       items: [
-        { label: 'Profile', to: '/dashboard/company', icon: Building2, permission: 'company.view' },
-        { label: 'Branding', to: '/dashboard/company/branding', icon: Palette, permission: 'branding.manage' },
-        { label: 'Billing', to: '/dashboard/coming-soon/billing', icon: Settings, comingSoon: true, permission: 'company.settings.manage' },
+        { label: 'Profile', to: '/dashboard/company', icon: Building2, tone: 'violet', permission: 'company.view' },
+        { label: 'Branding', to: '/dashboard/company/branding', icon: Palette, tone: 'rose', permission: 'branding.manage' },
+        { label: 'Billing', to: '/dashboard/coming-soon/billing', icon: Settings, tone: 'cyan', comingSoon: true, permission: 'company.settings.manage' },
       ],
     },
   ]
@@ -170,7 +173,7 @@ watch(
     />
 
     <aside
-      class="fixed inset-y-0 left-0 z-50 flex w-[264px] flex-col border-r border-ink-900/10 bg-white transition-transform duration-200 lg:translate-x-0"
+      class="app-sidebar fixed inset-y-0 left-0 z-50 flex w-[264px] flex-col border-r transition-transform duration-200 lg:translate-x-0"
       :class="mobileOpen ? 'translate-x-0' : '-translate-x-full'"
     >
       <div class="flex h-16 items-center justify-between border-b border-ink-900/8 px-4">
@@ -190,11 +193,11 @@ watch(
       <div v-if="!isCustomer" class="relative px-3 pt-3">
         <button
           type="button"
-          class="flex w-full items-center gap-2.5 rounded-lg border border-ink-900/10 bg-canvas px-3 py-2.5 text-left transition hover:border-ink-900/20"
+          class="sidebar-company flex w-full items-center gap-2.5 rounded-xl border px-3 py-2.5 text-left transition hover:shadow-sm"
           :aria-expanded="companyOpen"
           @click="companyOpen = !companyOpen"
         >
-          <span class="flex size-7 items-center justify-center rounded-md bg-ink-900 text-[10px] font-semibold text-white">
+          <span class="flex size-8 items-center justify-center rounded-lg bg-gradient-to-br from-brand-500 to-violet-500 text-[11px] font-semibold text-white shadow-sm shadow-brand-600/30">
             {{ (currentCompany?.company_name ?? 'B').slice(0, 1).toUpperCase() }}
           </span>
           <span class="min-w-0 flex-1">
@@ -236,23 +239,26 @@ watch(
       <nav class="flex-1 overflow-y-auto px-3 py-5" aria-label="Workspace">
         <section v-for="group in navigationGroups" :key="group.label">
           <p
-            class="px-2 text-[9.5px] font-semibold tracking-[0.18em] text-ink-900/35 uppercase"
+            class="flex items-center gap-2 px-2 text-[10px] font-semibold tracking-[0.16em] text-ink-900/40 uppercase"
             :class="group.label !== 'Workspace' ? 'mt-6' : ''"
           >
+            <span class="h-px w-3 rounded-full bg-brand-400/60" />
             {{ group.label }}
           </p>
           <ul class="mt-2 space-y-0.5">
             <li v-for="item in group.items" :key="item.to">
               <NuxtLink
                 :to="item.to"
-                class="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13px] font-medium transition"
-                :class="isActive(item.to) ? 'bg-brand-50 text-brand-700' : 'text-ink-900/60 hover:bg-ink-900/[0.03] hover:text-ink-900'"
+                class="sidebar-link flex items-center gap-2.5 rounded-xl px-2 py-1.5 text-[13px] font-medium"
+                :class="isActive(item.to) ? 'sidebar-link--active' : 'text-ink-900/65 hover:bg-white/80 hover:text-ink-900 dark:hover:bg-white/5'"
               >
-                <component :is="item.icon" :size="15" />
+                <span class="sidebar-icon" :class="`sidebar-icon--${item.tone}`">
+                  <component :is="item.icon" :size="14" />
+                </span>
                 <span class="min-w-0 flex-1 truncate">{{ item.label }}</span>
                 <span
                   v-if="item.comingSoon"
-                  class="ml-auto shrink-0 rounded border border-ink-900/10 px-1.5 py-0.5 text-[8.5px] tracking-wide text-ink-900/35 uppercase"
+                  class="ml-auto shrink-0 rounded-full border border-amber-200/80 bg-amber-50 px-1.5 py-0.5 text-[8.5px] font-semibold tracking-wide text-amber-700 uppercase"
                 >
                   Soon
                 </span>
@@ -265,16 +271,18 @@ watch(
       <div class="border-t border-ink-900/8 p-3">
         <NuxtLink
           to="/"
-          class="flex items-center gap-2 rounded-lg px-2.5 py-2 text-[12px] text-ink-900/45 transition hover:bg-ink-900/[0.03] hover:text-ink-900"
+          class="sidebar-footer-link flex items-center gap-2 rounded-xl border border-ink-900/8 bg-white/70 px-2.5 py-2 text-[12px] text-ink-900/55 hover:text-ink-900 dark:bg-white/5"
         >
-          <UserRound :size="14" />
+          <span class="flex size-6 items-center justify-center rounded-lg bg-brand-50 text-brand-700 dark:bg-white/10">
+            <UserRound :size="12" />
+          </span>
           View public site
         </NuxtLink>
       </div>
     </aside>
 
     <div class="lg:pl-[264px]">
-      <header class="sticky top-0 z-30 border-b border-ink-900/8 bg-canvas/90 backdrop-blur-xl">
+      <header class="app-topbar sticky top-0 z-30 border-b backdrop-blur-xl">
         <div class="flex h-16 items-center gap-3 px-4 sm:px-6">
           <button
             type="button"
@@ -301,7 +309,7 @@ watch(
               :aria-expanded="profileOpen"
               @click="profileOpen = !profileOpen"
             >
-              <span class="flex size-7 items-center justify-center rounded-md bg-ink-900 text-[10px] font-semibold text-white">
+              <span class="flex size-7 items-center justify-center rounded-lg bg-gradient-to-br from-brand-500 to-fuchsia-500 text-[10px] font-semibold text-white shadow-sm shadow-brand-600/25">
                 {{ initials }}
               </span>
               <span class="hidden text-left sm:block">
@@ -339,7 +347,7 @@ watch(
         </div>
       </header>
 
-      <main class="px-4 py-6 sm:px-6 sm:py-8">
+      <main class="app-main px-4 py-6 sm:px-6 sm:py-8">
         <div class="mx-auto max-w-[1000px]">
           <slot />
         </div>

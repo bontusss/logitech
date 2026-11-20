@@ -102,21 +102,24 @@ async function assignStaff(memberIDs: string[]) {
 </script>
 
 <template>
-  <div>
-    <NuxtLink to="/dashboard/company/branches" class="inline-flex items-center gap-1.5 text-[11.5px] font-medium text-ink-900/45 transition hover:text-ink-900">
+  <div class="dash-page">
+    <NuxtLink
+      to="/dashboard/company/branches"
+      class="inline-flex items-center gap-1.5 rounded-full border border-ink-900/10 bg-white/80 px-3 py-1.5 text-[11.5px] font-medium text-ink-900/50 shadow-sm transition hover:-translate-x-0.5 hover:text-ink-900 dark:bg-white/5"
+    >
       <ArrowLeft :size="13" /> All branches
     </NuxtLink>
 
-    <div v-if="loading" class="mt-6 flex items-center gap-2 rounded-xl border border-ink-900/10 bg-white p-6 text-[12.5px] text-ink-900/45">
+    <div v-if="loading" class="dash-panel mt-4 flex items-center gap-2 rounded-2xl border p-6 text-[12.5px] text-ink-900/45">
       <Loader2 :size="15" class="animate-spin" /> Loading branch…
     </div>
 
-    <p v-else-if="error && !branch" role="alert" class="mt-6 flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 p-4 text-[12.5px] text-red-700">
+    <p v-else-if="error && !branch" role="alert" class="mt-4 flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 p-4 text-[12.5px] text-red-700">
       <CircleAlert :size="15" class="mt-0.5 shrink-0" /> {{ error }}
     </p>
 
     <template v-else-if="branch">
-      <p v-if="error" role="alert" class="mt-4 flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-3.5 py-2.5 text-[12px] text-red-700">
+      <p v-if="error" role="alert" class="mt-4 flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 px-3.5 py-2.5 text-[12px] text-red-700">
         <CircleAlert :size="14" class="mt-0.5 shrink-0" /> {{ error }}
       </p>
 
