@@ -7,6 +7,7 @@ package db
 
 import (
 	"context"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -30,8 +31,8 @@ INSERT INTO deliveries (
   delivery_price_minor, payer, is_paid, payment_method, assigned_driver_id,
   status, created_by, request_status, package_category, weight_kg, additional_instructions,
   package_photo_url, pickup_latitude, pickup_longitude, dropoff_latitude,
-  dropoff_longitude, selected_route_id, selected_rate_card_id, price_is_estimate, booking_source,
-  delivery_speed, distance_km
+  dropoff_longitude, selected_route_id, price_is_estimate, booking_source,
+  delivery_speed, distance_km, customer_id, tracking_code
 )
 SELECT
   $1, $2, $3,
@@ -42,8 +43,9 @@ SELECT
   $13, NULLIF($14::text, ''),
   $15, $16,
   $17, $18,
-  $19, $20,
-  $21, 'booking_page', $22, $23
+  $19,
+  $20, 'booking_page', $21, $22,
+  $23, $24
 WHERE $19::uuid IS NULL
    OR EXISTS (
      SELECT 1 FROM company_booking_routes r
@@ -51,7 +53,7 @@ WHERE $19::uuid IS NULL
        AND r.company_id = $1::uuid
        AND r.status = 'active'
    )
-RETURNING id, company_id, sender_name, sender_phone, receiver_name, receiver_phone, pickup_address, dropoff_address, item_description, declared_value_minor, delivery_price_minor, payer, is_paid, payment_method, assigned_driver_id, status, created_by, created_at, updated_at, package_category, weight_kg, additional_instructions, package_photo_url, pickup_latitude, pickup_longitude, dropoff_latitude, dropoff_longitude, selected_route_id, selected_rate_card_id, price_is_estimate, booking_source, delivery_speed, distance_km, request_status, tracking_code, rider_link_token, declined_at, accepted_at
+RETURNING id, company_id, sender_name, sender_phone, receiver_name, receiver_phone, pickup_address, dropoff_address, item_description, declared_value_minor, delivery_price_minor, payer, is_paid, payment_method, assigned_driver_id, status, created_by, created_at, updated_at, package_category, weight_kg, additional_instructions, package_photo_url, pickup_latitude, pickup_longitude, dropoff_latitude, dropoff_longitude, selected_route_id, price_is_estimate, booking_source, delivery_speed, distance_km, request_status, tracking_code, rider_link_token, declined_at, accepted_at, customer_id
 `
 
 type CreatePublicBookingDeliveryParams struct {
@@ -74,10 +76,11 @@ type CreatePublicBookingDeliveryParams struct {
 	DropoffLatitude        pgtype.Numeric `json:"dropoff_latitude"`
 	DropoffLongitude       pgtype.Numeric `json:"dropoff_longitude"`
 	SelectedRouteID        *uuid.UUID     `json:"selected_route_id"`
-	SelectedRateCardID     *uuid.UUID     `json:"selected_rate_card_id"`
 	PriceIsEstimate        bool           `json:"price_is_estimate"`
 	DeliverySpeed          string         `json:"delivery_speed"`
 	DistanceKm             pgtype.Numeric `json:"distance_km"`
+	CustomerID             *uuid.UUID     `json:"customer_id"`
+	TrackingCode           *string        `json:"tracking_code"`
 }
 
 func (q *Queries) CreatePublicBookingDelivery(ctx context.Context, arg CreatePublicBookingDeliveryParams) (Delivery, error) {
@@ -101,10 +104,11 @@ func (q *Queries) CreatePublicBookingDelivery(ctx context.Context, arg CreatePub
 		arg.DropoffLatitude,
 		arg.DropoffLongitude,
 		arg.SelectedRouteID,
-		arg.SelectedRateCardID,
 		arg.PriceIsEstimate,
 		arg.DeliverySpeed,
 		arg.DistanceKm,
+		arg.CustomerID,
+		arg.TrackingCode,
 	)
 	var i Delivery
 	err := row.Scan(
@@ -136,7 +140,6 @@ func (q *Queries) CreatePublicBookingDelivery(ctx context.Context, arg CreatePub
 		&i.DropoffLatitude,
 		&i.DropoffLongitude,
 		&i.SelectedRouteID,
-		&i.SelectedRateCardID,
 		&i.PriceIsEstimate,
 		&i.BookingSource,
 		&i.DeliverySpeed,
@@ -146,6 +149,7 @@ func (q *Queries) CreatePublicBookingDelivery(ctx context.Context, arg CreatePub
 		&i.RiderLinkToken,
 		&i.DeclinedAt,
 		&i.AcceptedAt,
+		&i.CustomerID,
 	)
 	return i, err
 }
@@ -191,6 +195,17 @@ SELECT
   b.primary_color,
   b.secondary_color,
   b.cover_image_url,
+  COALESCE(b.description, c.description) AS description,
+  c.website_url,
+  c.instagram_url,
+  c.facebook_url,
+  c.twitter_url,
+  c.linkedin_url,
+  c.year_established,
+  c.photo_urls,
+  c.verified_at,
+  c.accepted_item_categories,
+  c.prohibited_item_categories,
   COALESCE(cs.currency, 'NGN') AS currency
 FROM booking_pages bp
 JOIN companies c ON c.id = bp.company_id
@@ -203,26 +218,37 @@ WHERE bp.slug = $1 AND bp.is_published
 `
 
 type GetPublicBookingPageRow struct {
-	Slug           string      `json:"slug"`
-	Headline       *string     `json:"headline"`
-	Description    *string     `json:"description"`
-	CompanyID      uuid.UUID   `json:"company_id"`
-	Name           string      `json:"name"`
-	CompanySlug    string      `json:"company_slug"`
-	BusinessType   string      `json:"business_type"`
-	BusinessEmail  string      `json:"business_email"`
-	Phone          string      `json:"phone"`
-	City           *string     `json:"city"`
-	State          *string     `json:"state"`
-	Country        string      `json:"country"`
-	OperatingHours []byte      `json:"operating_hours"`
-	Subdomain      pgtype.Text `json:"subdomain"`
-	PublicName     string      `json:"public_name"`
-	LogoUrl        *string     `json:"logo_url"`
-	PrimaryColor   *string     `json:"primary_color"`
-	SecondaryColor *string     `json:"secondary_color"`
-	CoverImageUrl  *string     `json:"cover_image_url"`
-	Currency       string      `json:"currency"`
+	Slug                     string      `json:"slug"`
+	Headline                 *string     `json:"headline"`
+	Description              *string     `json:"description"`
+	CompanyID                uuid.UUID   `json:"company_id"`
+	Name                     string      `json:"name"`
+	CompanySlug              string      `json:"company_slug"`
+	BusinessType             string      `json:"business_type"`
+	BusinessEmail            string      `json:"business_email"`
+	Phone                    string      `json:"phone"`
+	City                     *string     `json:"city"`
+	State                    *string     `json:"state"`
+	Country                  string      `json:"country"`
+	OperatingHours           []byte      `json:"operating_hours"`
+	Subdomain                pgtype.Text `json:"subdomain"`
+	PublicName               string      `json:"public_name"`
+	LogoUrl                  *string     `json:"logo_url"`
+	PrimaryColor             *string     `json:"primary_color"`
+	SecondaryColor           *string     `json:"secondary_color"`
+	CoverImageUrl            *string     `json:"cover_image_url"`
+	Description_2            *string     `json:"description_2"`
+	WebsiteUrl               *string     `json:"website_url"`
+	InstagramUrl             *string     `json:"instagram_url"`
+	FacebookUrl              *string     `json:"facebook_url"`
+	TwitterUrl               *string     `json:"twitter_url"`
+	LinkedinUrl              *string     `json:"linkedin_url"`
+	YearEstablished          pgtype.Int4 `json:"year_established"`
+	PhotoUrls                []string    `json:"photo_urls"`
+	VerifiedAt               *time.Time  `json:"verified_at"`
+	AcceptedItemCategories   []string    `json:"accepted_item_categories"`
+	ProhibitedItemCategories []string    `json:"prohibited_item_categories"`
+	Currency                 string      `json:"currency"`
 }
 
 func (q *Queries) GetPublicBookingPage(ctx context.Context, slug string) (GetPublicBookingPageRow, error) {
@@ -248,119 +274,20 @@ func (q *Queries) GetPublicBookingPage(ctx context.Context, slug string) (GetPub
 		&i.PrimaryColor,
 		&i.SecondaryColor,
 		&i.CoverImageUrl,
+		&i.Description_2,
+		&i.WebsiteUrl,
+		&i.InstagramUrl,
+		&i.FacebookUrl,
+		&i.TwitterUrl,
+		&i.LinkedinUrl,
+		&i.YearEstablished,
+		&i.PhotoUrls,
+		&i.VerifiedAt,
+		&i.AcceptedItemCategories,
+		&i.ProhibitedItemCategories,
 		&i.Currency,
 	)
 	return i, err
-}
-
-const getPublicBookingRate = `-- name: GetPublicBookingRate :one
-SELECT rc.id AS rate_card_id, rc.name, rc.currency, pt.price_cents
-FROM rate_cards rc
-JOIN rate_card_versions v ON v.rate_card_id = rc.id
-  AND v.is_active
-  AND v.deleted_at IS NULL
-  AND v.effective_from <= now()
-  AND (v.effective_until IS NULL OR v.effective_until > now())
-JOIN pricing_tiers pt ON pt.rate_card_version_id = v.id
-  AND pt.deleted_at IS NULL
-  AND pt.min_weight_kg <= $1
-  AND pt.max_weight_kg >= $1
-WHERE rc.company_id = $2
-  AND rc.id = $3
-  AND rc.status = 'published'
-  AND rc.is_published
-  AND rc.deleted_at IS NULL
-  AND (rc.effective_start IS NULL OR rc.effective_start <= now())
-  AND (rc.effective_end IS NULL OR rc.effective_end > now())
-ORDER BY pt.min_weight_kg DESC
-LIMIT 1
-`
-
-type GetPublicBookingRateParams struct {
-	WeightKg   pgtype.Numeric `json:"weight_kg"`
-	CompanyID  uuid.UUID      `json:"company_id"`
-	RateCardID uuid.UUID      `json:"rate_card_id"`
-}
-
-type GetPublicBookingRateRow struct {
-	RateCardID uuid.UUID `json:"rate_card_id"`
-	Name       string    `json:"name"`
-	Currency   string    `json:"currency"`
-	PriceCents int32     `json:"price_cents"`
-}
-
-func (q *Queries) GetPublicBookingRate(ctx context.Context, arg GetPublicBookingRateParams) (GetPublicBookingRateRow, error) {
-	row := q.db.QueryRow(ctx, getPublicBookingRate, arg.WeightKg, arg.CompanyID, arg.RateCardID)
-	var i GetPublicBookingRateRow
-	err := row.Scan(
-		&i.RateCardID,
-		&i.Name,
-		&i.Currency,
-		&i.PriceCents,
-	)
-	return i, err
-}
-
-const listPublicBookingRates = `-- name: ListPublicBookingRates :many
-SELECT DISTINCT ON (rc.id)
-  rc.id AS rate_card_id,
-  rc.name,
-  rc.currency,
-  pt.price_cents
-FROM rate_cards rc
-JOIN rate_card_versions v ON v.rate_card_id = rc.id
-  AND v.is_active
-  AND v.deleted_at IS NULL
-  AND v.effective_from <= now()
-  AND (v.effective_until IS NULL OR v.effective_until > now())
-JOIN pricing_tiers pt ON pt.rate_card_version_id = v.id
-  AND pt.deleted_at IS NULL
-  AND pt.min_weight_kg <= $1
-  AND pt.max_weight_kg >= $1
-WHERE rc.company_id = $2
-  AND rc.status = 'published'
-  AND rc.is_published
-  AND rc.deleted_at IS NULL
-  AND (rc.effective_start IS NULL OR rc.effective_start <= now())
-  AND (rc.effective_end IS NULL OR rc.effective_end > now())
-ORDER BY rc.id, pt.min_weight_kg DESC
-`
-
-type ListPublicBookingRatesParams struct {
-	WeightKg  pgtype.Numeric `json:"weight_kg"`
-	CompanyID uuid.UUID      `json:"company_id"`
-}
-
-type ListPublicBookingRatesRow struct {
-	RateCardID uuid.UUID `json:"rate_card_id"`
-	Name       string    `json:"name"`
-	Currency   string    `json:"currency"`
-	PriceCents int32     `json:"price_cents"`
-}
-
-func (q *Queries) ListPublicBookingRates(ctx context.Context, arg ListPublicBookingRatesParams) ([]ListPublicBookingRatesRow, error) {
-	rows, err := q.db.Query(ctx, listPublicBookingRates, arg.WeightKg, arg.CompanyID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []ListPublicBookingRatesRow{}
-	for rows.Next() {
-		var i ListPublicBookingRatesRow
-		if err := rows.Scan(
-			&i.RateCardID,
-			&i.Name,
-			&i.Currency,
-			&i.PriceCents,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
 }
 
 const upsertBookingPage = `-- name: UpsertBookingPage :one

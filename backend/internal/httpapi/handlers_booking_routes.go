@@ -23,6 +23,13 @@ type bookingRouteDTO struct {
 	ExpressPricePerKmMinor  *int64    `json:"express_price_per_km_minor"`
 	SameDayPricePerKmMinor  *int64    `json:"same_day_price_per_km_minor"`
 	MinimumChargeMinor      int64     `json:"minimum_charge_minor"`
+	EstimatedTransitTime    *string   `json:"estimated_transit_time"`
+	DepartureSchedule       *string   `json:"departure_schedule"`
+	PickupAvailable         bool      `json:"pickup_available"`
+	DeliveryAvailable       bool      `json:"delivery_available"`
+	Description             *string   `json:"description"`
+	MaxWeightKg             *float64  `json:"max_weight_kg"`
+	PriceIsEstimate         bool      `json:"price_is_estimate"`
 	Status                  string    `json:"status"`
 }
 
@@ -38,6 +45,13 @@ func bookingRouteFromDB(route db.CompanyBookingRoute) bookingRouteDTO {
 		ExpressPricePerKmMinor:  int8Pointer(route.ExpressPricePerKmMinor),
 		SameDayPricePerKmMinor:  int8Pointer(route.SameDayPricePerKmMinor),
 		MinimumChargeMinor:      route.MinimumChargeMinor,
+		EstimatedTransitTime:    route.EstimatedTransitTime,
+		DepartureSchedule:       route.DepartureSchedule,
+		PickupAvailable:         route.PickupAvailable,
+		DeliveryAvailable:       route.DeliveryAvailable,
+		Description:             route.Description,
+		MaxWeightKg:             numericPointer(route.MaxWeightKg),
+		PriceIsEstimate:         route.PriceIsEstimate,
 		Status:                  route.Status,
 	}
 }

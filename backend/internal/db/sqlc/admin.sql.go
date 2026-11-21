@@ -19,7 +19,7 @@ SET status = 'verified',
     verified_at = COALESCE(verified_at, now()),
     updated_at = now()
 WHERE id = $1 AND deleted_at IS NULL
-RETURNING id, name, slug, business_email, phone, business_type, cac_business_name, country, state, city, address, status, onboarding_status, owner_user_id, verified_at, created_at, updated_at, deleted_at, description, cover_image_url, operating_hours
+RETURNING id, name, slug, business_email, phone, business_type, cac_business_name, country, state, city, address, accepted_item_categories, prohibited_item_categories, status, onboarding_status, owner_user_id, verified_at, created_at, updated_at, deleted_at, description, cover_image_url, operating_hours, website_url, instagram_url, facebook_url, twitter_url, linkedin_url, year_established, photo_urls
 `
 
 func (q *Queries) ApproveCompany(ctx context.Context, id uuid.UUID) (Company, error) {
@@ -37,6 +37,8 @@ func (q *Queries) ApproveCompany(ctx context.Context, id uuid.UUID) (Company, er
 		&i.State,
 		&i.City,
 		&i.Address,
+		&i.AcceptedItemCategories,
+		&i.ProhibitedItemCategories,
 		&i.Status,
 		&i.OnboardingStatus,
 		&i.OwnerUserID,
@@ -47,6 +49,13 @@ func (q *Queries) ApproveCompany(ctx context.Context, id uuid.UUID) (Company, er
 		&i.Description,
 		&i.CoverImageUrl,
 		&i.OperatingHours,
+		&i.WebsiteUrl,
+		&i.InstagramUrl,
+		&i.FacebookUrl,
+		&i.TwitterUrl,
+		&i.LinkedinUrl,
+		&i.YearEstablished,
+		&i.PhotoUrls,
 	)
 	return i, err
 }

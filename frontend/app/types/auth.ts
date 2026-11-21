@@ -64,6 +64,13 @@ export interface Company {
   description: string | null
   cover_image_url: string | null
   operating_hours: OperatingHours
+  website_url: string | null
+  instagram_url: string | null
+  facebook_url: string | null
+  twitter_url: string | null
+  linkedin_url: string | null
+  year_established: number | null
+  photo_urls: string[]
 }
 
 export type CompanyStatus = 'pending' | 'under_review' | 'verified' | 'rejected' | 'suspended'

@@ -1,0 +1,3 @@
+-- Intentionally irreversible: the removed tables were unused scaffolding and
+-- contained no operational data. Restore from a backup if the legacy rate-card
+-- schema is ever required again.

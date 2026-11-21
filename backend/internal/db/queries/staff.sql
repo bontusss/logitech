@@ -103,6 +103,28 @@ FROM driver_profiles d
 JOIN companies c ON c.id = d.company_id AND c.deleted_at IS NULL AND c.status = 'verified'
 WHERE d.portal_token_hash = $1 AND d.status = 'active';
 
+-- name: GetDriverProfileForPortalByID :one
+SELECT d.id, d.company_id, d.full_name, d.phone, d.vehicle_plate, d.email, d.status, c.name AS company_name
+FROM driver_profiles d
+JOIN companies c ON c.id = d.company_id AND c.deleted_at IS NULL AND c.status = 'verified'
+WHERE d.id = $1 AND d.status = 'active';
+
+-- name: SetDriverPortalTokenHash :exec
+UPDATE driver_profiles
+SET portal_token_hash = $3,
+    updated_at = now()
+WHERE id = $1 AND company_id = $2;
+
+-- name: UpdateDriverProfile :one
+UPDATE driver_profiles
+SET full_name = $3,
+    phone = $4,
+    vehicle_plate = $5,
+    email = $6,
+    updated_at = now()
+WHERE id = $1 AND company_id = $2
+RETURNING id, company_id, full_name, phone, vehicle_plate, email, status, created_at, updated_at;
+
 -- name: SetDriverProfileStatus :one
 UPDATE driver_profiles
 SET status = $3,

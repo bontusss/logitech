@@ -9,7 +9,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 
-	"github.com/bol-platform/backend/internal/auth"
 	db "github.com/bol-platform/backend/internal/db/sqlc"
 	"github.com/bol-platform/backend/internal/service"
 )
@@ -62,20 +61,13 @@ func (a *API) acceptBookingRequest(c *gin.Context) {
 		return
 	}
 
-	trackingCode, _, err := auth.GenerateOpaqueToken()
-	if err != nil {
-		a.handleServiceError(c, err)
-		return
-	}
-	trackingCode = "TRK-" + strings.ToUpper(trackingCode[:18])
-
 	err = pgx.BeginFunc(c.Request.Context(), a.svc.DB, func(tx pgx.Tx) error {
 		q := a.svc.Q.WithTx(tx)
 		delivery, err := q.AcceptBookingRequest(c.Request.Context(), db.AcceptBookingRequestParams{CompanyID: tenant.CompanyID, ID: id})
 		if err != nil {
 			return err
 		}
-		if _, err := tx.Exec(c.Request.Context(), `UPDATE deliveries SET tracking_code=$3, assigned_driver_id=$4, status='assigned', updated_at=now() WHERE id=$1 AND company_id=$2`, id, tenant.CompanyID, trackingCode, driverID); err != nil {
+		if _, err := tx.Exec(c.Request.Context(), `UPDATE deliveries SET assigned_driver_id=$3, status='assigned', updated_at=now() WHERE id=$1 AND company_id=$2`, id, tenant.CompanyID, driverID); err != nil {
 			return err
 		}
 		if _, err := q.AddDeliveryTimelineEvent(c.Request.Context(), db.AddDeliveryTimelineEventParams{DeliveryID: id, CompanyID: tenant.CompanyID, Status: "assigned", Note: stringPointer("Request accepted and driver assigned"), CreatedBy: actorIDPointer(c)}); err != nil {
@@ -97,6 +89,10 @@ func (a *API) acceptBookingRequest(c *gin.Context) {
 	if err != nil {
 		a.handleServiceError(c, err)
 		return
+	}
+	trackingCode := ""
+	if delivery.TrackingCode != nil {
+		trackingCode = *delivery.TrackingCode
 	}
 	a.svc.Audit(c.Request.Context(), service.AuditEntry{ActorID: actorID(c), CompanyID: &tenant.CompanyID, Action: "company.booking_request_accepted", EntityType: "delivery", EntityID: &id, Metadata: map[string]any{"driver_id": driverID, "tracking_code": trackingCode}, IP: c.ClientIP(), UserAgent: c.Request.UserAgent()})
 	c.JSON(http.StatusOK, gin.H{"delivery": deliveryAcceptanceDTO(delivery, trackingCode, a.cfg.AppURL)})
@@ -278,7 +274,7 @@ func (a *API) publicTracking(c *gin.Context) {
 		TrackingCode   *string
 		UpdatedAt      time.Time
 	}
-	err := a.svc.DB.QueryRow(c.Request.Context(), `SELECT id,status,request_status,pickup_address,dropoff_address,tracking_code,updated_at FROM deliveries WHERE tracking_code=$1 AND request_status='accepted'`, code).Scan(&row.ID, &row.Status, &row.RequestStatus, &row.PickupAddress, &row.DropoffAddress, &row.TrackingCode, &row.UpdatedAt)
+	err := a.svc.DB.QueryRow(c.Request.Context(), `SELECT id,status,request_status,pickup_address,dropoff_address,tracking_code,updated_at FROM deliveries WHERE tracking_code=$1`, code).Scan(&row.ID, &row.Status, &row.RequestStatus, &row.PickupAddress, &row.DropoffAddress, &row.TrackingCode, &row.UpdatedAt)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			fail(c, http.StatusNotFound, "tracking_not_found", "That tracking code was not found.")
@@ -303,5 +299,5 @@ func (a *API) publicTracking(c *gin.Context) {
 			}
 		}
 	}
-	c.JSON(http.StatusOK, gin.H{"tracking_code": code, "status": row.Status, "pickup_address": row.PickupAddress, "dropoff_address": row.DropoffAddress, "updated_at": row.UpdatedAt, "timeline": timeline})
+	c.JSON(http.StatusOK, gin.H{"tracking_code": code, "status": row.Status, "request_status": row.RequestStatus, "pickup_address": row.PickupAddress, "dropoff_address": row.DropoffAddress, "updated_at": row.UpdatedAt, "timeline": timeline})
 }

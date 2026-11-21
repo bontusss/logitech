@@ -71,8 +71,18 @@ func New(cfg *config.Config, svc *service.Service, authManager *auth.Manager, li
 	v1.GET("/public/companies/:subdomain", api.publicCompany)
 	v1.GET("/public/book/:slug", api.rateLimit("public-booking-page", 60), api.publicBookingPage)
 	v1.GET("/public/book/:slug/routes", api.rateLimit("public-booking-routes", 60), api.publicBookingRoutes)
-	v1.GET("/public/book/:slug/rates", api.rateLimit("public-booking-rates", 60), api.publicBookingRates)
-	v1.POST("/public/book/:slug/bookings", api.rateLimit("public-booking-create", 10), api.createPublicBooking)
+	v1.POST("/public/book/:slug/reviews", api.rateLimit("public-booking-review", 5), api.optionalAuth(), api.submitPublicReview)
+
+	marketplace := v1.Group("/marketplace")
+	marketplace.GET("/locations", api.rateLimit("marketplace-locations", 60), api.marketplaceLocations)
+	marketplace.GET("/providers", api.rateLimit("marketplace-providers", 60), api.marketplaceProviders)
+	marketplace.GET("/providers/:slug", api.rateLimit("marketplace-provider", 60), api.marketplaceProvider)
+	marketplace.GET("/providers/:slug/services", api.rateLimit("marketplace-provider-services", 60), api.marketplaceProviderServices)
+	marketplace.POST("/search", api.rateLimit("marketplace-search", 30), api.optionalAuth(), api.marketplaceSearch)
+	marketplace.GET("/quotes/:reference", api.rateLimit("marketplace-quote", 60), api.marketplaceQuote)
+	marketplace.POST("/quotes", api.rateLimit("marketplace-quote-select", 30), api.optionalAuth(), api.selectMarketplaceQuote)
+	v1.POST("/public/book/:slug/bookings", api.rateLimit("public-booking-create", 10), api.optionalAuth(), api.createPublicBooking)
+	v1.POST("/public/bookings/:reference/claim", api.rateLimit("public-booking-claim", 10), api.optionalAuth(), api.claimPublicBooking)
 	v1.GET("/public/riders/:token", api.rateLimit("driver-portal", 60), api.driverPortal)
 	v1.GET("/public/tracking/:code", api.rateLimit("public-tracking", 60), api.publicTracking)
 	v1.GET("/invitations/:token", api.rateLimit("invitation-preview", 30), api.previewInvitation)
@@ -84,6 +94,12 @@ func New(cfg *config.Config, svc *service.Service, authManager *auth.Manager, li
 	authed.POST("/auth/email/resend-verification", api.rateLimit("resend-verification", 3), api.resendEmailVerification)
 	authed.POST("/auth/whatsapp/send-code", api.rateLimit("whatsapp-send-code", 5), api.sendWhatsAppCode)
 	authed.POST("/auth/whatsapp/verify-code", api.rateLimit("whatsapp-verify-code", 10), api.verifyWhatsAppCode)
+
+	customer := authed.Group("/customer")
+	customer.GET("/bookings", api.listCustomerBookings)
+	customer.GET("/quotes", api.listCustomerQuotes)
+	customer.GET("/quotes/:reference", api.getCustomerQuote)
+	customer.POST("/quotes/:reference/select", api.selectCustomerQuote)
 
 	admin := authed.Group("/admin", api.requirePlatformAdmin())
 	admin.GET("/overview", api.adminOverview)
@@ -103,6 +119,9 @@ func New(cfg *config.Config, svc *service.Service, authManager *auth.Manager, li
 	company.GET("/subdomain/availability", api.requirePermission("subdomain.manage"), api.checkSubdomain)
 	company.PUT("/subdomain", api.requirePermission("subdomain.manage"), api.updateSubdomain)
 
+	company.GET("/marketplace", api.requirePermission("company.settings.manage"), api.getCompanyMarketplaceSettings)
+	company.PUT("/marketplace", api.requirePermission("company.settings.manage"), api.updateCompanyMarketplaceSettings)
+
 	company.GET("/booking-page", api.requirePermission("bookings.manage"), api.getBookingPage)
 	company.GET("/booking-page/availability", api.requirePermission("bookings.manage"), api.checkBookingPageSlug)
 	company.PUT("/booking-page", api.requirePermission("bookings.manage"), api.upsertBookingPage)
@@ -112,6 +131,9 @@ func New(cfg *config.Config, svc *service.Service, authManager *auth.Manager, li
 	company.PATCH("/booking-routes/:id/status", api.requirePermission("rates.update"), api.setCompanyBookingRouteStatus)
 	company.POST("/booking-routes/:id/duplicate", api.requirePermission("rates.create"), api.duplicateCompanyBookingRoute)
 	company.DELETE("/booking-routes/:id", api.requirePermission("rates.update"), api.deleteCompanyBookingRoute)
+
+	company.GET("/item-categories", api.requirePermission("rates.view"), api.getItemCategoryPolicy)
+	company.PUT("/item-categories", api.requirePermission("rates.update"), api.updateItemCategoryPolicy)
 
 	company.GET("/last-mile-areas", api.requirePermission("rates.view"), api.listLastMileAreas)
 	company.POST("/last-mile-areas", api.requirePermission("rates.create"), api.createLastMileArea)
@@ -134,7 +156,10 @@ func New(cfg *config.Config, svc *service.Service, authManager *auth.Manager, li
 	company.GET("/members", api.requirePermission("staff.view"), api.listMembers)
 	company.GET("/drivers", api.requirePermission("staff.view"), api.listDrivers)
 	company.POST("/drivers", api.requirePermission("staff.invite"), api.createDriver)
+	company.PATCH("/drivers/:id", api.requirePermission("staff.update"), api.updateDriver)
 	company.PATCH("/drivers/:id/status", api.requirePermission("staff.deactivate"), api.setDriverStatus)
+	company.GET("/customers", api.requirePermission("staff.view"), api.listCompanyCustomers)
+	company.GET("/customers/:id/bookings", api.requirePermission("staff.view"), api.listCompanyCustomerBookings)
 	company.GET("/deliveries", api.requirePermission("shipments.view"), api.listDeliveries)
 	company.POST("/deliveries", api.requirePermission("shipments.create"), api.createDelivery)
 	company.GET("/requests", api.requirePermission("bookings.manage"), api.listBookingRequests)
@@ -159,46 +184,6 @@ func New(cfg *config.Config, svc *service.Service, authManager *auth.Manager, li
 	company.POST("/roles", api.requirePermission("staff.roles.manage"), api.createRole)
 	company.PATCH("/roles/:id", api.requirePermission("staff.roles.manage"), api.updateRole)
 	company.DELETE("/roles/:id", api.requirePermission("staff.roles.manage"), api.deleteRole)
-
-	// Rate engine routes
-	company.GET("/countries", api.requirePermission("rates.view"), api.listCountries)
-	company.POST("/countries", api.requirePermission("rates.create"), api.createCountry)
-
-	company.GET("/states", api.requirePermission("rates.view"), api.listStates)
-	company.POST("/states", api.requirePermission("rates.create"), api.createState)
-
-	company.GET("/cities", api.requirePermission("rates.view"), api.listCities)
-	company.POST("/cities", api.requirePermission("rates.create"), api.createCity)
-
-	company.GET("/terminals", api.requirePermission("rates.view"), api.listTerminals)
-	company.POST("/terminals", api.requirePermission("rates.create"), api.createTerminal)
-
-	company.GET("/shipping-services", api.requirePermission("rates.view"), api.listShippingServices)
-	company.POST("/shipping-services", api.requirePermission("rates.create"), api.createShippingService)
-
-	company.GET("/routes", api.requirePermission("rates.view"), api.listCompanyRoutes)
-	company.POST("/routes", api.requirePermission("rates.create"), api.createCompanyRoute)
-
-	company.GET("/rate-cards", api.requirePermission("rates.view"), api.listRateCards)
-	company.POST("/rate-cards", api.requirePermission("rates.create"), api.createRateCard)
-	company.GET("/rate-cards/:id", api.requirePermission("rates.view"), api.getRateCard)
-
-	company.GET("/rate-cards/:id/versions", api.requirePermission("rates.view"), api.listRateCardVersions)
-	company.POST("/rate-cards/:id/versions", api.requirePermission("rates.create"), api.createRateCardVersion)
-
-	company.GET("/rate-cards/:id/versions/:version_id/rules", api.requirePermission("rates.view"), api.listPricingRules)
-	company.POST("/rate-cards/:id/versions/:version_id/rules", api.requirePermission("rates.create"), api.createPricingRule)
-
-	company.GET("/rate-cards/:id/versions/:version_id/tiers", api.requirePermission("rates.view"), api.listPricingTiers)
-	company.POST("/rate-cards/:id/versions/:version_id/tiers", api.requirePermission("rates.create"), api.createPricingTier)
-
-	company.GET("/package-categories", api.requirePermission("rates.view"), api.listPackageCategories)
-	company.POST("/package-categories", api.requirePermission("rates.create"), api.createPackageCategory)
-
-	company.GET("/additional-charges", api.requirePermission("rates.view"), api.listAdditionalCharges)
-	company.POST("/additional-charges", api.requirePermission("rates.create"), api.createAdditionalCharge)
-
-	company.POST("/quotes", api.requirePermission("rates.create"), api.createShippingQuote)
 
 	staticHandler := web.Handler()
 	r.NoRoute(func(c *gin.Context) {

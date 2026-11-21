@@ -145,7 +145,7 @@ func (a *API) createLastMileArea(c *gin.Context) {
 		FlatPriceMinor: nullInt8Minor(req.FlatPriceMinor), BaseDeliveryFeeMinor: nullInt8Minor(req.BaseDeliveryFeeMinor), PricePerKmMinor: nullInt8Minor(req.PricePerKmMinor), MinimumFeeMinor: nullInt8Minor(req.MinimumFeeMinor),
 		MaximumDistanceKm: floatNumericPtr(req.MaximumDistanceKm), MaximumFeeMinor: nullInt8Minor(req.MaximumFeeMinor), VolumetricDivisor: floatNumericPtr(req.VolumetricDivisor), PriceIsEstimate: req.PriceIsEstimate,
 		MaxWeightKg: floatNumericPtr(req.MaxWeightKg), MaxLengthCm: floatNumericPtr(req.MaxLengthCm), MaxWidthCm: floatNumericPtr(req.MaxWidthCm), MaxHeightCm: floatNumericPtr(req.MaxHeightCm),
-		ExpressAvailable: req.ExpressAvailable, PickupAvailable: req.PickupAvailable, DeliveryAvailable: req.DeliveryAvailable, OperatingHours: hours, SupportedParcelTypes: req.SupportedParcelTypes,
+		ExpressAvailable: req.ExpressAvailable, PickupAvailable: req.PickupAvailable, DeliveryAvailable: req.DeliveryAvailable, OperatingHours: hours, SupportedParcelTypes: nonNilStrings(req.SupportedParcelTypes),
 	})
 	if err != nil {
 		a.handleServiceError(c, err)
@@ -210,7 +210,7 @@ func (a *API) updateLastMileArea(c *gin.Context) {
 		FlatPriceMinor: nullInt8Minor(req.FlatPriceMinor), BaseDeliveryFeeMinor: nullInt8Minor(req.BaseDeliveryFeeMinor), PricePerKmMinor: nullInt8Minor(req.PricePerKmMinor), MinimumFeeMinor: nullInt8Minor(req.MinimumFeeMinor),
 		MaximumDistanceKm: floatNumericPtr(req.MaximumDistanceKm), MaximumFeeMinor: nullInt8Minor(req.MaximumFeeMinor), VolumetricDivisor: floatNumericPtr(req.VolumetricDivisor), PriceIsEstimate: req.PriceIsEstimate,
 		MaxWeightKg: floatNumericPtr(req.MaxWeightKg), MaxLengthCm: floatNumericPtr(req.MaxLengthCm), MaxWidthCm: floatNumericPtr(req.MaxWidthCm), MaxHeightCm: floatNumericPtr(req.MaxHeightCm),
-		ExpressAvailable: req.ExpressAvailable, PickupAvailable: req.PickupAvailable, DeliveryAvailable: req.DeliveryAvailable, OperatingHours: hours, SupportedParcelTypes: req.SupportedParcelTypes,
+		ExpressAvailable: req.ExpressAvailable, PickupAvailable: req.PickupAvailable, DeliveryAvailable: req.DeliveryAvailable, OperatingHours: hours, SupportedParcelTypes: nonNilStrings(req.SupportedParcelTypes),
 	})
 	if err != nil {
 		fail(c, http.StatusNotFound, "last_mile_area_not_found", "That service area was not found.")
@@ -291,7 +291,7 @@ func (a *API) replaceLastMileZones(c *gin.Context) {
 	}
 	zones := make([]db.ServiceZone, 0, len(req.Zones))
 	for _, z := range req.Zones {
-		created, err := a.svc.Q.CreateServiceZone(c.Request.Context(), db.CreateServiceZoneParams{AreaID: areaID, Name: strings.TrimSpace(z.Name), Neighbourhoods: z.Neighbourhoods, State: z.State, City: z.City, Lga: z.Lga, CustomLocation: z.CustomLocation, CompanyID: tenant.CompanyID})
+		created, err := a.svc.Q.CreateServiceZone(c.Request.Context(), db.CreateServiceZoneParams{AreaID: areaID, Name: strings.TrimSpace(z.Name), Neighbourhoods: nonNilStrings(z.Neighbourhoods), State: z.State, City: z.City, Lga: z.Lga, CustomLocation: z.CustomLocation, CompanyID: tenant.CompanyID})
 		if err != nil {
 			a.handleServiceError(c, err)
 			return

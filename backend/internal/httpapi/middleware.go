@@ -98,6 +98,38 @@ func (a *API) requireAuth() gin.HandlerFunc {
 	}
 }
 
+// optionalAuth attaches the current user when a valid session is present but
+// lets anonymous visitors continue. Used by marketplace search and quote
+// selection, which must work without an account.
+func (a *API) optionalAuth() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		raw := accessTokenFromRequest(c)
+		if raw == "" {
+			c.Next()
+			return
+		}
+
+		claims, err := a.auth.Parse(raw)
+		if err != nil || a.svc.IsAccessTokenRevoked(c.Request.Context(), claims.ID) {
+			c.Next()
+			return
+		}
+		userID, err := uuid.Parse(claims.Subject)
+		if err != nil {
+			c.Next()
+			return
+		}
+		user, err := a.svc.Q.GetUserByID(c.Request.Context(), userID)
+		if err != nil || user.Status != "active" {
+			c.Next()
+			return
+		}
+		c.Set(ctxUserKey, user)
+		c.Set(ctxClaimsKey, claims)
+		c.Next()
+	}
+}
+
 // requirePlatformAdmin allows any platform account (super_admin, admin or
 // support). Individual handlers decide whether support may mutate data.
 func (a *API) requirePlatformAdmin() gin.HandlerFunc {

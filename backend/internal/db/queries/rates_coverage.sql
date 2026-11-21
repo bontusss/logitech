@@ -70,38 +70,12 @@ SELECT $1,$2,$3,$4 WHERE EXISTS (
 AND EXISTS (SELECT 1 FROM service_zones z WHERE z.id=$3 AND z.area_id=$1)
 RETURNING *;
 
--- name: ReplaceWeightBrackets :exec
-DELETE FROM pricing_weight_brackets w USING company_booking_routes r
-WHERE w.route_id=r.id AND r.company_id=$1 AND w.route_id=$2;
 
--- name: CreateWeightBracket :one
-INSERT INTO pricing_weight_brackets (route_id,min_weight_kg,max_weight_kg,price_minor)
-SELECT $1,$2,$3,$4 FROM company_booking_routes r WHERE r.id=$1 AND r.company_id=$5
-RETURNING *;
 
--- name: ReplaceSizeCategories :exec
-DELETE FROM pricing_size_categories c USING company_booking_routes r
-WHERE c.route_id=r.id AND r.company_id=$1 AND c.route_id=$2;
 
--- name: CreateSizeCategory :one
-INSERT INTO pricing_size_categories (route_id,name,price_minor,requires_manual_quote)
-SELECT $1,$2,$3,$4 FROM company_booking_routes r WHERE r.id=$1 AND r.company_id=$5
-RETURNING *;
 
--- name: ListWeightBrackets :many
-SELECT w.* FROM pricing_weight_brackets w JOIN company_booking_routes r ON r.id=w.route_id
-WHERE r.company_id=$1 AND w.route_id=$2 ORDER BY w.min_weight_kg;
 
--- name: ListSizeCategories :many
-SELECT c.* FROM pricing_size_categories c JOIN company_booking_routes r ON r.id=c.route_id
-WHERE r.company_id=$1 AND c.route_id=$2 ORDER BY c.created_at;
 
 -- name: ListZoneRates :many
 SELECT r.* FROM pricing_zone_rates r JOIN last_mile_service_areas a ON a.id=r.area_id
 WHERE a.company_id=$1 AND r.area_id=$2;
-
--- name: CreatePricingQuoteVersion :one
-INSERT INTO pricing_quote_versions (
- company_id,service_type,route_id,area_id,pricing_model,input_snapshot,calculation_snapshot,
- base_price_minor,additional_charges_minor,total_minor,currency,is_estimate,physical_inspection_required,confirmation_required
-) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) RETURNING *;

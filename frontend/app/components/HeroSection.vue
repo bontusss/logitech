@@ -1,5 +1,42 @@
 <script setup lang="ts">
 import { ArrowDown, ShieldCheck, Sparkles, Truck } from 'lucide-vue-next'
+import type {
+  MarketplaceSearchPayload,
+  MarketplaceSearchResponse,
+} from '~/types/marketplace'
+import { apiErrorMessage } from '~/composables/useApi'
+
+const { api } = useApi()
+const searchLoading = ref(false)
+const searchError = ref('')
+const searchResponse = ref<MarketplaceSearchResponse | null>(null)
+const searchPayload = ref<MarketplaceSearchPayload | null>(null)
+let requestId = 0
+
+async function runSearch(payload: MarketplaceSearchPayload) {
+  const currentRequest = ++requestId
+  searchPayload.value = payload
+  searchLoading.value = true
+  searchError.value = ''
+  searchResponse.value = null
+
+  try {
+    const response = await api<MarketplaceSearchResponse>('/marketplace/search', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    })
+    if (currentRequest === requestId) searchResponse.value = response
+  } catch (error: unknown) {
+    if (currentRequest === requestId) {
+      searchError.value = apiErrorMessage(
+        error,
+        'The search could not be completed. Please try again.',
+      )
+    }
+  } finally {
+    if (currentRequest === requestId) searchLoading.value = false
+  }
+}
 </script>
 
 <template>
@@ -43,9 +80,14 @@ import { ArrowDown, ShieldCheck, Sparkles, Truck } from 'lucide-vue-next'
       </div>
 
       <div class="reveal reveal-2 mx-auto mt-10 grid max-w-[1080px] gap-4 lg:grid-cols-2 lg:items-start">
-        <ShippingRateSearch />
+        <ShippingRateSearch :loading="searchLoading" @search="runSearch" />
         <div>
-          <RateComparisonPreview />
+          <LiveRateComparison
+            :loading="searchLoading"
+            :error="searchError"
+            :response="searchResponse"
+            :search="searchPayload"
+          />
           <NuxtLink
             to="/#how-it-works"
             class="mt-4 inline-flex items-center gap-2 rounded-full border border-white/90 bg-white/85 px-3.5 py-2 text-[12.5px] font-semibold text-ink-900/75 shadow-sm transition hover:-translate-y-0.5 hover:border-brand-200 hover:text-brand-700 dark:border-white/10 dark:bg-white/5"

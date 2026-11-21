@@ -8,7 +8,6 @@ import {
   Settings,
   Sparkles,
   Truck,
-  Users,
 } from 'lucide-vue-next'
 
 definePageMeta({ middleware: 'auth', layout: 'app' })
@@ -24,12 +23,6 @@ const sections: Record<
     description: 'Manage delivery assignments, driver progress and proof of delivery from one place.',
     icon: Truck,
     iconClass: 'bg-sky-100 text-sky-700 dark:bg-sky-400/15 dark:text-sky-200',
-  },
-  customers: {
-    title: 'Customers',
-    description: 'A searchable directory of the people and businesses booking deliveries.',
-    icon: Users,
-    iconClass: 'bg-rose-100 text-rose-700 dark:bg-rose-400/15 dark:text-rose-200',
   },
   requests: {
     title: 'Booking requests',

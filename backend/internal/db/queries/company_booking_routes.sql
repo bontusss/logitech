@@ -16,6 +16,7 @@ SELECT
   r.express_price_per_km_minor,
   r.same_day_price_per_km_minor,
   r.minimum_charge_minor,
+  r.price_is_estimate,
   COALESCE(s.currency, 'NGN') AS currency
 FROM company_booking_routes r
 LEFT JOIN company_settings s ON s.company_id = r.company_id
@@ -36,6 +37,7 @@ SELECT
   r.express_price_per_km_minor,
   r.same_day_price_per_km_minor,
   r.minimum_charge_minor,
+  r.price_is_estimate,
   COALESCE(s.currency, 'NGN') AS currency
 FROM company_booking_routes r
 LEFT JOIN company_settings s ON s.company_id = r.company_id

@@ -48,8 +48,9 @@ WHERE d.company_id = $1 AND d.id = $2;
 
 -- name: AcceptBookingRequest :one
 UPDATE deliveries
-SET request_status = 'accepted', status = 'created', accepted_at = now(), tracking_code =
-  'TRK-' || upper(substr(replace(id::text, '-', ''), 1, 12)), updated_at = now()
+SET request_status = 'accepted', status = 'created', accepted_at = now(),
+    tracking_code = COALESCE(tracking_code, 'TRK-' || upper(substr(replace(id::text, '-', ''), 1, 12))),
+    updated_at = now()
 WHERE company_id = $1 AND id = $2 AND request_status = 'pending'
 RETURNING *;
 

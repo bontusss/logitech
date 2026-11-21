@@ -29,6 +29,13 @@ const form = reactive({
   city: '',
   address: '',
   description: '',
+  website_url: '',
+  instagram_url: '',
+  facebook_url: '',
+  twitter_url: '',
+  linkedin_url: '',
+  year_established: '' as string | number,
+  photos: '',
 })
 const hours = ref<OperatingHours>({})
 const saving = ref(false)
@@ -47,6 +54,13 @@ watch(
       city: company.city ?? '',
       address: company.address ?? '',
       description: company.description ?? '',
+      website_url: company.website_url ?? '',
+      instagram_url: company.instagram_url ?? '',
+      facebook_url: company.facebook_url ?? '',
+      twitter_url: company.twitter_url ?? '',
+      linkedin_url: company.linkedin_url ?? '',
+      year_established: company.year_established ?? '',
+      photos: (company.photo_urls ?? []).join('\n'),
     })
     hours.value = company.operating_hours ?? {}
   },
@@ -82,6 +96,16 @@ async function save() {
         city: form.city.trim(),
         address: form.address.trim(),
         description: form.description.trim(),
+        website_url: form.website_url.trim(),
+        instagram_url: form.instagram_url.trim(),
+        facebook_url: form.facebook_url.trim(),
+        twitter_url: form.twitter_url.trim(),
+        linkedin_url: form.linkedin_url.trim(),
+        year_established: form.year_established === '' ? 0 : Number(form.year_established),
+        photo_urls: form.photos
+          .split('\n')
+          .map((value) => value.trim())
+          .filter(Boolean),
         operating_hours: hours.value,
       },
     })
@@ -191,6 +215,79 @@ async function save() {
           class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 disabled:bg-slate-50 disabled:text-ink-900/45"
           placeholder="What your company moves, where it operates and what customers should know."
         />
+      </label>
+      <label class="block">
+        <span class="mb-1.5 block text-[11px] font-medium text-ink-900/55">Website</span>
+        <input
+          v-model="form.website_url"
+          type="url"
+          :disabled="!canEdit"
+          placeholder="https://example.com"
+          class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 disabled:bg-slate-50 disabled:text-ink-900/45"
+        />
+      </label>
+      <label class="block">
+        <span class="mb-1.5 block text-[11px] font-medium text-ink-900/55">Year established</span>
+        <input
+          v-model="form.year_established"
+          type="number"
+          min="1800"
+          :max="new Date().getFullYear()"
+          :disabled="!canEdit"
+          placeholder="2018"
+          class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 disabled:bg-slate-50 disabled:text-ink-900/45"
+        />
+      </label>
+      <label class="block">
+        <span class="mb-1.5 block text-[11px] font-medium text-ink-900/55">Instagram</span>
+        <input
+          v-model="form.instagram_url"
+          type="url"
+          :disabled="!canEdit"
+          placeholder="https://instagram.com/yourbrand"
+          class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 disabled:bg-slate-50 disabled:text-ink-900/45"
+        />
+      </label>
+      <label class="block">
+        <span class="mb-1.5 block text-[11px] font-medium text-ink-900/55">Facebook</span>
+        <input
+          v-model="form.facebook_url"
+          type="url"
+          :disabled="!canEdit"
+          placeholder="https://facebook.com/yourbrand"
+          class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 disabled:bg-slate-50 disabled:text-ink-900/45"
+        />
+      </label>
+      <label class="block">
+        <span class="mb-1.5 block text-[11px] font-medium text-ink-900/55">X / Twitter</span>
+        <input
+          v-model="form.twitter_url"
+          type="url"
+          :disabled="!canEdit"
+          placeholder="https://x.com/yourbrand"
+          class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 disabled:bg-slate-50 disabled:text-ink-900/45"
+        />
+      </label>
+      <label class="block">
+        <span class="mb-1.5 block text-[11px] font-medium text-ink-900/55">LinkedIn</span>
+        <input
+          v-model="form.linkedin_url"
+          type="url"
+          :disabled="!canEdit"
+          placeholder="https://linkedin.com/company/yourbrand"
+          class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 disabled:bg-slate-50 disabled:text-ink-900/45"
+        />
+      </label>
+      <label class="block sm:col-span-2">
+        <span class="mb-1.5 block text-[11px] font-medium text-ink-900/55">Company photos</span>
+        <textarea
+          v-model="form.photos"
+          rows="3"
+          :disabled="!canEdit"
+          class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500 disabled:bg-slate-50 disabled:text-ink-900/45"
+          placeholder="One https image link per line, up to 8 photos."
+        />
+        <span class="mt-1 block text-[10px] text-ink-900/35">Use https image links (for example Cloudinary or your website).</span>
       </label>
     </div>
 

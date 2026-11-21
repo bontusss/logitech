@@ -2,7 +2,6 @@ package httpapi
 
 import (
 	"encoding/json"
-	"math"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -14,6 +13,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 
+	"github.com/bol-platform/backend/internal/auth"
 	db "github.com/bol-platform/backend/internal/db/sqlc"
 	"github.com/bol-platform/backend/internal/service"
 )
@@ -284,6 +284,31 @@ func (a *API) publicBookingPage(c *gin.Context) {
 		operatingHours = gin.H{}
 	}
 
+	branches, err := a.svc.Q.ListPublicCompanyBranches(c.Request.Context(), row.CompanyID)
+	if err != nil {
+		a.handleServiceError(c, err)
+		return
+	}
+	branchItems := make([]publicBranchDTO, 0, len(branches))
+	for _, branch := range branches {
+		branchItems = append(branchItems, publicBranchFromRow(branch))
+	}
+
+	reviews, err := a.svc.Q.ListCompanyReviews(c.Request.Context(), row.CompanyID)
+	if err != nil {
+		a.handleServiceError(c, err)
+		return
+	}
+	reviewItems := make([]publicReviewDTO, 0, len(reviews))
+	for _, review := range reviews {
+		reviewItems = append(reviewItems, publicReviewFromRow(review))
+	}
+	summary, err := a.svc.Q.GetCompanyReviewSummary(c.Request.Context(), row.CompanyID)
+	if err != nil {
+		a.handleServiceError(c, err)
+		return
+	}
+
 	c.JSON(http.StatusOK, gin.H{
 		"booking_page": gin.H{
 			"slug":        row.Slug,
@@ -291,18 +316,27 @@ func (a *API) publicBookingPage(c *gin.Context) {
 			"description": row.Description,
 		},
 		"company": gin.H{
-			"id":              row.CompanyID,
-			"name":            row.Name,
-			"slug":            row.CompanySlug,
-			"public_name":     row.PublicName,
-			"business_type":   row.BusinessType,
-			"business_email":  row.BusinessEmail,
-			"phone":           row.Phone,
-			"city":            row.City,
-			"state":           row.State,
-			"country":         row.Country,
-			"currency":        row.Currency,
-			"operating_hours": operatingHours,
+			"id":               row.CompanyID,
+			"name":             row.Name,
+			"slug":             row.CompanySlug,
+			"public_name":      row.PublicName,
+			"business_type":    row.BusinessType,
+			"business_email":   row.BusinessEmail,
+			"phone":            row.Phone,
+			"city":             row.City,
+			"state":            row.State,
+			"country":          row.Country,
+			"currency":         row.Currency,
+			"operating_hours":  operatingHours,
+			"description":      row.Description_2,
+			"website_url":      row.WebsiteUrl,
+			"instagram_url":    row.InstagramUrl,
+			"facebook_url":     row.FacebookUrl,
+			"twitter_url":      row.TwitterUrl,
+			"linkedin_url":     row.LinkedinUrl,
+			"year_established": optionalInt32(row.YearEstablished),
+			"photo_urls":       nonNilStrings(row.PhotoUrls),
+			"verified_at":      row.VerifiedAt,
 		},
 		"branding": gin.H{
 			"logo_url":        row.LogoUrl,
@@ -310,7 +344,17 @@ func (a *API) publicBookingPage(c *gin.Context) {
 			"secondary_color": row.SecondaryColor,
 			"cover_image_url": row.CoverImageUrl,
 		},
+		"item_categories": gin.H{
+			"accepted":   nonNilStrings(row.AcceptedItemCategories),
+			"prohibited": nonNilStrings(row.ProhibitedItemCategories),
+		},
 		"subdomain": row.Subdomain,
+		"branches":  branchItems,
+		"reviews":   reviewItems,
+		"review_summary": gin.H{
+			"review_count":   summary.ReviewCount,
+			"average_rating": summary.AverageRating,
+		},
 	})
 }
 
@@ -335,37 +379,6 @@ func (a *API) publicBookingRoutes(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"routes": routes})
-}
-
-func (a *API) publicBookingRates(c *gin.Context) {
-	slug, reason := validateBookingPageSlug(c.Param("slug"))
-	if reason != "" {
-		fail(c, http.StatusNotFound, "booking_page_not_found", "That booking page was not found.")
-		return
-	}
-	weight, err := strconv.ParseFloat(c.Query("weight_kg"), 64)
-	if err != nil || weight <= 0 || weight > 500 {
-		fail(c, http.StatusBadRequest, "invalid_weight", "Enter a package weight between 0.1 and 500 kg.")
-		return
-	}
-	page, err := a.svc.Q.GetPublicBookingPage(c.Request.Context(), slug)
-	if err != nil {
-		if err == pgx.ErrNoRows {
-			fail(c, http.StatusNotFound, "booking_page_not_found", "That booking page was not found.")
-			return
-		}
-		a.handleServiceError(c, err)
-		return
-	}
-	rates, err := a.svc.Q.ListPublicBookingRates(c.Request.Context(), db.ListPublicBookingRatesParams{
-		WeightKg:  float64ToNumeric(weight),
-		CompanyID: page.CompanyID,
-	})
-	if err != nil {
-		a.handleServiceError(c, err)
-		return
-	}
-	c.JSON(http.StatusOK, gin.H{"rates": rates})
 }
 
 func (a *API) createPublicBooking(c *gin.Context) {
@@ -408,6 +421,10 @@ func (a *API) createPublicBooking(c *gin.Context) {
 	}
 	if req.DeclaredValueMinor > 10_000_000_000_00 {
 		fail(c, http.StatusBadRequest, "invalid_item_value", "The item value is too large.")
+		return
+	}
+	if !service.ItemCategoryAllowed(req.PackageCategory, page.AcceptedItemCategories, page.ProhibitedItemCategories) {
+		fail(c, http.StatusUnprocessableEntity, "item_category_not_allowed", "This provider does not accept that item category. Choose another category.")
 		return
 	}
 
@@ -456,12 +473,17 @@ func (a *API) createPublicBooking(c *gin.Context) {
 			fail(c, http.StatusBadRequest, "service_unavailable", "That delivery speed is not offered on this route.")
 			return
 		}
-		calculatedPrice := int64(math.Ceil(float64(pricePerKm.Int64) * distanceKM))
-		if calculatedPrice < selectedRoute.MinimumChargeMinor {
-			calculatedPrice = selectedRoute.MinimumChargeMinor
+		rate, rateErr := service.CalculateIntercityRate(service.IntercityRateInput{
+			DistanceKm:         distanceKM,
+			PerKmMinor:         pricePerKm.Int64,
+			MinimumChargeMinor: selectedRoute.MinimumChargeMinor,
+		})
+		if rateErr != nil {
+			fail(c, http.StatusUnprocessableEntity, "missing_rate", "This route has no usable price. Choose another route.")
+			return
 		}
-		deliveryPriceMinor = calculatedPrice
-		priceIsEstimate = false
+		deliveryPriceMinor = rate.TotalMinor
+		priceIsEstimate = selectedRoute.PriceIsEstimate
 	} else if !validCoordinatePair(req.PickupLatitude, req.PickupLongitude) ||
 		!validCoordinatePair(req.DropoffLatitude, req.DropoffLongitude) {
 		fail(c, http.StatusBadRequest, "locations_not_verified", "Choose pickup and drop-off locations from the map suggestions.")
@@ -475,6 +497,18 @@ func (a *API) createPublicBooking(c *gin.Context) {
 			fail(c, http.StatusBadRequest, "invalid_package_photo", "Upload the package photo using the booking page photo picker.")
 			return
 		}
+	}
+
+	trackingCode, _, err := auth.GenerateOpaqueToken()
+	if err != nil {
+		a.handleServiceError(c, err)
+		return
+	}
+	trackingCode = "TRK-" + strings.ToUpper(trackingCode[:12])
+
+	var customerID *uuid.UUID
+	if user, ok := currentUser(c); ok {
+		customerID = &user.ID
 	}
 
 	delivery, err := a.svc.Q.CreatePublicBookingDelivery(c.Request.Context(), db.CreatePublicBookingDeliveryParams{
@@ -497,10 +531,11 @@ func (a *API) createPublicBooking(c *gin.Context) {
 		DropoffLatitude:        optionalNumeric(req.DropoffLatitude),
 		DropoffLongitude:       optionalNumeric(req.DropoffLongitude),
 		SelectedRouteID:        routeID,
-		SelectedRateCardID:     nil,
 		PriceIsEstimate:        priceIsEstimate,
 		DeliverySpeed:          deliverySpeed,
 		DistanceKm:             float64ToNumeric(distanceKM),
+		CustomerID:             customerID,
+		TrackingCode:           &trackingCode,
 	})
 	if err != nil {
 		if err == pgx.ErrNoRows {
@@ -519,14 +554,19 @@ func (a *API) createPublicBooking(c *gin.Context) {
 		IP:         c.ClientIP(),
 		UserAgent:  c.Request.UserAgent(),
 	})
-	c.JSON(http.StatusCreated, gin.H{
-		"booking": gin.H{
-			"reference":            delivery.ID,
-			"status":               delivery.Status,
-			"delivery_price_minor": delivery.DeliveryPriceMinor,
-			"price_is_estimate":    delivery.PriceIsEstimate,
-		},
-	})
+	booking := gin.H{
+		"reference":            delivery.ID,
+		"status":               delivery.Status,
+		"request_status":       delivery.RequestStatus,
+		"delivery_price_minor": delivery.DeliveryPriceMinor,
+		"price_is_estimate":    delivery.PriceIsEstimate,
+		"customer_linked":      delivery.CustomerID != nil,
+	}
+	if delivery.TrackingCode != nil {
+		booking["tracking_code"] = *delivery.TrackingCode
+		booking["tracking_url"] = strings.TrimRight(a.cfg.AppURL, "/") + "/track/" + *delivery.TrackingCode
+	}
+	c.JSON(http.StatusCreated, gin.H{"booking": booking})
 }
 
 func validCoordinatePair(latitude, longitude *float64) bool {

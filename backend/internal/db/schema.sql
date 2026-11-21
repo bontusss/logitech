@@ -47,6 +47,8 @@ CREATE TABLE companies (
   state             text,
   city              text,
   address           text,
+  accepted_item_categories text[] NOT NULL DEFAULT ARRAY['cloth', 'electronics', 'document', 'food', 'jewelry', 'other']::text[],
+  prohibited_item_categories text[] NOT NULL DEFAULT '{}'::text[],
   status            text NOT NULL DEFAULT 'pending'
                     CHECK (status IN ('pending', 'under_review', 'verified', 'rejected', 'suspended')),
   onboarding_status text NOT NULL DEFAULT 'incomplete'
@@ -418,338 +420,6 @@ CREATE UNIQUE INDEX terminals_code_unique ON terminals (code) WHERE deleted_at I
 CREATE INDEX idx_terminals_city ON terminals (city_id);
 
 -- ---------------------------------------------------------------------------
--- Company Service Areas (company-scoped)
--- ---------------------------------------------------------------------------
-
-CREATE TABLE company_service_areas (
-  id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  company_id      uuid NOT NULL REFERENCES companies (id) ON DELETE CASCADE,
-  location_type   text NOT NULL CHECK (location_type IN ('country', 'state', 'city', 'area', 'terminal')),
-  location_id     uuid NOT NULL,
-  serves_pickup   boolean NOT NULL DEFAULT false,
-  serves_delivery boolean NOT NULL DEFAULT false,
-  serves_terminal boolean NOT NULL DEFAULT false,
-  is_primary      boolean NOT NULL DEFAULT false,
-  created_at      timestamptz NOT NULL DEFAULT now(),
-  updated_at      timestamptz NOT NULL DEFAULT now(),
-  UNIQUE (company_id, location_type, location_id)
-);
-
-CREATE INDEX idx_company_service_areas_company ON company_service_areas (company_id);
-CREATE INDEX idx_company_service_areas_location ON company_service_areas (location_type, location_id);
-
--- ---------------------------------------------------------------------------
--- Shipping Services
--- ---------------------------------------------------------------------------
-
-CREATE TABLE shipping_services (
-  id                  uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  company_id          uuid NOT NULL REFERENCES companies (id) ON DELETE CASCADE,
-  name                text NOT NULL,
-  description         text,
-  service_code        text NOT NULL,
-  delivery_type       text NOT NULL CHECK (delivery_type IN ('intercity', 'terminal-to-terminal', 'door-to-door', 'door-to-terminal', 'terminal-to-door')),
-  estimated_duration  integer NOT NULL, -- in days
-  min_weight_kg       numeric(10,2) NOT NULL DEFAULT 0,
-  max_weight_kg       numeric(10,2),
-  max_dimension_cm    numeric(10,2) NOT NULL DEFAULT 0, -- longest side in cm
-  volumetric_divisor  numeric(10,2) NOT NULL DEFAULT 5000, -- e.g., 5000 for standard
-  status              text NOT NULL DEFAULT 'active'
-                      CHECK (status IN ('active', 'inactive')),
-  is_default          boolean NOT NULL DEFAULT false,
-  created_at          timestamptz NOT NULL DEFAULT now(),
-  updated_at          timestamptz NOT NULL DEFAULT now(),
-  deleted_at          timestamptz
-);
-
-CREATE UNIQUE INDEX shipping_services_code_company_unique ON shipping_services (service_code, company_id);
-CREATE INDEX idx_shipping_services_company ON shipping_services (company_id);
-CREATE INDEX idx_shipping_services_status ON shipping_services (status);
-
--- ---------------------------------------------------------------------------
--- Company Routes
--- ---------------------------------------------------------------------------
-
-CREATE TABLE company_routes (
-  id                  uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  company_id          uuid NOT NULL REFERENCES companies (id) ON DELETE CASCADE,
-  origin_location_type text NOT NULL CHECK (origin_location_type IN ('country', 'state', 'city', 'area', 'terminal')),
-  origin_location_id  uuid NOT NULL,
-  destination_location_type text NOT NULL CHECK (destination_location_type IN ('country', 'state', 'city', 'area', 'terminal')),
-  destination_location_id uuid NOT NULL,
-  is_round_trip       boolean NOT NULL DEFAULT false,
-  status              text NOT NULL DEFAULT 'active'
-                      CHECK (status IN ('active', 'inactive')),
-  created_at          timestamptz NOT NULL DEFAULT now(),
-  updated_at          timestamptz NOT NULL DEFAULT now(),
-  deleted_at          timestamptz,
-  UNIQUE (company_id, origin_location_type, origin_location_id, destination_location_type, destination_location_id)
-);
-
-CREATE INDEX idx_company_routes_company ON company_routes (company_id);
-CREATE INDEX idx_company_routes_origin ON company_routes (origin_location_type, origin_location_id);
-CREATE INDEX idx_company_routes_destination ON company_routes (destination_location_type, destination_location_id);
-
--- ---------------------------------------------------------------------------
--- Rate Cards
--- ---------------------------------------------------------------------------
-
-CREATE TABLE rate_cards (
-  id                  uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  company_id          uuid NOT NULL REFERENCES companies (id) ON DELETE CASCADE,
-  name                text NOT NULL,
-  description         text,
-  currency            text NOT NULL DEFAULT 'NGN'
-                      CHECK (currency ~ '^[A-Z]{3}$'),
-  status              text NOT NULL DEFAULT 'draft'
-                      CHECK (status IN ('draft', 'published', 'expired', 'archived')),
-  is_published        boolean NOT NULL DEFAULT false,
-  effective_start     timestamptz,
-  effective_end       timestamptz,
-  published_at        timestamptz,
-  created_at          timestamptz NOT NULL DEFAULT now(),
-  updated_at          timestamptz NOT NULL DEFAULT now(),
-  deleted_at          timestamptz
-);
-
-CREATE INDEX idx_rate_cards_company ON rate_cards (company_id);
-CREATE INDEX idx_rate_cards_status ON rate_cards (status);
-CREATE INDEX idx_rate_cards_published ON rate_cards (is_published, effective_start, effective_end);
-
--- ---------------------------------------------------------------------------
--- Rate Card Versions (historical snapshots)
--- ---------------------------------------------------------------------------
-
-CREATE TABLE rate_card_versions (
-  id                  uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  rate_card_id        uuid NOT NULL REFERENCES rate_cards (id) ON DELETE CASCADE,
-  version             integer NOT NULL,
-  pricing_json        jsonb NOT NULL DEFAULT '{}'::jsonb,
-  additional_charges_json jsonb NOT NULL DEFAULT '{}'::jsonb,
-  is_active           boolean NOT NULL DEFAULT false,
-  effective_from      timestamptz NOT NULL DEFAULT now(),
-  effective_until     timestamptz,
-  created_at          timestamptz NOT NULL DEFAULT now(),
-  created_by          uuid REFERENCES users (id),
-  updated_at          timestamptz NOT NULL DEFAULT now(),
-  deleted_at          timestamptz
-);
-
-CREATE UNIQUE INDEX rate_card_versions_unique_version ON rate_card_versions (rate_card_id, version);
-CREATE INDEX idx_rate_card_versions_card ON rate_card_versions (rate_card_id);
-CREATE INDEX idx_rate_card_versions_active ON rate_card_versions (rate_card_id, is_active);
-
--- ---------------------------------------------------------------------------
--- Pricing Rules
--- ---------------------------------------------------------------------------
-
-CREATE TABLE pricing_rules (
-  id                  uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  rate_card_version_id uuid NOT NULL REFERENCES rate_card_versions (id) ON DELETE CASCADE,
-  rule_type           text NOT NULL CHECK (rule_type IN ('fixed', 'weight_based', 'per_kg', 'volumetric', 'category')),
-  name                text NOT NULL,
-  description         text,
-
-  -- Fixed pricing
-  fixed_amount        numeric(12,2),
-
-  -- Weight-based pricing
-  weight_tier_id      uuid,
-
-  -- Per-kg pricing
-  per_kg_base_charge  numeric(12,2) NOT NULL DEFAULT 0,
-  per_kg_rate         numeric(12,2) NOT NULL DEFAULT 0,
-  per_kg_minimum      numeric(12,2) NOT NULL DEFAULT 0,
-  per_kg_maximum      numeric(12,2),
-
-  -- Volumetric pricing
-  volumetric_divisor  numeric(10,2) NOT NULL DEFAULT 5000,
-
-  -- Category pricing
-  category_id         uuid,
-
-  -- Universal settings for the rule
-  applicable_routes   jsonb NOT NULL DEFAULT '[]'::jsonb,
-  applicable_services jsonb NOT NULL DEFAULT '[]'::jsonb,
-  applicable_categories jsonb NOT NULL DEFAULT '[]'::jsonb,
-  effective_from      timestamptz NOT NULL DEFAULT now(),
-  effective_until     timestamptz,
-  is_active           boolean NOT NULL DEFAULT true,
-  created_at          timestamptz NOT NULL DEFAULT now(),
-  deleted_at          timestamptz
-);
-
-CREATE INDEX idx_pricing_rules_version ON pricing_rules (rate_card_version_id);
-CREATE INDEX idx_pricing_rules_type ON pricing_rules (rule_type);
-CREATE INDEX idx_pricing_rules_active ON pricing_rules (is_active, effective_from, effective_until);
-
--- ---------------------------------------------------------------------------
--- Pricing Tiers (weight brackets for weight_based pricing)
--- ---------------------------------------------------------------------------
-
-CREATE TABLE pricing_tiers (
-  id                  uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  rate_card_version_id uuid NOT NULL REFERENCES rate_card_versions (id) ON DELETE CASCADE,
-  min_weight_kg       numeric(10,2) NOT NULL DEFAULT 0,
-  max_weight_kg       numeric(10,2) NOT NULL,
-  price_cents         integer NOT NULL, -- price in minor units (kobo for NGN)
-  name                text NOT NULL,
-  description         text,
-  created_at          timestamptz NOT NULL DEFAULT now(),
-  deleted_at          timestamptz,
-  UNIQUE (rate_card_version_id, min_weight_kg, max_weight_kg)
-);
-
-CREATE INDEX idx_pricing_tiers_version ON pricing_tiers (rate_card_version_id);
-
--- ---------------------------------------------------------------------------
--- Package Categories
--- ---------------------------------------------------------------------------
-
-CREATE TABLE package_categories (
-  id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  name        text NOT NULL,
-  description text,
-  sort_order  integer NOT NULL DEFAULT 0,
-  is_default  boolean NOT NULL DEFAULT false,
-  created_at  timestamptz NOT NULL DEFAULT now(),
-  updated_at  timestamptz NOT NULL DEFAULT now(),
-  deleted_at  timestamptz
-);
-
-CREATE UNIQUE INDEX package_categories_name_unique ON package_categories (name) WHERE deleted_at IS NULL;
-
-ALTER TABLE pricing_rules
-  ADD CONSTRAINT pricing_rules_weight_tier_id_fkey
-  FOREIGN KEY (weight_tier_id) REFERENCES pricing_tiers (id),
-  ADD CONSTRAINT pricing_rules_category_id_fkey
-  FOREIGN KEY (category_id) REFERENCES package_categories (id);
-
--- ---------------------------------------------------------------------------
--- Additional Charges
--- ---------------------------------------------------------------------------
-
-CREATE TABLE additional_charges (
-  id                  uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  rate_card_version_id uuid REFERENCES rate_card_versions (id) ON DELETE SET NULL,
-  company_id          uuid REFERENCES companies (id) ON DELETE SET NULL,
-  name                text NOT NULL,
-  charge_type         text NOT NULL CHECK (charge_type IN ('fixed', 'percentage')),
-  amount_cents        integer NOT NULL DEFAULT 0, -- fixed amount in minor units
-  percentage          numeric(5,2), -- percentage value
-  is_mandatory        boolean NOT NULL DEFAULT false,
-  applies_to_routes   jsonb NOT NULL DEFAULT '[]'::jsonb,
-  applies_to_services jsonb NOT NULL DEFAULT '[]'::jsonb,
-  applies_to_categories jsonb NOT NULL DEFAULT '[]'::jsonb,
-  is_included_in_price boolean NOT NULL DEFAULT false, -- whether included in displayed base price
-  created_at          timestamptz NOT NULL DEFAULT now(),
-  updated_at          timestamptz NOT NULL DEFAULT now(),
-  deleted_at          timestamptz
-);
-
-CREATE INDEX idx_additional_charges_version ON additional_charges (rate_card_version_id);
-CREATE INDEX idx_additional_charges_company ON additional_charges (company_id);
-
--- ---------------------------------------------------------------------------
--- Quote Charges (per-quote line items)
--- ---------------------------------------------------------------------------
-
-CREATE TABLE quote_charges (
-  id                  uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  shipping_quote_id   uuid NOT NULL,
-  charge_id           uuid REFERENCES additional_charges (id) ON DELETE SET NULL,
-  name                text NOT NULL,
-  charge_type         text NOT NULL CHECK (charge_type IN ('fixed', 'percentage')),
-  amount_cents        integer NOT NULL DEFAULT 0,
-  percentage          numeric(5,2),
-  is_mandatory        boolean NOT NULL DEFAULT false,
-  applied_on          text NOT NULL DEFAULT 'base', -- 'base', 'weight', 'dimensions', etc.
-  created_at          timestamptz NOT NULL DEFAULT now()
-);
-
-CREATE INDEX idx_quote_charges_quote ON quote_charges (shipping_quote_id);
-
--- ---------------------------------------------------------------------------
--- Shipping Quotes
--- ---------------------------------------------------------------------------
-
-CREATE TABLE shipping_quotes (
-  id                  uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  company_id          uuid NOT NULL REFERENCES companies (id) ON DELETE CASCADE,
-  customer_id         uuid REFERENCES users (id) ON DELETE SET NULL,
-  origin_location_type text NOT NULL CHECK (origin_location_type IN ('country', 'state', 'city', 'area', 'terminal')),
-  origin_location_id  uuid NOT NULL,
-  destination_location_type text NOT NULL CHECK (destination_location_type IN ('country', 'state', 'city', 'area', 'terminal')),
-  destination_location_id uuid NOT NULL,
-  selected_service_id uuid NOT NULL REFERENCES shipping_services (id),
-  rate_card_version_id uuid REFERENCES rate_card_versions (id),
-  quote_reference     text NOT NULL UNIQUE,
-  reference_weight_kg numeric(10,2) NOT NULL,
-  reference_length_cm numeric(10,2) NOT NULL,
-  reference_width_cm  numeric(10,2) NOT NULL,
-  reference_height_cm numeric(10,2) NOT NULL,
-  reference_category  text NOT NULL DEFAULT 'parcel', -- document, small_parcel, medium_parcel, large_parcel, fragile, electronics, bulk
-  chargeable_weight_kg numeric(10,2) NOT NULL,
-  base_price_cents    integer NOT NULL, -- base price in minor units
-  total_price_cents   integer NOT NULL, -- total price including all charges in minor units
-  currency            text NOT NULL DEFAULT 'NGN',
-  estimated_duration  integer NOT NULL, -- in days
-  status              text NOT NULL DEFAULT 'valid'
-                      CHECK (status IN ('valid', 'expired', 'accepted', 'cancelled')),
-  expires_at          timestamptz NOT NULL,
-  created_at          timestamptz NOT NULL DEFAULT now(),
-  company_confirmed   boolean NOT NULL DEFAULT false,
-  company_confirm_at  timestamptz
-);
-
-CREATE INDEX idx_shipping_quotes_company ON shipping_quotes (company_id);
-CREATE INDEX idx_shipping_quotes_customer ON shipping_quotes (customer_id);
-CREATE INDEX idx_shipping_quotes_reference ON shipping_quotes (quote_reference);
-CREATE INDEX idx_shipping_quotes_status ON shipping_quotes (status);
-CREATE INDEX idx_shipping_quotes_expires ON shipping_quotes (expires_at);
-CREATE INDEX idx_shipping_quotes_service ON shipping_quotes (selected_service_id);
-
-ALTER TABLE quote_charges
-  ADD CONSTRAINT quote_charges_shipping_quote_id_fkey
-  FOREIGN KEY (shipping_quote_id) REFERENCES shipping_quotes (id) ON DELETE CASCADE;
-
--- ---------------------------------------------------------------------------
--- Rate Card Publishing History
--- ---------------------------------------------------------------------------
-
-CREATE TABLE rate_card_history (
-  id                  uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  rate_card_id        uuid NOT NULL REFERENCES rate_cards (id) ON DELETE CASCADE,
-  version_id          uuid NOT NULL REFERENCES rate_card_versions (id) ON DELETE CASCADE,
-  changed_by          uuid REFERENCES users (id),
-  changed_at          timestamptz NOT NULL DEFAULT now(),
-  previous_status     text NOT NULL DEFAULT 'draft',
-  new_status          text NOT NULL,
-  notes               text,
-  ip                 text,
-  user_agent          text
-);
-
-CREATE INDEX idx_rate_card_history_card ON rate_card_history (rate_card_id);
-CREATE INDEX idx_rate_card_history_version ON rate_card_history (version_id);
-
--- ---------------------------------------------------------------------------
--- Audit trigger for rate card versions
--- ---------------------------------------------------------------------------
-
-CREATE OR REPLACE FUNCTION handle_rate_card_version_updated_at()
-RETURNS trigger AS $$
-BEGIN
-  NEW.updated_at = now();
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE TRIGGER rate_card_version_set_updated_at
-BEFORE UPDATE ON rate_card_versions
-FOR EACH ROW EXECUTE FUNCTION handle_rate_card_version_updated_at();
-
--- ---------------------------------------------------------------------------
 -- Booking pages
 
 CREATE TABLE booking_pages (
@@ -776,7 +446,7 @@ CREATE TABLE driver_profiles (
   vehicle_plate     text NOT NULL,
   email             citext NOT NULL,
   portal_token_hash text NOT NULL UNIQUE,
-  status            text NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'suspended')),
+  status            text NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'suspended', 'inactive')),
   created_at        timestamptz NOT NULL DEFAULT now(),
   updated_at        timestamptz NOT NULL DEFAULT now(),
   UNIQUE (company_id, email),
@@ -838,7 +508,6 @@ ALTER TABLE deliveries
   ADD COLUMN dropoff_latitude numeric(10,7),
   ADD COLUMN dropoff_longitude numeric(10,7),
   ADD COLUMN selected_route_id uuid,
-  ADD COLUMN selected_rate_card_id uuid REFERENCES rate_cards (id) ON DELETE SET NULL,
   ADD COLUMN price_is_estimate boolean NOT NULL DEFAULT true,
   ADD COLUMN booking_source text NOT NULL DEFAULT 'dashboard'
     CHECK (booking_source IN ('dashboard', 'booking_page'));
@@ -888,10 +557,6 @@ ALTER TABLE deliveries
   ADD COLUMN distance_km numeric(10,2) NOT NULL DEFAULT 0 CHECK (distance_km >= 0);
 
 ALTER TABLE company_booking_routes
-  ADD COLUMN transportation_method text NOT NULL DEFAULT 'road',
-  ADD COLUMN pricing_model text NOT NULL DEFAULT 'fixed',
-  ADD COLUMN origin_branch_id uuid REFERENCES branches(id) ON DELETE SET NULL,
-  ADD COLUMN destination_branch_id uuid REFERENCES branches(id) ON DELETE SET NULL,
   ADD COLUMN estimated_transit_time text,
   ADD COLUMN departure_schedule text,
   ADD COLUMN pickup_available boolean NOT NULL DEFAULT true,
@@ -902,22 +567,7 @@ ALTER TABLE company_booking_routes
   ADD COLUMN max_width_cm numeric(10,2),
   ADD COLUMN max_height_cm numeric(10,2),
   ADD COLUMN price_is_estimate boolean NOT NULL DEFAULT true,
-  ADD CONSTRAINT company_booking_routes_pricing_model_check
-    CHECK (pricing_model IN ('fixed','weight','size','volumetric','manual')),
   ADD CONSTRAINT company_booking_routes_weight_check CHECK (max_weight_kg IS NULL OR max_weight_kg >= 0);
-
-CREATE TABLE pricing_weight_brackets (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(), route_id uuid NOT NULL REFERENCES company_booking_routes(id) ON DELETE CASCADE,
-  min_weight_kg numeric(10,2) NOT NULL CHECK (min_weight_kg >= 0), max_weight_kg numeric(10,2) NOT NULL CHECK (max_weight_kg >= min_weight_kg),
-  price_minor bigint NOT NULL CHECK (price_minor >= 0), created_at timestamptz NOT NULL DEFAULT now()
-);
-CREATE INDEX pricing_weight_brackets_route_idx ON pricing_weight_brackets(route_id, min_weight_kg);
-
-CREATE TABLE pricing_size_categories (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(), route_id uuid NOT NULL REFERENCES company_booking_routes(id) ON DELETE CASCADE,
-  name text NOT NULL, price_minor bigint, requires_manual_quote boolean NOT NULL DEFAULT false, created_at timestamptz NOT NULL DEFAULT now(),
-  CHECK (price_minor IS NULL OR price_minor >= 0), UNIQUE (route_id, name)
-);
 
 CREATE TABLE last_mile_service_areas (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(), company_id uuid NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
@@ -948,17 +598,6 @@ CREATE TABLE pricing_zone_rates (
 );
 CREATE INDEX pricing_zone_rates_area_idx ON pricing_zone_rates(area_id);
 CREATE TRIGGER pricing_zone_rates_set_updated_at BEFORE UPDATE ON pricing_zone_rates FOR EACH ROW EXECUTE FUNCTION set_updated_at();
-
-CREATE TABLE pricing_quote_versions (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(), company_id uuid NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
-  service_type text NOT NULL CHECK (service_type IN ('intercity','lastmile')), route_id uuid REFERENCES company_booking_routes(id) ON DELETE SET NULL,
-  area_id uuid REFERENCES last_mile_service_areas(id) ON DELETE SET NULL, pricing_model text NOT NULL,
-  input_snapshot jsonb NOT NULL, calculation_snapshot jsonb NOT NULL, base_price_minor bigint,
-  additional_charges_minor bigint NOT NULL DEFAULT 0, total_minor bigint, currency text NOT NULL DEFAULT 'NGN',
-  is_estimate boolean NOT NULL DEFAULT true, physical_inspection_required boolean NOT NULL DEFAULT false,
-  confirmation_required boolean NOT NULL DEFAULT false, created_at timestamptz NOT NULL DEFAULT now()
-);
-CREATE INDEX pricing_quote_versions_company_created_idx ON pricing_quote_versions(company_id, created_at DESC);
 
 ALTER TABLE deliveries
   ADD COLUMN request_status text NOT NULL DEFAULT 'accepted'
@@ -991,3 +630,143 @@ CREATE TABLE delivery_timeline_events (
 );
 CREATE INDEX delivery_timeline_delivery_created_idx
   ON delivery_timeline_events(delivery_id, created_at DESC);
+-- Marketplace: provider listing, quote snapshots, customer selections and
+-- search telemetry. Quotes intentionally snapshot every price component so a
+-- later rate change cannot rewrite a saved quote.
+
+CREATE TABLE marketplace_settings (
+  company_id          uuid PRIMARY KEY REFERENCES companies (id) ON DELETE CASCADE,
+  is_listed           boolean NOT NULL DEFAULT false,
+  visibility_status   text NOT NULL DEFAULT 'draft'
+                      CHECK (visibility_status IN ('draft', 'listed', 'paused')),
+  public_description  text,
+  published_at        timestamptz,
+  created_at          timestamptz NOT NULL DEFAULT now(),
+  updated_at          timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX marketplace_settings_listed_idx
+  ON marketplace_settings (visibility_status, is_listed);
+
+CREATE TRIGGER marketplace_settings_set_updated_at
+BEFORE UPDATE ON marketplace_settings
+FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+CREATE TABLE marketplace_search_logs (
+  id                  uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  customer_id         uuid REFERENCES users (id) ON DELETE SET NULL,
+  origin_state        text NOT NULL,
+  origin_city         text NOT NULL,
+  destination_state   text NOT NULL,
+  destination_city    text NOT NULL,
+  search_metadata     jsonb NOT NULL DEFAULT '{}'::jsonb,
+  result_count        integer NOT NULL DEFAULT 0,
+  failure_count       integer NOT NULL DEFAULT 0,
+  created_at          timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX marketplace_search_logs_created_idx
+  ON marketplace_search_logs (created_at DESC);
+CREATE INDEX marketplace_search_logs_route_idx
+  ON marketplace_search_logs (lower(origin_state), lower(origin_city), lower(destination_state), lower(destination_city));
+
+CREATE TABLE marketplace_quotes (
+  id                      uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  quote_reference         text NOT NULL UNIQUE,
+  search_id               uuid REFERENCES marketplace_search_logs (id) ON DELETE SET NULL,
+  company_id              uuid NOT NULL REFERENCES companies (id) ON DELETE CASCADE,
+  provider_name           text NOT NULL,
+  provider_logo           text NOT NULL DEFAULT '',
+  provider_slug           text NOT NULL,
+  route_id                uuid REFERENCES company_booking_routes (id) ON DELETE SET NULL,
+  origin_state            text NOT NULL,
+  origin_city             text NOT NULL,
+  destination_state       text NOT NULL,
+  destination_city        text NOT NULL,
+  service_key             text NOT NULL CHECK (service_key IN ('standard', 'express', 'same_day', 'last_mile')),
+  service_name            text NOT NULL,
+  distance_km             numeric(10,2) NOT NULL,
+  package_snapshot        jsonb NOT NULL,
+  chargeable_weight_kg    numeric(10,2) NOT NULL,
+  base_price_minor        bigint NOT NULL CHECK (base_price_minor >= 0),
+  additional_charges_minor bigint NOT NULL DEFAULT 0 CHECK (additional_charges_minor >= 0),
+  discount_minor          bigint NOT NULL DEFAULT 0 CHECK (discount_minor >= 0),
+  total_price_minor       bigint NOT NULL CHECK (total_price_minor >= 0),
+  currency                text NOT NULL DEFAULT 'NGN',
+  price_confirmation_type text NOT NULL CHECK (price_confirmation_type IN ('confirmed', 'estimated')),
+  price_breakdown         jsonb NOT NULL DEFAULT '[]'::jsonb,
+  rate_snapshot           jsonb NOT NULL,
+  estimated_delivery      text,
+  estimated_duration_days integer,
+  pickup_available        boolean NOT NULL DEFAULT false,
+  delivery_available      boolean NOT NULL DEFAULT false,
+  delivery_method         text NOT NULL DEFAULT 'terminal-to-terminal',
+  conditions              text,
+  status                  text NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'selected', 'expired')),
+  expires_at              timestamptz NOT NULL,
+  created_at              timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX marketplace_quotes_company_idx ON marketplace_quotes (company_id);
+CREATE INDEX marketplace_quotes_search_idx ON marketplace_quotes (search_id);
+CREATE INDEX marketplace_quotes_expiry_idx ON marketplace_quotes (expires_at);
+CREATE INDEX marketplace_quotes_service_idx ON marketplace_quotes (company_id, service_key);
+
+CREATE TABLE customer_saved_quotes (
+  id                uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  customer_id       uuid REFERENCES users (id) ON DELETE CASCADE,
+  guest_token_hash  text,
+  quote_id          uuid NOT NULL REFERENCES marketplace_quotes (id) ON DELETE CASCADE,
+  selection_status  text NOT NULL DEFAULT 'selected'
+                    CHECK (selection_status IN ('selected', 'expired', 'converted', 'discarded')),
+  created_at        timestamptz NOT NULL DEFAULT now(),
+  updated_at        timestamptz NOT NULL DEFAULT now(),
+  CHECK (customer_id IS NOT NULL OR guest_token_hash IS NOT NULL)
+);
+
+CREATE UNIQUE INDEX customer_saved_quotes_customer_unique
+  ON customer_saved_quotes (customer_id, quote_id) WHERE customer_id IS NOT NULL;
+CREATE UNIQUE INDEX customer_saved_quotes_guest_unique
+  ON customer_saved_quotes (guest_token_hash, quote_id) WHERE guest_token_hash IS NOT NULL;
+CREATE INDEX customer_saved_quotes_customer_created_idx
+  ON customer_saved_quotes (customer_id, created_at DESC);
+
+CREATE TRIGGER customer_saved_quotes_set_updated_at
+BEFORE UPDATE ON customer_saved_quotes
+FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+-- Customer self-service bookings: a booking made on a provider's public page
+-- can be linked to a customer account, and every booking-page request gets a
+-- tracking code so guests can copy a working tracking URL immediately.
+ALTER TABLE deliveries
+  ADD COLUMN customer_id uuid REFERENCES users (id) ON DELETE SET NULL;
+
+CREATE INDEX deliveries_customer_created_idx
+  ON deliveries (customer_id, created_at DESC)
+  WHERE customer_id IS NOT NULL;
+
+-- Public provider profile details shown on the booking page, and customer
+-- reviews. Reviews are published immediately and tied to the reviewer's
+-- account when they are signed in.
+ALTER TABLE companies
+  ADD COLUMN website_url text,
+  ADD COLUMN instagram_url text,
+  ADD COLUMN facebook_url text,
+  ADD COLUMN twitter_url text,
+  ADD COLUMN linkedin_url text,
+  ADD COLUMN year_established integer
+    CHECK (year_established IS NULL OR year_established BETWEEN 1800 AND 2200),
+  ADD COLUMN photo_urls text[] NOT NULL DEFAULT '{}';
+
+CREATE TABLE company_reviews (
+  id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  company_id    uuid NOT NULL REFERENCES companies (id) ON DELETE CASCADE,
+  customer_id   uuid REFERENCES users (id) ON DELETE SET NULL,
+  reviewer_name text NOT NULL,
+  rating        smallint NOT NULL CHECK (rating BETWEEN 1 AND 5),
+  comment       text NOT NULL DEFAULT '',
+  created_at    timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX company_reviews_company_created_idx
+  ON company_reviews (company_id, created_at DESC);

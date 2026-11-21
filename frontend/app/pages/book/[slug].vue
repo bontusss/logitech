@@ -3,21 +3,37 @@ import {
   ArrowLeft,
   ArrowRight,
   BadgeCheck,
+  Building2,
+  Camera,
   Check,
   CheckCircle2,
   CircleAlert,
+  Clock3,
+  Copy,
+  ExternalLink,
+  Facebook,
+  Globe,
+  Instagram,
+  Linkedin,
   Loader2,
+  Mail,
   MapPin,
+  MessageSquare,
   Package,
+  Phone,
   Send,
   ShieldCheck,
   Sparkles,
+  Star,
+  Twitter,
   Upload,
+  UserPlus,
   UserRound,
   Weight,
   X,
 } from 'lucide-vue-next'
 import type { BookingLocation } from '~/components/BookingLocationField.vue'
+import type { OperatingHours } from '~/types/auth'
 
 definePageMeta({ layout: false })
 
@@ -39,6 +55,16 @@ interface PublicBookingPage {
     state: string | null
     country: string
     currency: string
+    operating_hours: OperatingHours
+    description: string | null
+    website_url: string | null
+    instagram_url: string | null
+    facebook_url: string | null
+    twitter_url: string | null
+    linkedin_url: string | null
+    year_established: number | null
+    photo_urls: string[]
+    verified_at: string | null
   }
   branding: {
     logo_url: string | null
@@ -46,7 +72,36 @@ interface PublicBookingPage {
     secondary_color: string
     cover_image_url: string | null
   }
+  item_categories: {
+    accepted: string[]
+    prohibited: string[]
+  }
   subdomain: string
+  branches: PublicBranch[]
+  reviews: PublicReview[]
+  review_summary: {
+    review_count: number
+    average_rating: number
+  }
+}
+
+interface PublicBranch {
+  id: string
+  name: string
+  address: string
+  city: string
+  state: string
+  phone: string | null
+  email: string
+  operating_hours: OperatingHours
+}
+
+interface PublicReview {
+  id: string
+  reviewer_name: string
+  rating: number
+  comment: string
+  created_at: string
 }
 
 interface PublicRoute {
@@ -63,7 +118,7 @@ interface PublicRoute {
   currency: string
 }
 
-type BookingStep = 0 | 1 | 2 | 3
+type BookingStep = 0 | 1 | 2 | 3 | 4
 type PackageCategory = 'cloth' | 'electronics' | 'document' | 'food' | 'jewelry' | 'other'
 
 const route = useRoute()
@@ -111,9 +166,160 @@ const location = computed(() =>
 const pageURL = computed(() => `${origin}/book/${data.value?.booking_page.slug || slug.value}`)
 const phoneHref = computed(() => `tel:${(company.value?.phone || '').replace(/[^+\d]/g, '')}`)
 const routes = computed(() => routeData.value?.routes ?? [])
+const branches = computed(() => data.value?.branches ?? [])
+const reviews = ref<PublicReview[]>([])
+const reviewSummary = ref({ review_count: 0, average_rating: 0 })
+watch(
+  data,
+  (value) => {
+    reviews.value = value?.reviews ?? []
+    reviewSummary.value = value?.review_summary ?? { review_count: 0, average_rating: 0 }
+  },
+  { immediate: true },
+)
+const providerDescription = computed(() => company.value?.description || '')
+const websiteHref = computed(() => company.value?.website_url || '')
+const companyPhotos = computed(() => (company.value?.photo_urls ?? []).filter(Boolean))
+const averageRating = computed(() =>
+  reviewSummary.value.review_count > 0
+    ? reviewSummary.value.average_rating.toFixed(1)
+    : 'New',
+)
+const socialLinks = computed(() =>
+  [
+    { label: 'Instagram', href: company.value?.instagram_url ?? '', icon: Instagram },
+    { label: 'Facebook', href: company.value?.facebook_url ?? '', icon: Facebook },
+    { label: 'X', href: company.value?.twitter_url ?? '', icon: Twitter },
+    { label: 'LinkedIn', href: company.value?.linkedin_url ?? '', icon: Linkedin },
+  ].filter((link) => Boolean(link.href)),
+)
+const dayLabels = [
+  { key: 'mon', label: 'Mon' },
+  { key: 'tue', label: 'Tue' },
+  { key: 'wed', label: 'Wed' },
+  { key: 'thu', label: 'Thu' },
+  { key: 'fri', label: 'Fri' },
+  { key: 'sat', label: 'Sat' },
+  { key: 'sun', label: 'Sun' },
+]
+const hasOperatingHours = computed(() => {
+  const hours = company.value?.operating_hours
+  return Boolean(hours && Object.keys(hours).length)
+})
+const operatingHoursRows = computed(() =>
+  dayLabels
+    .map((day) => {
+      const entry = company.value?.operating_hours?.[day.key]
+      return {
+        ...day,
+        closed: entry?.closed ?? !entry,
+        open: entry?.open || '',
+        close: entry?.close || '',
+      }
+    })
+    .filter((row) => row.open || row.close || row.closed),
+)
+const serviceCoverage = computed(() => {
+  const seen = new Set<string>()
+  const items: string[] = []
+  const add = (city: string | null | undefined, state: string | null | undefined) => {
+    const label = [city, state].filter(Boolean).join(', ')
+    if (!label || seen.has(label.toLowerCase())) return
+    seen.add(label.toLowerCase())
+    items.push(label)
+  }
+  for (const providerRoute of routes.value) {
+    add(providerRoute.origin_city, providerRoute.origin_state)
+    add(providerRoute.destination_city, providerRoute.destination_state)
+  }
+  for (const branch of branches.value) {
+    add(branch.city, branch.state)
+  }
+  if (!items.length && company.value) {
+    add(company.value.city, company.value.state)
+  }
+  return items.slice(0, 12)
+})
+const signedIn = ref(false)
+const reviewOpen = ref(false)
+const reviewSaving = ref(false)
+const reviewError = ref('')
+const reviewSuccess = ref(false)
+const hoverRating = ref(0)
+const reviewForm = reactive({ reviewerName: '', rating: 5, comment: '' })
+
+function phoneHrefFor(value: string | null | undefined) {
+  return `tel:${(value || '').replace(/[^+\d]/g, '')}`
+}
+
+function formatHour(value: string) {
+  const [hourText, minuteText] = value.split(':')
+  const hour = Number(hourText)
+  if (!Number.isFinite(hour)) return value
+  const suffix = hour >= 12 ? 'PM' : 'AM'
+  const normalized = hour % 12 === 0 ? 12 : hour % 12
+  return `${normalized}:${minuteText || '00'} ${suffix}`
+}
+
+function formatReviewDate(value: string) {
+  return new Date(value).toLocaleDateString('en-NG', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  })
+}
+
+async function submitReview() {
+  reviewError.value = ''
+  reviewSuccess.value = false
+  if (reviewForm.reviewerName.trim().length < 2) {
+    reviewError.value = 'Add your name so the provider knows who left the review.'
+    return
+  }
+  reviewSaving.value = true
+  try {
+    const response = await $fetch<{
+      review: PublicReview
+      review_summary: { review_count: number; average_rating: number }
+    }>(`/public/book/${encodeURIComponent(slug.value)}/reviews`, {
+      baseURL: apiBase,
+      method: 'POST',
+      credentials: 'include',
+      body: {
+        reviewer_name: reviewForm.reviewerName.trim(),
+        rating: reviewForm.rating,
+        comment: reviewForm.comment.trim(),
+      },
+    })
+    reviews.value = [response.review, ...reviews.value].slice(0, 8)
+    reviewSummary.value = response.review_summary
+    reviewSuccess.value = true
+    reviewForm.comment = ''
+    reviewOpen.value = false
+  } catch (cause) {
+    reviewError.value = apiErrorMessage(cause, 'Could not submit your review. Please try again.')
+  } finally {
+    reviewSaving.value = false
+  }
+}
+
 const currency = computed(() => company.value?.currency || 'NGN')
 const routeMode = ref<'route' | 'map'>('route')
 const currentStep = ref<BookingStep>(0)
+const trackingCode = ref('')
+const trackingUrl = ref('')
+const bookingSavedToAccount = ref(false)
+const registering = ref(false)
+const registerError = ref('')
+const copyError = ref('')
+const copiedTracking = ref(false)
+const accountForm = reactive({
+  fullName: '',
+  email: '',
+  phone: '',
+  password: '',
+})
+const { user, fetchMe } = useAuth()
 const saving = ref(false)
 const uploading = ref(false)
 const error = ref('')
@@ -134,6 +340,24 @@ const categoryOptions: { value: PackageCategory; label: string; emoji: string; h
   { value: 'other', label: 'Other', emoji: '📦', hint: 'Something else' },
 ]
 
+const availableCategoryOptions = computed(() => {
+  const accepted = data.value?.item_categories?.accepted ?? []
+  const prohibited = data.value?.item_categories?.prohibited ?? []
+  return categoryOptions.filter((option) =>
+    !prohibited.includes(option.value) && (accepted.length === 0 || accepted.includes(option.value)),
+  )
+})
+const prohibitedCategoryLabels = computed(() => {
+  const prohibited = data.value?.item_categories?.prohibited ?? []
+  return categoryOptions.filter((option) => prohibited.includes(option.value)).map((option) => option.label)
+})
+
+watch(availableCategoryOptions, (options) => {
+  if (form.category && !options.some((option) => option.value === form.category)) {
+    form.category = ''
+  }
+})
+
 const form = reactive({
   selectedRouteId: '',
   deliverySpeed: 'standard' as 'standard' | 'express' | 'same_day',
@@ -151,6 +375,16 @@ const form = reactive({
 })
 
 const routeSelected = computed(() => routes.value.find((item) => item.id === form.selectedRouteId) ?? null)
+
+watch(
+  [signedIn, () => user.value?.full_name, () => form.senderName],
+  () => {
+    if (!reviewForm.reviewerName) {
+      reviewForm.reviewerName = user.value?.full_name || form.senderName || ''
+    }
+  },
+  { immediate: true },
+)
 
 watch(
   routes,
@@ -338,6 +572,9 @@ async function createBooking() {
         reference: string
         delivery_price_minor?: number
         price_is_estimate?: boolean
+        tracking_code?: string
+        tracking_url?: string
+        customer_linked?: boolean
       }
     }>(
       `/public/book/${encodeURIComponent(slug.value)}/bookings`,
@@ -368,13 +605,86 @@ async function createBooking() {
     bookingReference.value = response.booking.reference
     submittedPriceMinor.value = response.booking.delivery_price_minor ?? null
     submittedPriceIsEstimate.value = response.booking.price_is_estimate ?? true
-    currentStep.value = 3
+    trackingCode.value = response.booking.tracking_code ?? ''
+    trackingUrl.value = response.booking.tracking_url
+      || (trackingCode.value ? `${origin}/track/${trackingCode.value}` : '')
+    bookingSavedToAccount.value = Boolean(response.booking.customer_linked)
+    accountForm.fullName = form.senderName.trim()
+    accountForm.phone = form.senderPhone.trim()
+    currentStep.value = 4
   } catch (cause) {
     error.value = apiErrorMessage(cause, 'Could not send this booking request. Please try again.')
   } finally {
     saving.value = false
   }
 }
+
+async function claimBooking() {
+  registerError.value = ''
+  if (!bookingReference.value || registering.value) return
+  if (!signedIn.value) {
+    if (accountForm.fullName.trim().length < 2) {
+      registerError.value = 'Add your full name to create an account.'
+      return
+    }
+    if (!accountForm.email.includes('@')) {
+      registerError.value = 'Enter the email address you want to use for your account.'
+      return
+    }
+    if (accountForm.password.length < 8) {
+      registerError.value = 'Choose a password of at least 8 characters.'
+      return
+    }
+  }
+
+  registering.value = true
+  try {
+    const response = await $fetch<{
+      linked: boolean
+      booking?: { tracking_code?: string; tracking_url?: string }
+    }>(`/public/bookings/${encodeURIComponent(bookingReference.value)}/claim`, {
+      baseURL: apiBase,
+      method: 'POST',
+      credentials: 'include',
+      body: signedIn.value
+        ? {}
+        : {
+            full_name: accountForm.fullName.trim(),
+            email: accountForm.email.trim(),
+            phone: accountForm.phone.trim(),
+            password: accountForm.password,
+          },
+    })
+    if (response.booking?.tracking_code) trackingCode.value = response.booking.tracking_code
+    if (response.booking?.tracking_url) trackingUrl.value = response.booking.tracking_url
+    bookingSavedToAccount.value = true
+    await fetchMe()
+    signedIn.value = true
+  } catch (cause) {
+    registerError.value = apiErrorMessage(
+      cause,
+      'Could not save this booking to an account. You can still use your tracking link.',
+    )
+  } finally {
+    registering.value = false
+  }
+}
+
+async function copyTrackingLink() {
+  copyError.value = ''
+  if (!trackingUrl.value) return
+  try {
+    await navigator.clipboard.writeText(trackingUrl.value)
+    copiedTracking.value = true
+    window.setTimeout(() => (copiedTracking.value = false), 1800)
+  } catch {
+    copyError.value = 'Could not copy automatically. Select the tracking link and copy it.'
+  }
+}
+
+onMounted(async () => {
+  signedIn.value = Boolean(await fetchMe())
+})
 
 const bookingCode = computed(() => bookingReference.value
   ? `REQ-${bookingReference.value.slice(0, 8).toUpperCase()}`
@@ -406,7 +716,10 @@ const bookingCode = computed(() => bookingReference.value
             <span v-else>{{ firstLetter }}</span>
           </div>
           <div class="min-w-0 text-white">
-            <p class="truncate text-[14px] font-bold tracking-tight">{{ displayName }}</p>
+            <p class="flex items-center gap-1 truncate text-[14px] font-bold tracking-tight">
+              {{ displayName }}
+              <BadgeCheck v-if="data?.company.verified_at" :size="13" class="shrink-0 text-emerald-300" />
+            </p>
             <p class="mt-0.5 flex items-center gap-1 truncate text-[11px] text-white/65">
               <MapPin :size="11" class="shrink-0" /> {{ location || 'Local delivery, made simple' }}
             </p>
@@ -455,9 +768,276 @@ const bookingCode = computed(() => bookingReference.value
               <p class="mt-2 max-w-xl text-[13px] leading-6 text-slate-500">{{ description }}</p>
             </div>
 
-            <div class="mb-4 grid grid-cols-4 gap-1.5 sm:gap-2" aria-label="Booking steps">
+            <section class="booking-panel mb-4 overflow-hidden rounded-3xl border" aria-label="About the provider">
+              <div class="grid gap-5 p-4 sm:p-5 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
+                <div class="min-w-0">
+                  <div class="flex flex-wrap items-center gap-1.5">
+                    <span class="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[9.5px] font-semibold text-emerald-700">
+                      <BadgeCheck :size="12" /> Verified provider
+                    </span>
+                    <span class="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[9.5px] font-semibold text-amber-700">
+                      <Star :size="11" class="fill-amber-500 text-amber-500" />
+                      {{ averageRating }}
+                      <span class="font-normal text-amber-700/80">
+                        {{ reviewSummary.review_count
+                          ? `(${reviewSummary.review_count} review${reviewSummary.review_count === 1 ? '' : 's'})`
+                          : 'no reviews yet' }}
+                      </span>
+                    </span>
+                    <span
+                      v-if="company.year_established"
+                      class="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[9.5px] font-semibold text-slate-600"
+                    >
+                      <Building2 :size="11" /> Since {{ company.year_established }}
+                    </span>
+                  </div>
+
+                  <p v-if="providerDescription" class="mt-2.5 max-w-2xl text-[11.5px] leading-5 text-slate-600">
+                    {{ providerDescription }}
+                  </p>
+
+                  <div class="mt-3 flex flex-wrap items-center gap-1.5">
+                    <a
+                      :href="`mailto:${company.business_email}`"
+                      class="inline-flex max-w-full items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-[10.5px] font-medium text-slate-600 transition hover:border-slate-300"
+                    >
+                      <Mail :size="12" :style="{ color: primary }" />
+                      <span class="truncate">{{ company.business_email }}</span>
+                    </a>
+                    <a
+                      :href="phoneHref"
+                      class="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-[10.5px] font-medium text-slate-600 transition hover:border-slate-300"
+                    >
+                      <Phone :size="12" :style="{ color: primary }" /> {{ company.phone }}
+                    </a>
+                    <a
+                      v-if="websiteHref"
+                      :href="websiteHref"
+                      target="_blank"
+                      rel="noopener"
+                      class="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-[10.5px] font-medium text-slate-600 transition hover:border-slate-300"
+                    >
+                      <Globe :size="12" :style="{ color: primary }" /> Website <ExternalLink :size="10" />
+                    </a>
+                  </div>
+
+                  <div v-if="socialLinks.length" class="mt-2.5 flex items-center gap-1.5">
+                    <span class="text-[9px] font-semibold tracking-wide text-slate-400 uppercase">Follow</span>
+                    <a
+                      v-for="link in socialLinks"
+                      :key="link.label"
+                      :href="link.href"
+                      target="_blank"
+                      rel="noopener"
+                      :aria-label="link.label"
+                      class="flex size-7 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition hover:text-slate-900"
+                    >
+                      <component :is="link.icon" :size="13" />
+                    </a>
+                  </div>
+                </div>
+
+                <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
+                  <div v-if="hasOperatingHours" class="booking-soft rounded-2xl border p-3">
+                    <p class="flex items-center gap-1.5 text-[9.5px] font-bold tracking-wide text-slate-500 uppercase">
+                      <Clock3 :size="12" :style="{ color: primary }" /> Operating hours
+                    </p>
+                    <dl class="mt-2 space-y-1">
+                      <div v-for="row in operatingHoursRows" :key="row.key" class="flex items-center justify-between gap-2 text-[10px]">
+                        <dt class="text-slate-500">{{ row.label }}</dt>
+                        <dd class="font-medium text-slate-700">
+                          <span v-if="row.closed" class="text-slate-400">Closed</span>
+                          <span v-else>{{ formatHour(row.open) }} – {{ formatHour(row.close) }}</span>
+                        </dd>
+                      </div>
+                    </dl>
+                  </div>
+                  <div v-if="serviceCoverage.length" class="booking-soft rounded-2xl border p-3">
+                    <p class="flex items-center gap-1.5 text-[9.5px] font-bold tracking-wide text-slate-500 uppercase">
+                      <MapPin :size="12" :style="{ color: primary }" /> Service coverage
+                    </p>
+                    <div class="mt-2 flex flex-wrap gap-1">
+                      <span
+                        v-for="place in serviceCoverage"
+                        :key="place"
+                        class="rounded-full border border-slate-200 bg-white px-2 py-0.5 text-[9.5px] font-medium text-slate-600"
+                      >
+                        {{ place }}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div v-if="branches.length || companyPhotos.length" class="grid gap-4 border-t border-slate-200/70 p-4 sm:p-5 md:grid-cols-2">
+                <div v-if="branches.length">
+                  <p class="flex items-center gap-1.5 text-[9.5px] font-bold tracking-wide text-slate-500 uppercase">
+                    <Building2 :size="12" :style="{ color: primary }" /> Branches
+                  </p>
+                  <ul class="mt-2 space-y-1.5">
+                    <li
+                      v-for="branch in branches.slice(0, 4)"
+                      :key="branch.id"
+                      class="rounded-xl border border-slate-200 bg-white px-2.5 py-2 text-[10.5px]"
+                    >
+                      <p class="font-semibold text-slate-700">{{ branch.name }}</p>
+                      <p class="mt-0.5 text-slate-500">{{ branch.address }}, {{ branch.city }}, {{ branch.state }}</p>
+                      <a
+                        v-if="branch.phone"
+                        :href="phoneHrefFor(branch.phone)"
+                        class="mt-0.5 inline-flex items-center gap-1 font-medium"
+                        :style="{ color: primary }"
+                      >
+                        <Phone :size="10" /> {{ branch.phone }}
+                      </a>
+                    </li>
+                  </ul>
+                  <p v-if="branches.length > 4" class="mt-1.5 text-[9.5px] text-slate-400">
+                    +{{ branches.length - 4 }} more branch{{ branches.length - 4 === 1 ? '' : 'es' }}
+                  </p>
+                </div>
+                <div v-if="companyPhotos.length">
+                  <p class="flex items-center gap-1.5 text-[9.5px] font-bold tracking-wide text-slate-500 uppercase">
+                    <Camera :size="12" :style="{ color: primary }" /> Company photos
+                  </p>
+                  <div class="mt-2 grid grid-cols-3 gap-1.5">
+                    <a
+                      v-for="photo in companyPhotos.slice(0, 6)"
+                      :key="photo"
+                      :href="photo"
+                      target="_blank"
+                      rel="noopener"
+                      class="group relative aspect-[4/3] overflow-hidden rounded-xl border border-slate-200 bg-slate-100"
+                    >
+                      <img :src="photo" alt="Company photo" loading="lazy" class="size-full object-cover transition group-hover:scale-105" />
+                    </a>
+                  </div>
+                </div>
+              </div>
+
+              <div class="border-t border-slate-200/70 p-4 sm:p-5">
+                <div class="flex flex-wrap items-start justify-between gap-3">
+                  <div class="min-w-0">
+                    <h2 class="flex items-center gap-1.5 text-[13px] font-bold tracking-tight">
+                      <MessageSquare :size="14" :style="{ color: primary }" /> Customer reviews
+                    </h2>
+                    <p class="mt-1 flex flex-wrap items-center gap-1.5 text-[10.5px] text-slate-500">
+                      <template v-if="reviewSummary.review_count">
+                        <span class="inline-flex items-center gap-0.5">
+                          <Star
+                            v-for="index in 5"
+                            :key="index"
+                            :size="11"
+                            :class="index <= Math.round(reviewSummary.average_rating) ? 'fill-amber-500 text-amber-500' : 'text-slate-300'"
+                          />
+                        </span>
+                        <span class="font-semibold text-slate-700">{{ averageRating }}</span>
+                        from {{ reviewSummary.review_count }} review{{ reviewSummary.review_count === 1 ? '' : 's' }}
+                      </template>
+                      <template v-else>No reviews yet — be the first to share your experience.</template>
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    class="inline-flex items-center gap-1.5 rounded-xl border bg-white px-3 py-2 text-[10.5px] font-semibold transition hover:bg-slate-50"
+                    :style="{ borderColor: `${primary}55`, color: primary }"
+                    @click="reviewOpen = !reviewOpen"
+                  >
+                    <Star :size="12" /> {{ reviewOpen ? 'Close review form' : 'Leave a review' }}
+                  </button>
+                </div>
+
+                <p v-if="reviewError" role="alert" class="mt-2.5 flex items-start gap-1.5 rounded-lg border border-rose-200 bg-rose-50 px-2.5 py-2 text-[10.5px] text-rose-700">
+                  <CircleAlert :size="12" class="mt-0.5 shrink-0" />{{ reviewError }}
+                </p>
+                <p v-if="reviewSuccess" role="status" class="mt-2.5 flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-2 text-[10.5px] text-emerald-700">
+                  <CheckCircle2 :size="12" /> Thanks! Your review is now live.
+                </p>
+
+                <form
+                  v-if="reviewOpen"
+                  class="booking-soft mt-3 grid gap-2 rounded-2xl border p-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end"
+                  @submit.prevent="submitReview"
+                >
+                  <label class="block">
+                    <span class="mb-1 block text-[10px] font-semibold text-slate-600">Your name</span>
+                    <input
+                      v-model="reviewForm.reviewerName"
+                      required
+                      minlength="2"
+                      maxlength="120"
+                      placeholder="e.g. Ada O."
+                      class="w-full rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-[11px] outline-none focus:border-[var(--booking-primary)]"
+                    />
+                  </label>
+                  <div class="block">
+                    <span class="mb-1 block text-[10px] font-semibold text-slate-600">Rating</span>
+                    <div class="flex items-center gap-0.5" @mouseleave="hoverRating = 0">
+                      <button
+                        v-for="value in 5"
+                        :key="value"
+                        type="button"
+                        :aria-label="`${value} star${value === 1 ? '' : 's'}`"
+                        class="p-0.5"
+                        @click="reviewForm.rating = value"
+                        @mouseenter="hoverRating = value"
+                      >
+                        <Star
+                          :size="20"
+                          :class="value <= (hoverRating || reviewForm.rating) ? 'fill-amber-500 text-amber-500' : 'text-slate-300'"
+                        />
+                      </button>
+                    </div>
+                  </div>
+                  <label class="block sm:col-span-2">
+                    <span class="mb-1 block text-[10px] font-semibold text-slate-600">
+                      Comment <span class="font-normal text-slate-400">· optional</span>
+                    </span>
+                    <textarea
+                      v-model="reviewForm.comment"
+                      rows="2"
+                      maxlength="1000"
+                      placeholder="How was the pickup, communication and delivery?"
+                      class="w-full resize-y rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-[11px] outline-none focus:border-[var(--booking-primary)]"
+                    />
+                  </label>
+                  <div class="flex justify-end sm:col-span-2">
+                    <button
+                      type="submit"
+                      :disabled="reviewSaving"
+                      class="inline-flex min-h-9 items-center gap-1.5 rounded-lg px-3 text-[10.5px] font-bold text-white disabled:opacity-60"
+                      :style="{ backgroundColor: primary }"
+                    >
+                      <Loader2 v-if="reviewSaving" :size="12" class="animate-spin" />
+                      <Star v-else :size="12" />
+                      {{ reviewSaving ? 'Posting…' : 'Post review' }}
+                    </button>
+                  </div>
+                </form>
+
+                <ul v-if="reviews.length" class="mt-3 grid gap-2 sm:grid-cols-2">
+                  <li v-for="review in reviews.slice(0, 4)" :key="review.id" class="rounded-xl border border-slate-200 bg-white p-2.5">
+                    <div class="flex items-center justify-between gap-2">
+                      <p class="truncate text-[10.5px] font-semibold text-slate-700">{{ review.reviewer_name }}</p>
+                      <span class="inline-flex shrink-0 items-center gap-0.5">
+                        <Star
+                          v-for="index in 5"
+                          :key="index"
+                          :size="9"
+                          :class="index <= review.rating ? 'fill-amber-500 text-amber-500' : 'text-slate-200'"
+                        />
+                      </span>
+                    </div>
+                    <p v-if="review.comment" class="mt-1 text-[10px] leading-4 text-slate-500">{{ review.comment }}</p>
+                    <p class="mt-1 text-[9px] text-slate-400">{{ formatReviewDate(review.created_at) }}</p>
+                  </li>
+                </ul>
+              </div>
+            </section>
+
+            <div class="mb-4 grid grid-cols-5 gap-1 sm:gap-2" aria-label="Booking steps">
               <div
-                v-for="(label, index) in ['Route', 'Package', 'People', 'Review']"
+                v-for="(label, index) in ['Route', 'Package', 'People', 'Review', 'Track']"
                 :key="label"
                 class="booking-step min-w-0 rounded-xl border px-2 py-2 sm:px-2.5"
                 :class="index > currentStep ? 'border-slate-200 bg-white/70 dark:border-white/10 dark:bg-white/5' : ''"
@@ -495,7 +1075,7 @@ const bookingCode = computed(() => bookingReference.value
                     <p class="mt-1 text-[11.5px] leading-5 text-slate-500">Choose a provider route or pin exact pickup and drop-off places.</p>
                   </div>
                 </div>
-                <span class="hidden shrink-0 rounded-full bg-slate-100 px-2 py-1 text-[9px] font-semibold tracking-wide text-slate-500 uppercase sm:inline dark:bg-white/10 dark:text-slate-300">Step 1 of 4</span>
+                <span class="hidden shrink-0 rounded-full bg-slate-100 px-2 py-1 text-[9px] font-semibold tracking-wide text-slate-500 uppercase sm:inline dark:bg-white/10 dark:text-slate-300">Step 1 of 5</span>
               </div>
 
               <div v-if="routeLoadError" role="status" class="mt-4 rounded-xl bg-amber-50 px-3 py-2.5 text-[11px] text-amber-800">
@@ -576,13 +1156,19 @@ const bookingCode = computed(() => bookingReference.value
                   <span class="booking-icon-tile flex size-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-amber-100 to-orange-50 text-amber-700 dark:from-amber-400/15 dark:to-orange-400/10 dark:text-amber-200"><Package :size="18" /></span>
                   <div><h2 class="text-[16px] font-bold tracking-tight">Tell us about the package</h2><p class="mt-1 text-[11.5px] text-slate-500">A little detail helps the team handle it with care.</p></div>
                 </div>
-                <span class="hidden shrink-0 rounded-full bg-slate-100 px-2 py-1 text-[9px] font-semibold tracking-wide text-slate-500 uppercase sm:inline dark:bg-white/10 dark:text-slate-300">Step 2 of 4</span>
+                <span class="hidden shrink-0 rounded-full bg-slate-100 px-2 py-1 text-[9px] font-semibold tracking-wide text-slate-500 uppercase sm:inline dark:bg-white/10 dark:text-slate-300">Step 2 of 5</span>
               </div>
               <fieldset class="mt-5">
                 <legend class="mb-2.5 text-[11px] font-semibold text-slate-700">What are you sending?</legend>
+                <p v-if="prohibitedCategoryLabels.length" class="mb-2.5 rounded-lg bg-rose-50 px-2.5 py-2 text-[10px] leading-4 text-rose-700">
+                  This provider cannot move: {{ prohibitedCategoryLabels.join(', ') }}.
+                </p>
+                <p v-if="!availableCategoryOptions.length" class="mb-2.5 rounded-lg bg-amber-50 px-2.5 py-2 text-[10px] leading-4 text-amber-800">
+                  This provider has not published an acceptable item category. Contact them before booking.
+                </p>
                 <div class="grid grid-cols-2 gap-2 sm:grid-cols-3">
                   <button
-                    v-for="item in categoryOptions"
+                    v-for="item in availableCategoryOptions"
                     :key="item.value"
                     type="button"
                     class="rounded-2xl border border-slate-200/80 bg-white p-3 text-left transition hover:-translate-y-0.5 hover:shadow-md dark:border-white/10 dark:bg-white/5"
@@ -637,7 +1223,7 @@ const bookingCode = computed(() => bookingReference.value
                   <span class="booking-icon-tile flex size-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-violet-100 to-fuchsia-50 text-violet-700 dark:from-violet-400/15 dark:to-fuchsia-400/10 dark:text-violet-200"><UserRound :size="18" /></span>
                   <div><h2 class="text-[16px] font-bold tracking-tight">Who’s sending and receiving?</h2><p class="mt-1 text-[11.5px] text-slate-500">We’ll use these details to coordinate your delivery.</p></div>
                 </div>
-                <span class="hidden shrink-0 rounded-full bg-slate-100 px-2 py-1 text-[9px] font-semibold tracking-wide text-slate-500 uppercase sm:inline dark:bg-white/10 dark:text-slate-300">Step 3 of 4</span>
+                <span class="hidden shrink-0 rounded-full bg-slate-100 px-2 py-1 text-[9px] font-semibold tracking-wide text-slate-500 uppercase sm:inline dark:bg-white/10 dark:text-slate-300">Step 3 of 5</span>
               </div>
               <div class="mt-5 grid gap-5 md:grid-cols-2">
                 <section class="rounded-2xl border p-3.5 sm:p-4" :style="{ background: `${primary}0d`, borderColor: `${primary}26` }">
@@ -659,7 +1245,7 @@ const bookingCode = computed(() => bookingReference.value
                   <span class="booking-icon-tile flex size-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-100 to-teal-50 text-emerald-700 dark:from-emerald-400/15 dark:to-teal-400/10 dark:text-emerald-200"><CheckCircle2 :size="18" /></span>
                   <div><h2 class="text-[16px] font-bold tracking-tight">Everything look right?</h2><p class="mt-1 text-[11.5px] text-slate-500">Review your details before sending this booking request.</p></div>
                 </div>
-                <span class="hidden shrink-0 rounded-full bg-slate-100 px-2 py-1 text-[9px] font-semibold tracking-wide text-slate-500 uppercase sm:inline dark:bg-white/10 dark:text-slate-300">Step 4 of 4</span>
+                <span class="hidden shrink-0 rounded-full bg-slate-100 px-2 py-1 text-[9px] font-semibold tracking-wide text-slate-500 uppercase sm:inline dark:bg-white/10 dark:text-slate-300">Step 4 of 5</span>
               </div>
               <div class="mt-5 space-y-3">
                 <section class="rounded-2xl border border-sky-200/60 bg-gradient-to-br from-sky-50 to-cyan-50/60 p-3.5 dark:border-sky-400/20 dark:from-sky-400/10 dark:to-cyan-400/5">
@@ -673,7 +1259,7 @@ const bookingCode = computed(() => bookingReference.value
                 <section class="rounded-2xl border border-amber-200/60 bg-gradient-to-br from-amber-50 to-orange-50/60 p-3.5 dark:border-amber-400/20 dark:from-amber-400/10 dark:to-orange-400/5">
                   <p class="text-[9px] font-bold tracking-[0.14em] text-amber-700/70 uppercase dark:text-amber-200/70">Package</p>
                   <div class="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2 text-[11px]">
-                    <span class="font-semibold">{{ categoryOptions.find((item) => item.value === form.category)?.label }}</span>
+                    <span class="font-semibold">{{ availableCategoryOptions.find((item) => item.value === form.category)?.label }}</span>
                     <span>{{ form.weightKg }} kg</span>
                     <span>Item value {{ formatMoney(declaredValueMinor) }}</span>
                   </div>
@@ -704,12 +1290,12 @@ const bookingCode = computed(() => bookingReference.value
             </div>
 
             <div
-              v-else-if="bookingReference"
-              class="relative overflow-hidden rounded-3xl border border-emerald-200/70 bg-gradient-to-br from-emerald-50 via-white to-cyan-50/60 px-5 py-10 text-center sm:px-10 sm:py-14 dark:border-emerald-400/20 dark:from-emerald-400/10 dark:via-transparent dark:to-cyan-400/5"
+              v-else-if="currentStep === 4 && bookingReference"
+              class="relative overflow-hidden rounded-3xl border border-emerald-200/70 bg-gradient-to-br from-emerald-50 via-white to-cyan-50/60 px-4 py-8 sm:px-8 sm:py-10 dark:border-emerald-400/20 dark:from-emerald-400/10 dark:via-transparent dark:to-cyan-400/5"
             >
               <div class="pointer-events-none absolute -top-16 right-0 size-44 rounded-full bg-emerald-300/25 blur-3xl" />
               <div class="pointer-events-none absolute -bottom-20 -left-8 size-48 rounded-full bg-cyan-300/25 blur-3xl" />
-              <div class="relative">
+              <div class="relative text-center">
                 <span class="booking-icon-tile mx-auto flex size-14 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-500 text-white shadow-lg"><CheckCircle2 :size="27" /></span>
                 <p class="mt-5 text-[10px] font-bold tracking-[0.16em] text-emerald-700 uppercase dark:text-emerald-200">Request received</p>
                 <h2 class="mt-2 text-[clamp(1.45rem,3vw,2rem)] font-extrabold tracking-tight">You’re all set.</h2>
@@ -718,14 +1304,154 @@ const bookingCode = computed(() => bookingReference.value
                   <template v-if="submittedPriceIsEstimate">They’ll confirm the delivery fee with you.</template>
                   <template v-else-if="submittedPriceMinor !== null">Your published {{ serviceLabels[form.deliverySpeed] }} price is {{ formatMoney(submittedPriceMinor) }}.</template>
                 </p>
-                <p class="mx-auto mt-5 inline-flex flex-wrap items-center justify-center gap-2 rounded-full border border-emerald-200/70 bg-white/80 px-4 py-2 font-mono text-[11px] font-bold text-slate-700 shadow-sm dark:border-emerald-400/20 dark:bg-white/10 dark:text-slate-100">
+                <p class="mx-auto mt-4 inline-flex flex-wrap items-center justify-center gap-2 rounded-full border border-emerald-200/70 bg-white/80 px-4 py-2 font-mono text-[10.5px] font-bold text-slate-700 shadow-sm dark:border-emerald-400/20 dark:bg-white/10 dark:text-slate-100">
                   Booking reference <span class="text-emerald-700 dark:text-emerald-200">{{ bookingCode }}</span>
                 </p>
-                <p class="mt-5 text-[10px] text-slate-400">Keep this reference handy if you contact the provider.</p>
               </div>
+
+              <div class="relative mt-6 grid gap-3 text-left md:grid-cols-2">
+                <section
+                  v-if="!bookingSavedToAccount"
+                  class="rounded-2xl border border-white/70 bg-white/85 p-4 shadow-sm dark:border-white/10 dark:bg-white/5"
+                >
+                  <p class="inline-flex items-center gap-1.5 text-[10px] font-bold tracking-[0.14em] text-emerald-700 uppercase dark:text-emerald-200">
+                    <UserPlus :size="13" /> Optional
+                  </p>
+                  <h3 class="mt-1.5 text-[13.5px] font-bold">Save this booking</h3>
+                  <p class="mt-1 text-[10.5px] leading-5 text-slate-500">
+                    Create a free account to follow this parcel in your dashboard and keep bookings from every provider in one place.
+                  </p>
+
+                  <p
+                    v-if="registerError"
+                    role="alert"
+                    class="mt-3 flex items-start gap-1.5 rounded-lg border border-rose-200 bg-rose-50 px-2.5 py-2 text-[10.5px] leading-4 text-rose-700"
+                  >
+                    <CircleAlert :size="12" class="mt-0.5 shrink-0" />{{ registerError }}
+                  </p>
+
+                  <button
+                    v-if="signedIn"
+                    type="button"
+                    :disabled="registering"
+                    class="mt-3 inline-flex min-h-9 w-full items-center justify-center gap-1.5 rounded-lg px-3 text-[11px] font-bold text-white disabled:opacity-60"
+                    :style="{ backgroundColor: primary }"
+                    @click="claimBooking"
+                  >
+                    <Loader2 v-if="registering" :size="13" class="animate-spin" />
+                    <UserPlus v-else :size="13" />
+                    {{ registering ? 'Saving…' : 'Save to my account' }}
+                  </button>
+                  <form v-else class="mt-3 space-y-2" @submit.prevent="claimBooking">
+                    <input
+                      v-model="accountForm.fullName"
+                      required
+                      maxlength="120"
+                      autocomplete="name"
+                      placeholder="Full name"
+                      class="w-full rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-[11px] outline-none focus:border-[var(--booking-primary)]"
+                    />
+                    <input
+                      v-model="accountForm.email"
+                      required
+                      type="email"
+                      maxlength="254"
+                      autocomplete="email"
+                      placeholder="Email address"
+                      class="w-full rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-[11px] outline-none focus:border-[var(--booking-primary)]"
+                    />
+                    <input
+                      v-model="accountForm.phone"
+                      type="tel"
+                      maxlength="30"
+                      autocomplete="tel"
+                      placeholder="Phone number (optional)"
+                      class="w-full rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-[11px] outline-none focus:border-[var(--booking-primary)]"
+                    />
+                    <input
+                      v-model="accountForm.password"
+                      required
+                      type="password"
+                      minlength="8"
+                      maxlength="128"
+                      autocomplete="new-password"
+                      placeholder="Password (8+ characters)"
+                      class="w-full rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-[11px] outline-none focus:border-[var(--booking-primary)]"
+                    />
+                    <button
+                      type="submit"
+                      :disabled="registering"
+                      class="inline-flex min-h-9 w-full items-center justify-center gap-1.5 rounded-lg px-3 text-[11px] font-bold text-white disabled:opacity-60"
+                      :style="{ backgroundColor: primary }"
+                    >
+                      <Loader2 v-if="registering" :size="13" class="animate-spin" />
+                      <UserPlus v-else :size="13" />
+                      {{ registering ? 'Creating account…' : 'Create account & save booking' }}
+                    </button>
+                  </form>
+                  <p class="mt-2 text-[9.5px] text-slate-400">You can skip this and still track the parcel with the link beside it.</p>
+                </section>
+
+                <section
+                  v-else
+                  class="rounded-2xl border border-emerald-200/70 bg-white/85 p-4 shadow-sm dark:border-emerald-400/20 dark:bg-white/5"
+                >
+                  <p class="inline-flex items-center gap-1.5 text-[10px] font-bold tracking-[0.14em] text-emerald-700 uppercase dark:text-emerald-200">
+                    <CheckCircle2 :size="13" /> Saved
+                  </p>
+                  <h3 class="mt-1.5 text-[13.5px] font-bold">This booking is in your dashboard</h3>
+                  <p class="mt-1 text-[10.5px] leading-5 text-slate-500">
+                    Follow it any time from your account, along with every other provider you book with.
+                  </p>
+                  <NuxtLink
+                    to="/dashboard"
+                    class="mt-3 inline-flex min-h-9 w-full items-center justify-center gap-1.5 rounded-lg px-3 text-[11px] font-bold text-white"
+                    :style="{ backgroundColor: primary }"
+                  >
+                    Open my dashboard <ArrowRight :size="13" />
+                  </NuxtLink>
+                </section>
+
+                <section class="rounded-2xl border border-cyan-200/70 bg-white/85 p-4 shadow-sm dark:border-cyan-400/20 dark:bg-white/5">
+                  <p class="inline-flex items-center gap-1.5 text-[10px] font-bold tracking-[0.14em] text-cyan-700 uppercase dark:text-cyan-200">
+                    <MapPin :size="13" /> Track without an account
+                  </p>
+                  <h3 class="mt-1.5 text-[13.5px] font-bold">Your tracking link</h3>
+                  <p class="mt-1 text-[10.5px] leading-5 text-slate-500">
+                    Copy this link or keep the code handy. It updates as {{ displayName }} moves the parcel.
+                  </p>
+                  <div v-if="trackingUrl" class="mt-3">
+                    <p class="truncate rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-2 font-mono text-[10px] text-slate-600">
+                      {{ trackingUrl }}
+                    </p>
+                    <div class="mt-2 flex gap-2">
+                      <button
+                        type="button"
+                        class="inline-flex min-h-9 flex-1 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 text-[10.5px] font-semibold text-slate-700 transition hover:bg-slate-50"
+                        @click="copyTrackingLink"
+                      >
+                        <Check v-if="copiedTracking" :size="13" class="text-emerald-600" />
+                        <Copy v-else :size="13" />
+                        {{ copiedTracking ? 'Copied' : 'Copy link' }}
+                      </button>
+                      <NuxtLink
+                        :to="`/track/${trackingCode}`"
+                        class="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-lg px-2.5 text-[10.5px] font-semibold text-white"
+                        :style="{ backgroundColor: primary }"
+                      >
+                        Open tracker <ArrowRight :size="12" />
+                      </NuxtLink>
+                    </div>
+                    <p v-if="copyError" class="mt-1.5 text-[9.5px] text-rose-600">{{ copyError }}</p>
+                  </div>
+                </section>
+              </div>
+              <p class="relative mt-4 text-center text-[10px] text-slate-400">
+                Keep the reference or tracking link handy if you contact the provider.
+              </p>
             </div>
 
-            <div v-if="!bookingReference" class="mt-4 flex items-center justify-between gap-3">
+            <div v-if="currentStep < 4" class="mt-4 flex items-center justify-between gap-3">
               <button
                 v-if="currentStep > 0"
                 type="button"

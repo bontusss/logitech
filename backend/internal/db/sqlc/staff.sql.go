@@ -191,6 +191,40 @@ func (q *Queries) GetDriverProfileForPortal(ctx context.Context, portalTokenHash
 	return i, err
 }
 
+const getDriverProfileForPortalByID = `-- name: GetDriverProfileForPortalByID :one
+SELECT d.id, d.company_id, d.full_name, d.phone, d.vehicle_plate, d.email, d.status, c.name AS company_name
+FROM driver_profiles d
+JOIN companies c ON c.id = d.company_id AND c.deleted_at IS NULL AND c.status = 'verified'
+WHERE d.id = $1 AND d.status = 'active'
+`
+
+type GetDriverProfileForPortalByIDRow struct {
+	ID           uuid.UUID `json:"id"`
+	CompanyID    uuid.UUID `json:"company_id"`
+	FullName     string    `json:"full_name"`
+	Phone        string    `json:"phone"`
+	VehiclePlate string    `json:"vehicle_plate"`
+	Email        string    `json:"email"`
+	Status       string    `json:"status"`
+	CompanyName  string    `json:"company_name"`
+}
+
+func (q *Queries) GetDriverProfileForPortalByID(ctx context.Context, id uuid.UUID) (GetDriverProfileForPortalByIDRow, error) {
+	row := q.db.QueryRow(ctx, getDriverProfileForPortalByID, id)
+	var i GetDriverProfileForPortalByIDRow
+	err := row.Scan(
+		&i.ID,
+		&i.CompanyID,
+		&i.FullName,
+		&i.Phone,
+		&i.VehiclePlate,
+		&i.Email,
+		&i.Status,
+		&i.CompanyName,
+	)
+	return i, err
+}
+
 const getInvitationDetails = `-- name: GetInvitationDetails :one
 SELECT
   i.id,
@@ -429,6 +463,24 @@ func (q *Queries) RevokeInvitation(ctx context.Context, arg RevokeInvitationPara
 	return err
 }
 
+const setDriverPortalTokenHash = `-- name: SetDriverPortalTokenHash :exec
+UPDATE driver_profiles
+SET portal_token_hash = $3,
+    updated_at = now()
+WHERE id = $1 AND company_id = $2
+`
+
+type SetDriverPortalTokenHashParams struct {
+	ID              uuid.UUID `json:"id"`
+	CompanyID       uuid.UUID `json:"company_id"`
+	PortalTokenHash string    `json:"portal_token_hash"`
+}
+
+func (q *Queries) SetDriverPortalTokenHash(ctx context.Context, arg SetDriverPortalTokenHashParams) error {
+	_, err := q.db.Exec(ctx, setDriverPortalTokenHash, arg.ID, arg.CompanyID, arg.PortalTokenHash)
+	return err
+}
+
 const setDriverProfileStatus = `-- name: SetDriverProfileStatus :one
 UPDATE driver_profiles
 SET status = $3,
@@ -458,6 +510,62 @@ type SetDriverProfileStatusRow struct {
 func (q *Queries) SetDriverProfileStatus(ctx context.Context, arg SetDriverProfileStatusParams) (SetDriverProfileStatusRow, error) {
 	row := q.db.QueryRow(ctx, setDriverProfileStatus, arg.ID, arg.CompanyID, arg.Status)
 	var i SetDriverProfileStatusRow
+	err := row.Scan(
+		&i.ID,
+		&i.CompanyID,
+		&i.FullName,
+		&i.Phone,
+		&i.VehiclePlate,
+		&i.Email,
+		&i.Status,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const updateDriverProfile = `-- name: UpdateDriverProfile :one
+UPDATE driver_profiles
+SET full_name = $3,
+    phone = $4,
+    vehicle_plate = $5,
+    email = $6,
+    updated_at = now()
+WHERE id = $1 AND company_id = $2
+RETURNING id, company_id, full_name, phone, vehicle_plate, email, status, created_at, updated_at
+`
+
+type UpdateDriverProfileParams struct {
+	ID           uuid.UUID `json:"id"`
+	CompanyID    uuid.UUID `json:"company_id"`
+	FullName     string    `json:"full_name"`
+	Phone        string    `json:"phone"`
+	VehiclePlate string    `json:"vehicle_plate"`
+	Email        string    `json:"email"`
+}
+
+type UpdateDriverProfileRow struct {
+	ID           uuid.UUID `json:"id"`
+	CompanyID    uuid.UUID `json:"company_id"`
+	FullName     string    `json:"full_name"`
+	Phone        string    `json:"phone"`
+	VehiclePlate string    `json:"vehicle_plate"`
+	Email        string    `json:"email"`
+	Status       string    `json:"status"`
+	CreatedAt    time.Time `json:"created_at"`
+	UpdatedAt    time.Time `json:"updated_at"`
+}
+
+func (q *Queries) UpdateDriverProfile(ctx context.Context, arg UpdateDriverProfileParams) (UpdateDriverProfileRow, error) {
+	row := q.db.QueryRow(ctx, updateDriverProfile,
+		arg.ID,
+		arg.CompanyID,
+		arg.FullName,
+		arg.Phone,
+		arg.VehiclePlate,
+		arg.Email,
+	)
+	var i UpdateDriverProfileRow
 	err := row.Scan(
 		&i.ID,
 		&i.CompanyID,

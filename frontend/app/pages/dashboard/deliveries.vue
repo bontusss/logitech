@@ -5,6 +5,7 @@ import {
   Check,
   CircleAlert,
   ClipboardList,
+  Copy,
   Loader2,
   MapPin,
   Plus,
@@ -16,6 +17,7 @@ import {
   ExternalLink,
   Clock3,
   Link,
+  Share2,
   Sparkles,
 } from 'lucide-vue-next'
 import type { CompanyDetail } from '~/types/auth'
@@ -28,7 +30,7 @@ interface Driver {
   full_name: string
   phone: string
   vehicle_plate: string
-  status: 'active' | 'suspended'
+  status: 'active' | 'suspended' | 'inactive'
 }
 
 interface Delivery {
@@ -91,6 +93,7 @@ const saving = ref(false)
 const formOpen = ref(false)
 const error = ref('')
 const searchQuery = ref('')
+const copiedTrackingId = ref('')
 const currency = computed(() => detail.value?.settings.currency || 'NGN')
 
 const form = reactive({
@@ -196,6 +199,37 @@ function onModalKeydown(event: KeyboardEvent) {
 function whatsappHref(phone: string, message: string) {
   const digits = phone.replace(/[^0-9]/g, '').replace(/^0/, '234')
   return `https://wa.me/${digits}?text=${encodeURIComponent(message)}`
+}
+
+async function copyTrackingLink(delivery: Delivery) {
+  if (!delivery.tracking_url) return
+  try {
+    await navigator.clipboard.writeText(delivery.tracking_url)
+    copiedTrackingId.value = delivery.id
+    window.setTimeout(() => {
+      if (copiedTrackingId.value === delivery.id) copiedTrackingId.value = ''
+    }, 1800)
+  } catch {
+    error.value = 'Could not copy the tracking link. Open it and copy from the address bar.'
+  }
+}
+
+async function shareTrackingLink(delivery: Delivery) {
+  if (!delivery.tracking_url) return
+  const shareData = {
+    title: `Track delivery ${delivery.tracking_code || deliveryReference(delivery.id)}`,
+    text: `${delivery.sender_name} → ${delivery.receiver_name}: follow this delivery in real time.`,
+    url: delivery.tracking_url,
+  }
+  if (navigator.share) {
+    try {
+      await navigator.share(shareData)
+      return
+    } catch (err) {
+      if (err instanceof DOMException && err.name === 'AbortError') return
+    }
+  }
+  await copyTrackingLink(delivery)
 }
 
 async function reassignDriver(delivery: Delivery, driverId: string) {
@@ -462,9 +496,22 @@ function paymentLabel(delivery: Delivery) {
               <p class="mt-1 truncate text-[10.5px] text-ink-900/45">{{ delivery.pickup_address }} → {{ delivery.dropoff_address }}</p>
               <p class="mt-1 text-[10.5px] font-medium text-brand-700">{{ delivery.assigned_driver_name || 'Driver assigned' }} · <span class="capitalize">{{ statusLabel(delivery.status) }}</span></p>
             </div>
-            <button type="button" class="shrink-0 rounded-lg border border-brand-200 px-3 py-2 text-[10.5px] font-semibold text-brand-700" @click="activeTab = 'all'; detailOpenId = delivery.id">
-              Manage delivery
-            </button>
+            <div class="flex shrink-0 flex-wrap items-center gap-1.5">
+              <div v-if="delivery.tracking_url" class="flex items-center gap-1 rounded-lg border border-brand-200 bg-brand-50/50 p-1">
+                <span class="px-1 text-[9px] font-semibold text-brand-800 dark:text-indigo-200">{{ delivery.tracking_code || 'Tracking' }}</span>
+                <button type="button" class="inline-flex items-center gap-1 rounded-md bg-white px-1.5 py-1 text-[9px] font-semibold text-brand-700" @click="copyTrackingLink(delivery)">
+                  <Check v-if="copiedTrackingId === delivery.id" :size="10" />
+                  <Copy v-else :size="10" />
+                  {{ copiedTrackingId === delivery.id ? 'Copied' : 'Copy' }}
+                </button>
+                <button type="button" class="inline-flex items-center gap-1 rounded-md bg-white px-1.5 py-1 text-[9px] font-semibold text-brand-700" @click="shareTrackingLink(delivery)">
+                  <Share2 :size="10" /> Share
+                </button>
+              </div>
+              <button type="button" class="rounded-lg border border-brand-200 px-3 py-2 text-[10.5px] font-semibold text-brand-700" @click="activeTab = 'all'; detailOpenId = delivery.id">
+                Manage delivery
+              </button>
+            </div>
           </article>
         </div>
         <div
@@ -566,7 +613,35 @@ function paymentLabel(delivery: Delivery) {
             <a :href="whatsappHref(delivery.sender_phone, `Hello ${delivery.sender_name}, here is an update for your delivery ${deliveryReference(delivery.id)}.`)" target="_blank" rel="noopener" class="inline-flex items-center gap-1 rounded-lg border border-emerald-200 px-2.5 py-2 text-[10.5px] font-semibold text-emerald-700"><MessageCircle :size="12" />Sender</a>
             <a :href="whatsappHref(delivery.receiver_phone, `Hello ${delivery.receiver_name}, here is an update for your delivery ${deliveryReference(delivery.id)}.`)" target="_blank" rel="noopener" class="inline-flex items-center gap-1 rounded-lg border border-emerald-200 px-2.5 py-2 text-[10.5px] font-semibold text-emerald-700"><MessageCircle :size="12" />Receiver</a>
             <button type="button" class="inline-flex items-center gap-1 rounded-lg border border-ink-900/10 px-2.5 py-2 text-[10.5px] font-semibold" @click="detailOpenId=detailOpenId===delivery.id ? '' : delivery.id"><Clock3 :size="12" />Timeline</button>
-            <a v-if="delivery.tracking_url" :href="delivery.tracking_url" target="_blank" rel="noopener" class="inline-flex items-center gap-1 rounded-lg border border-brand-200 px-2.5 py-2 text-[10.5px] font-semibold text-brand-700"><ExternalLink :size="12" />Tracking</a>
+            <div v-if="delivery.tracking_url" class="flex w-full flex-wrap items-center gap-1.5 rounded-lg border border-brand-200 bg-brand-50/45 px-2.5 py-2 sm:w-auto dark:border-brand-400/20 dark:bg-brand-400/5">
+              <span class="inline-flex items-center gap-1 text-[9.5px] font-semibold text-brand-800 dark:text-indigo-200">
+                <Link :size="11" /> {{ delivery.tracking_code || 'Tracking link' }}
+              </span>
+              <button
+                type="button"
+                class="inline-flex items-center gap-1 rounded-md border border-brand-200 bg-white px-1.5 py-1 text-[9.5px] font-semibold text-brand-700 hover:bg-brand-50 dark:border-brand-400/20 dark:bg-white/5 dark:text-indigo-200"
+                @click="copyTrackingLink(delivery)"
+              >
+                <Check v-if="copiedTrackingId === delivery.id" :size="10" />
+                <Copy v-else :size="10" />
+                {{ copiedTrackingId === delivery.id ? 'Copied' : 'Copy' }}
+              </button>
+              <button
+                type="button"
+                class="inline-flex items-center gap-1 rounded-md border border-brand-200 bg-white px-1.5 py-1 text-[9.5px] font-semibold text-brand-700 hover:bg-brand-50 dark:border-brand-400/20 dark:bg-white/5 dark:text-indigo-200"
+                @click="shareTrackingLink(delivery)"
+              >
+                <Share2 :size="10" /> Share
+              </button>
+              <a
+                :href="delivery.tracking_url"
+                target="_blank"
+                rel="noopener"
+                class="inline-flex items-center gap-1 rounded-md border border-brand-200 bg-white px-1.5 py-1 text-[9.5px] font-semibold text-brand-700 hover:bg-brand-50 dark:border-brand-400/20 dark:bg-white/5 dark:text-indigo-200"
+              >
+                <ExternalLink :size="10" /> Open
+              </a>
+            </div>
           </div>
           <div v-if="detailOpenId===delivery.id" class="mt-3 rounded-xl border border-ink-900/8 bg-canvas p-3">
             <p class="text-[10.5px] font-semibold">Journey timeline</p>

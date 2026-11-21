@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"net/url"
 	"regexp"
 	"slices"
 	"strings"
@@ -52,17 +53,17 @@ func normalizeProviderBusinessTypes(values []string, legacy string) (string, boo
 }
 
 type companyRegistrationRequest struct {
-	CompanyName   string `json:"company_name" binding:"required,min=2,max=160"`
-	BusinessEmail string `json:"business_email" binding:"required,email,max=254"`
-	Phone         string `json:"phone" binding:"required,max=30"`
+	CompanyName   string   `json:"company_name" binding:"required,min=2,max=160"`
+	BusinessEmail string   `json:"business_email" binding:"required,email,max=254"`
+	Phone         string   `json:"phone" binding:"required,max=30"`
 	BusinessType  string   `json:"business_type" binding:"omitempty,max=80"`
 	BusinessTypes []string `json:"business_types"`
-	Country       string `json:"country" binding:"omitempty,max=2"`
-	State         string `json:"state" binding:"required,max=80"`
-	City          string `json:"city" binding:"required,max=80"`
-	Address       string `json:"address" binding:"required,max=240"`
-	ContactName   string `json:"contact_name" binding:"required,min=2,max=120"`
-	Password      string `json:"password" binding:"required,min=8,max=128"`
+	Country       string   `json:"country" binding:"omitempty,max=2"`
+	State         string   `json:"state" binding:"required,max=80"`
+	City          string   `json:"city" binding:"required,max=80"`
+	Address       string   `json:"address" binding:"required,max=240"`
+	ContactName   string   `json:"contact_name" binding:"required,min=2,max=120"`
+	Password      string   `json:"password" binding:"required,min=8,max=128"`
 }
 
 type companyDTO struct {
@@ -84,9 +85,21 @@ type companyDTO struct {
 	Description      *string         `json:"description"`
 	CoverImageURL    *string         `json:"cover_image_url"`
 	OperatingHours   json.RawMessage `json:"operating_hours"`
+	WebsiteURL       *string         `json:"website_url"`
+	InstagramURL     *string         `json:"instagram_url"`
+	FacebookURL      *string         `json:"facebook_url"`
+	TwitterURL       *string         `json:"twitter_url"`
+	LinkedInURL      *string         `json:"linkedin_url"`
+	YearEstablished  *int32          `json:"year_established"`
+	PhotoURLs        []string        `json:"photo_urls"`
 }
 
 func toCompanyDTO(company db.Company) companyDTO {
+	var yearEstablished *int32
+	if company.YearEstablished.Valid {
+		year := company.YearEstablished.Int32
+		yearEstablished = &year
+	}
 	return companyDTO{
 		ID:               company.ID,
 		Name:             company.Name,
@@ -106,6 +119,13 @@ func toCompanyDTO(company db.Company) companyDTO {
 		Description:      company.Description,
 		CoverImageURL:    company.CoverImageUrl,
 		OperatingHours:   json.RawMessage(company.OperatingHours),
+		WebsiteURL:       company.WebsiteUrl,
+		InstagramURL:     company.InstagramUrl,
+		FacebookURL:      company.FacebookUrl,
+		TwitterURL:       company.TwitterUrl,
+		LinkedInURL:      company.LinkedinUrl,
+		YearEstablished:  yearEstablished,
+		PhotoURLs:        nonNilStrings(company.PhotoUrls),
 	}
 }
 
@@ -195,6 +215,13 @@ func (a *API) updateCompany(c *gin.Context) {
 		Address         *string         `json:"address" binding:"omitempty,max=240"`
 		Description     *string         `json:"description" binding:"omitempty,max=2000"`
 		OperatingHours  json.RawMessage `json:"operating_hours"`
+		WebsiteURL      *string         `json:"website_url" binding:"omitempty,max=500"`
+		InstagramURL    *string         `json:"instagram_url" binding:"omitempty,max=500"`
+		FacebookURL     *string         `json:"facebook_url" binding:"omitempty,max=500"`
+		TwitterURL      *string         `json:"twitter_url" binding:"omitempty,max=500"`
+		LinkedInURL     *string         `json:"linkedin_url" binding:"omitempty,max=500"`
+		YearEstablished *int            `json:"year_established"`
+		PhotoURLs       []string        `json:"photo_urls"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		fail(c, http.StatusBadRequest, "invalid_input", "Check the company details you entered.")
@@ -215,6 +242,41 @@ func (a *API) updateCompany(c *gin.Context) {
 	city := valueOr(req.City, deref(current.City))
 	address := valueOr(req.Address, deref(current.Address))
 	description := valueOr(req.Description, deref(current.Description))
+	website := strings.TrimSpace(valueOr(req.WebsiteURL, deref(current.WebsiteUrl)))
+	instagram := strings.TrimSpace(valueOr(req.InstagramURL, deref(current.InstagramUrl)))
+	facebook := strings.TrimSpace(valueOr(req.FacebookURL, deref(current.FacebookUrl)))
+	twitter := strings.TrimSpace(valueOr(req.TwitterURL, deref(current.TwitterUrl)))
+	linkedin := strings.TrimSpace(valueOr(req.LinkedInURL, deref(current.LinkedinUrl)))
+	for _, link := range []string{website, instagram, facebook, twitter, linkedin} {
+		if !validCompanyLink(link) {
+			fail(c, http.StatusUnprocessableEntity, "invalid_link", "Website and social links must be full http or https URLs.")
+			return
+		}
+	}
+
+	yearEstablished := int32(0)
+	if current.YearEstablished.Valid {
+		yearEstablished = current.YearEstablished.Int32
+	}
+	if req.YearEstablished != nil {
+		year := *req.YearEstablished
+		if year != 0 && (year < 1800 || year > time.Now().Year()) {
+			fail(c, http.StatusUnprocessableEntity, "invalid_year", "Enter a year between 1800 and the current year.")
+			return
+		}
+		yearEstablished = int32(year)
+	}
+
+	photos := current.PhotoUrls
+	if req.PhotoURLs != nil {
+		cleaned, ok := cleanCompanyPhotoURLs(req.PhotoURLs)
+		if !ok {
+			fail(c, http.StatusUnprocessableEntity, "invalid_photo", "Add up to 8 company photos as https image links.")
+			return
+		}
+		photos = cleaned
+	}
+
 	hours := current.OperatingHours
 	if len(req.OperatingHours) > 0 {
 		var probe map[string]any
@@ -250,6 +312,13 @@ func (a *API) updateCompany(c *gin.Context) {
 		Column10:       description,
 		Column11:       deref(current.CoverImageUrl),
 		OperatingHours: hours,
+		Column13:       website,
+		Column14:       instagram,
+		Column15:       facebook,
+		Column16:       twitter,
+		Column17:       linkedin,
+		Column18:       yearEstablished,
+		Column19:       nonNilStrings(photos),
 	})
 	if err != nil {
 		if strings.Contains(err.Error(), "23505") {
@@ -632,6 +701,40 @@ func actorID(c *gin.Context) *uuid.UUID {
 		return nil
 	}
 	return &user.ID
+}
+
+func validCompanyLink(value string) bool {
+	if value == "" {
+		return true
+	}
+	parsed, err := url.Parse(value)
+	return err == nil &&
+		(parsed.Scheme == "http" || parsed.Scheme == "https") &&
+		parsed.Host != ""
+}
+
+func cleanCompanyPhotoURLs(values []string) ([]string, bool) {
+	cleaned := make([]string, 0, len(values))
+	seen := make(map[string]bool, len(values))
+	for _, value := range values {
+		value = strings.TrimSpace(value)
+		if value == "" {
+			continue
+		}
+		if len(value) > 500 || len(cleaned) >= 8 {
+			return nil, false
+		}
+		parsed, err := url.Parse(value)
+		if err != nil || parsed.Scheme != "https" || parsed.Host == "" {
+			return nil, false
+		}
+		if seen[value] {
+			continue
+		}
+		seen[value] = true
+		cleaned = append(cleaned, value)
+	}
+	return cleaned, true
 }
 
 func valueOr[T any](value *T, fallback T) T {

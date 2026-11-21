@@ -78,7 +78,7 @@ const navigationGroups = computed<NavigationGroup[]>(() => {
       label: 'Operations',
       items: [
         { label: 'Deliveries', to: '/dashboard/deliveries', icon: Truck, tone: 'sky', permission: 'shipments.view' },
-        { label: 'Customers', to: '/dashboard/coming-soon/customers', icon: Users, tone: 'rose', comingSoon: true, permission: 'staff.view' },
+        { label: 'Customers', to: '/dashboard/customers', icon: Users, tone: 'rose', permission: 'staff.view' },
         { label: 'Requests', to: '/dashboard/requests', icon: ClipboardList, tone: 'amber', permission: 'bookings.manage' },
         { label: 'Analytics', to: '/dashboard/coming-soon/analytics', icon: ChartNoAxesColumnIncreasing, tone: 'mint', comingSoon: true, permission: 'reports.view' },
         { label: 'Finance', to: '/dashboard/coming-soon/finance', icon: CreditCard, tone: 'cyan', comingSoon: true, permission: 'reports.view' },

@@ -107,69 +107,6 @@ func (q *Queries) CreateLastMileArea(ctx context.Context, arg CreateLastMileArea
 	return i, err
 }
 
-const createPricingQuoteVersion = `-- name: CreatePricingQuoteVersion :one
-INSERT INTO pricing_quote_versions (
- company_id,service_type,route_id,area_id,pricing_model,input_snapshot,calculation_snapshot,
- base_price_minor,additional_charges_minor,total_minor,currency,is_estimate,physical_inspection_required,confirmation_required
-) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) RETURNING id, company_id, service_type, route_id, area_id, pricing_model, input_snapshot, calculation_snapshot, base_price_minor, additional_charges_minor, total_minor, currency, is_estimate, physical_inspection_required, confirmation_required, created_at
-`
-
-type CreatePricingQuoteVersionParams struct {
-	CompanyID                  uuid.UUID   `json:"company_id"`
-	ServiceType                string      `json:"service_type"`
-	RouteID                    *uuid.UUID  `json:"route_id"`
-	AreaID                     *uuid.UUID  `json:"area_id"`
-	PricingModel               string      `json:"pricing_model"`
-	InputSnapshot              []byte      `json:"input_snapshot"`
-	CalculationSnapshot        []byte      `json:"calculation_snapshot"`
-	BasePriceMinor             pgtype.Int8 `json:"base_price_minor"`
-	AdditionalChargesMinor     int64       `json:"additional_charges_minor"`
-	TotalMinor                 pgtype.Int8 `json:"total_minor"`
-	Currency                   string      `json:"currency"`
-	IsEstimate                 bool        `json:"is_estimate"`
-	PhysicalInspectionRequired bool        `json:"physical_inspection_required"`
-	ConfirmationRequired       bool        `json:"confirmation_required"`
-}
-
-func (q *Queries) CreatePricingQuoteVersion(ctx context.Context, arg CreatePricingQuoteVersionParams) (PricingQuoteVersion, error) {
-	row := q.db.QueryRow(ctx, createPricingQuoteVersion,
-		arg.CompanyID,
-		arg.ServiceType,
-		arg.RouteID,
-		arg.AreaID,
-		arg.PricingModel,
-		arg.InputSnapshot,
-		arg.CalculationSnapshot,
-		arg.BasePriceMinor,
-		arg.AdditionalChargesMinor,
-		arg.TotalMinor,
-		arg.Currency,
-		arg.IsEstimate,
-		arg.PhysicalInspectionRequired,
-		arg.ConfirmationRequired,
-	)
-	var i PricingQuoteVersion
-	err := row.Scan(
-		&i.ID,
-		&i.CompanyID,
-		&i.ServiceType,
-		&i.RouteID,
-		&i.AreaID,
-		&i.PricingModel,
-		&i.InputSnapshot,
-		&i.CalculationSnapshot,
-		&i.BasePriceMinor,
-		&i.AdditionalChargesMinor,
-		&i.TotalMinor,
-		&i.Currency,
-		&i.IsEstimate,
-		&i.PhysicalInspectionRequired,
-		&i.ConfirmationRequired,
-		&i.CreatedAt,
-	)
-	return i, err
-}
-
 const createPricingZoneRate = `-- name: CreatePricingZoneRate :one
 INSERT INTO pricing_zone_rates (area_id,from_zone_id,to_zone_id,price_minor)
 SELECT $1,$2,$3,$4 WHERE EXISTS (
@@ -252,74 +189,6 @@ func (q *Queries) CreateServiceZone(ctx context.Context, arg CreateServiceZonePa
 	return i, err
 }
 
-const createSizeCategory = `-- name: CreateSizeCategory :one
-INSERT INTO pricing_size_categories (route_id,name,price_minor,requires_manual_quote)
-SELECT $1,$2,$3,$4 FROM company_booking_routes r WHERE r.id=$1 AND r.company_id=$5
-RETURNING id, route_id, name, price_minor, requires_manual_quote, created_at
-`
-
-type CreateSizeCategoryParams struct {
-	RouteID             uuid.UUID   `json:"route_id"`
-	Name                string      `json:"name"`
-	PriceMinor          pgtype.Int8 `json:"price_minor"`
-	RequiresManualQuote bool        `json:"requires_manual_quote"`
-	CompanyID           uuid.UUID   `json:"company_id"`
-}
-
-func (q *Queries) CreateSizeCategory(ctx context.Context, arg CreateSizeCategoryParams) (PricingSizeCategory, error) {
-	row := q.db.QueryRow(ctx, createSizeCategory,
-		arg.RouteID,
-		arg.Name,
-		arg.PriceMinor,
-		arg.RequiresManualQuote,
-		arg.CompanyID,
-	)
-	var i PricingSizeCategory
-	err := row.Scan(
-		&i.ID,
-		&i.RouteID,
-		&i.Name,
-		&i.PriceMinor,
-		&i.RequiresManualQuote,
-		&i.CreatedAt,
-	)
-	return i, err
-}
-
-const createWeightBracket = `-- name: CreateWeightBracket :one
-INSERT INTO pricing_weight_brackets (route_id,min_weight_kg,max_weight_kg,price_minor)
-SELECT $1,$2,$3,$4 FROM company_booking_routes r WHERE r.id=$1 AND r.company_id=$5
-RETURNING id, route_id, min_weight_kg, max_weight_kg, price_minor, created_at
-`
-
-type CreateWeightBracketParams struct {
-	RouteID     uuid.UUID      `json:"route_id"`
-	MinWeightKg pgtype.Numeric `json:"min_weight_kg"`
-	MaxWeightKg pgtype.Numeric `json:"max_weight_kg"`
-	PriceMinor  int64          `json:"price_minor"`
-	CompanyID   uuid.UUID      `json:"company_id"`
-}
-
-func (q *Queries) CreateWeightBracket(ctx context.Context, arg CreateWeightBracketParams) (PricingWeightBracket, error) {
-	row := q.db.QueryRow(ctx, createWeightBracket,
-		arg.RouteID,
-		arg.MinWeightKg,
-		arg.MaxWeightKg,
-		arg.PriceMinor,
-		arg.CompanyID,
-	)
-	var i PricingWeightBracket
-	err := row.Scan(
-		&i.ID,
-		&i.RouteID,
-		&i.MinWeightKg,
-		&i.MaxWeightKg,
-		&i.PriceMinor,
-		&i.CreatedAt,
-	)
-	return i, err
-}
-
 const deleteCompanyBookingRoute = `-- name: DeleteCompanyBookingRoute :exec
 DELETE FROM company_booking_routes WHERE company_id = $1 AND id = $2
 `
@@ -377,7 +246,7 @@ SELECT r.company_id, r.origin_state, r.origin_city, r.destination_state, r.desti
   r.estimated_transit_time, r.departure_schedule, r.pickup_available, r.delivery_available, r.description,
   r.max_weight_kg, r.max_length_cm, r.max_width_cm, r.max_height_cm, r.price_is_estimate, 'inactive'
 FROM company_booking_routes r WHERE r.company_id = $1 AND r.id = $2
-RETURNING id, company_id, origin_state, origin_city, destination_state, destination_city, distance_km, standard_price_per_km_minor, express_price_per_km_minor, same_day_price_per_km_minor, minimum_charge_minor, status, created_at, updated_at, transportation_method, pricing_model, origin_branch_id, destination_branch_id, estimated_transit_time, departure_schedule, pickup_available, delivery_available, description, max_weight_kg, max_length_cm, max_width_cm, max_height_cm, price_is_estimate
+RETURNING id, company_id, origin_state, origin_city, destination_state, destination_city, distance_km, standard_price_per_km_minor, express_price_per_km_minor, same_day_price_per_km_minor, minimum_charge_minor, status, created_at, updated_at, estimated_transit_time, departure_schedule, pickup_available, delivery_available, description, max_weight_kg, max_length_cm, max_width_cm, max_height_cm, price_is_estimate
 `
 
 type DuplicateCompanyBookingRouteParams struct {
@@ -403,10 +272,6 @@ func (q *Queries) DuplicateCompanyBookingRoute(ctx context.Context, arg Duplicat
 		&i.Status,
 		&i.CreatedAt,
 		&i.UpdatedAt,
-		&i.TransportationMethod,
-		&i.PricingModel,
-		&i.OriginBranchID,
-		&i.DestinationBranchID,
 		&i.EstimatedTransitTime,
 		&i.DepartureSchedule,
 		&i.PickupAvailable,
@@ -556,80 +421,6 @@ func (q *Queries) ListServiceZones(ctx context.Context, arg ListServiceZonesPara
 	return items, nil
 }
 
-const listSizeCategories = `-- name: ListSizeCategories :many
-SELECT c.id, c.route_id, c.name, c.price_minor, c.requires_manual_quote, c.created_at FROM pricing_size_categories c JOIN company_booking_routes r ON r.id=c.route_id
-WHERE r.company_id=$1 AND c.route_id=$2 ORDER BY c.created_at
-`
-
-type ListSizeCategoriesParams struct {
-	CompanyID uuid.UUID `json:"company_id"`
-	RouteID   uuid.UUID `json:"route_id"`
-}
-
-func (q *Queries) ListSizeCategories(ctx context.Context, arg ListSizeCategoriesParams) ([]PricingSizeCategory, error) {
-	rows, err := q.db.Query(ctx, listSizeCategories, arg.CompanyID, arg.RouteID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []PricingSizeCategory{}
-	for rows.Next() {
-		var i PricingSizeCategory
-		if err := rows.Scan(
-			&i.ID,
-			&i.RouteID,
-			&i.Name,
-			&i.PriceMinor,
-			&i.RequiresManualQuote,
-			&i.CreatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const listWeightBrackets = `-- name: ListWeightBrackets :many
-SELECT w.id, w.route_id, w.min_weight_kg, w.max_weight_kg, w.price_minor, w.created_at FROM pricing_weight_brackets w JOIN company_booking_routes r ON r.id=w.route_id
-WHERE r.company_id=$1 AND w.route_id=$2 ORDER BY w.min_weight_kg
-`
-
-type ListWeightBracketsParams struct {
-	CompanyID uuid.UUID `json:"company_id"`
-	RouteID   uuid.UUID `json:"route_id"`
-}
-
-func (q *Queries) ListWeightBrackets(ctx context.Context, arg ListWeightBracketsParams) ([]PricingWeightBracket, error) {
-	rows, err := q.db.Query(ctx, listWeightBrackets, arg.CompanyID, arg.RouteID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []PricingWeightBracket{}
-	for rows.Next() {
-		var i PricingWeightBracket
-		if err := rows.Scan(
-			&i.ID,
-			&i.RouteID,
-			&i.MinWeightKg,
-			&i.MaxWeightKg,
-			&i.PriceMinor,
-			&i.CreatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const listZoneRates = `-- name: ListZoneRates :many
 SELECT r.id, r.area_id, r.from_zone_id, r.to_zone_id, r.price_minor, r.created_at, r.updated_at FROM pricing_zone_rates r JOIN last_mile_service_areas a ON a.id=r.area_id
 WHERE a.company_id=$1 AND r.area_id=$2
@@ -680,36 +471,6 @@ type ReplacePricingZoneRatesParams struct {
 
 func (q *Queries) ReplacePricingZoneRates(ctx context.Context, arg ReplacePricingZoneRatesParams) error {
 	_, err := q.db.Exec(ctx, replacePricingZoneRates, arg.CompanyID, arg.AreaID)
-	return err
-}
-
-const replaceSizeCategories = `-- name: ReplaceSizeCategories :exec
-DELETE FROM pricing_size_categories c USING company_booking_routes r
-WHERE c.route_id=r.id AND r.company_id=$1 AND c.route_id=$2
-`
-
-type ReplaceSizeCategoriesParams struct {
-	CompanyID uuid.UUID `json:"company_id"`
-	RouteID   uuid.UUID `json:"route_id"`
-}
-
-func (q *Queries) ReplaceSizeCategories(ctx context.Context, arg ReplaceSizeCategoriesParams) error {
-	_, err := q.db.Exec(ctx, replaceSizeCategories, arg.CompanyID, arg.RouteID)
-	return err
-}
-
-const replaceWeightBrackets = `-- name: ReplaceWeightBrackets :exec
-DELETE FROM pricing_weight_brackets w USING company_booking_routes r
-WHERE w.route_id=r.id AND r.company_id=$1 AND w.route_id=$2
-`
-
-type ReplaceWeightBracketsParams struct {
-	CompanyID uuid.UUID `json:"company_id"`
-	RouteID   uuid.UUID `json:"route_id"`
-}
-
-func (q *Queries) ReplaceWeightBrackets(ctx context.Context, arg ReplaceWeightBracketsParams) error {
-	_, err := q.db.Exec(ctx, replaceWeightBrackets, arg.CompanyID, arg.RouteID)
 	return err
 }
 

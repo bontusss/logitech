@@ -25,15 +25,18 @@ const input = ref(props.modelValue?.address ?? '')
 const suggestions = ref<Suggestion[]>([])
 const searching = ref(false)
 const locating = ref(false)
+const adjusting = ref(false)
 const error = ref('')
 const open = ref(false)
 const { token, loadError: mapboxConfigError, load: loadMapboxToken } = useMapboxToken()
 let timer: ReturnType<typeof setTimeout> | undefined
 let controller: AbortController | null = null
+let suppressInputWatch = false
 
 onMounted(() => void loadMapboxToken())
 
 watch(input, (value) => {
+  if (suppressInputWatch) return
   emit('update:modelValue', null)
   error.value = ''
   suggestions.value = []
@@ -91,12 +94,61 @@ async function search(query: string) {
   }
 }
 
-function choose(place: Suggestion) {
+async function choose(place: Suggestion) {
+  suppressInputWatch = true
   input.value = place.address
   suggestions.value = []
   open.value = false
   error.value = ''
+  await nextTick()
   emit('update:modelValue', place)
+  suppressInputWatch = false
+}
+
+async function reverseGeocode(latitude: number, longitude: number): Promise<Suggestion> {
+  const params = new URLSearchParams({
+    longitude: String(longitude),
+    latitude: String(latitude),
+    access_token: token.value,
+  })
+  const response = await fetch(`https://api.mapbox.com/search/geocode/v6/reverse?${params}`)
+  if (!response.ok) throw new Error('Could not verify this spot on the map.')
+  const result = await response.json() as {
+    features?: Array<{
+      geometry?: { coordinates?: [number, number] }
+      properties?: { full_address?: string; name?: string; place_formatted?: string }
+    }>
+  }
+  const feature = result.features?.[0]
+  const address = feature?.properties?.full_address
+    || [feature?.properties?.name, feature?.properties?.place_formatted].filter(Boolean).join(', ')
+  const coordinates = feature?.geometry?.coordinates
+  if (!address || !coordinates) throw new Error('Mapbox could not find an address at this spot.')
+  return { address, longitude: coordinates[0], latitude: coordinates[1] }
+}
+
+async function adjustPin(coordinates: { latitude: number; longitude: number }) {
+  if (!token.value) return
+  adjusting.value = true
+  error.value = ''
+  try {
+    const place = await reverseGeocode(coordinates.latitude, coordinates.longitude)
+    suppressInputWatch = true
+    input.value = place.address
+    await nextTick()
+    // Preserve the exact dragged position instead of snapping the pin back to
+    // the nearest road returned by reverse geocoding.
+    emit('update:modelValue', {
+      ...place,
+      latitude: coordinates.latitude,
+      longitude: coordinates.longitude,
+    })
+  } catch (cause) {
+    error.value = cause instanceof Error ? cause.message : 'Could not verify this spot. Move the pin again.'
+  } finally {
+    suppressInputWatch = false
+    adjusting.value = false
+  }
 }
 
 function useCurrentLocation() {
@@ -113,25 +165,8 @@ function useCurrentLocation() {
   navigator.geolocation.getCurrentPosition(
     async ({ coords }) => {
       try {
-        const params = new URLSearchParams({
-          longitude: String(coords.longitude),
-          latitude: String(coords.latitude),
-          access_token: token,
-        })
-        const response = await fetch(`https://api.mapbox.com/search/geocode/v6/reverse?${params}`)
-        if (!response.ok) throw new Error('Could not verify your current location.')
-        const result = await response.json() as {
-          features?: Array<{
-            geometry?: { coordinates?: [number, number] }
-            properties?: { full_address?: string; name?: string; place_formatted?: string }
-          }>
-        }
-        const feature = result.features?.[0]
-        const address = feature?.properties?.full_address
-          || [feature?.properties?.name, feature?.properties?.place_formatted].filter(Boolean).join(', ')
-        const coordinates = feature?.geometry?.coordinates
-        if (!address || !coordinates) throw new Error('Mapbox could not verify this location.')
-        choose({ address, longitude: coordinates[0], latitude: coordinates[1] })
+        const place = await reverseGeocode(coords.latitude, coords.longitude)
+        await choose(place)
       } catch (cause) {
         error.value = cause instanceof Error ? cause.message : 'Could not verify your current location.'
       } finally {
@@ -144,7 +179,8 @@ function useCurrentLocation() {
         : 'Could not get your location. Search for an address instead.'
       locating.value = false
     },
-    { enableHighAccuracy: true, timeout: 12000, maximumAge: 30000 },
+    // Do not reuse a cached fix: a stale location is worse than a fresh one.
+    { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 },
   )
 }
 </script>
@@ -181,6 +217,18 @@ function useCurrentLocation() {
         <Crosshair v-else :size="12" />
         Use my location
       </button>
+    </div>
+    <div v-if="token && modelValue" class="mt-2 space-y-1.5">
+      <MapPinAdjuster
+        :latitude="modelValue.latitude"
+        :longitude="modelValue.longitude"
+        :access-token="token"
+        height="140px"
+        @change="adjustPin"
+      />
+      <p class="text-[9.5px] leading-4 text-slate-400">
+        {{ adjusting ? 'Updating the address from the pin…' : 'Device location can be approximate. Drag the pin to the exact spot, or search again if you are in the wrong area.' }}
+      </p>
     </div>
     <p v-if="!token" class="mt-2 text-[10px] leading-4 text-amber-700">
       {{ mapboxConfigError || 'Mapbox is not configured for this page yet. Add its public access token to enable verified location search.' }}

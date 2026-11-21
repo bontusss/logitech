@@ -1,214 +1,187 @@
-import type { CustomerDashboardData, ShipmentStatus } from '~/types/customer'
+import type { CustomerAddress, CustomerBooking, DeliveryStatus } from '~/types/customer'
 
-/**
- * Illustrative marketplace data.
- *
- * The backend does not expose customer shipment or booking endpoints yet (only the
- * rate engine exists), so the dashboard is wired through this composable to keep
- * the shape of the eventual API in one place. Replace `sampleDashboard` with a
- * fetch to the customer dashboard endpoint once it ships.
- */
-const sampleDashboard: CustomerDashboardData = {
-  shipments: [
-    {
-      id: 'shp_2481',
-      reference: 'BOL-2481',
-      provider: 'Metroline Express',
-      service: 'Express',
-      origin: 'Aba',
-      destination: 'Lagos',
-      status: 'in_transit',
-      currentLocation: 'Benin City transit hub',
-      eta: 'Tomorrow, 4:00 PM',
-      weightKg: 3,
-      priceKobo: 450000,
-      events: [
-        { label: 'Booking confirmed', location: 'Aba', at: 'Nov 16, 9:12 AM', state: 'done' },
-        { label: 'Picked up from sender', location: 'Aba', at: 'Nov 16, 2:40 PM', state: 'done' },
-        { label: 'Departed origin hub', location: 'Aba', at: 'Nov 16, 7:05 PM', state: 'done' },
-        { label: 'In transit', location: 'Benin City', at: 'Nov 17, 6:30 AM', state: 'current' },
-        { label: 'Arrive at destination hub', location: 'Lagos', at: 'Expected Nov 18', state: 'pending' },
-        { label: 'Out for delivery', location: 'Lagos', at: 'Expected Nov 19', state: 'pending' },
-      ],
-    },
-    {
-      id: 'shp_2479',
-      reference: 'BOL-2479',
-      provider: 'Northstar Cargo',
-      service: 'Same-day',
-      origin: 'Onitsha',
-      destination: 'Abuja',
-      status: 'out_for_delivery',
-      currentLocation: 'Wuse delivery hub, Abuja',
-      eta: 'Today, before 6:00 PM',
-      weightKg: 5,
-      priceKobo: 620000,
-      events: [
-        { label: 'Booking confirmed', location: 'Onitsha', at: 'Nov 16, 11:20 AM', state: 'done' },
-        { label: 'Picked up from sender', location: 'Onitsha', at: 'Nov 16, 4:15 PM', state: 'done' },
-        { label: 'In transit', location: 'Lokoja', at: 'Nov 17, 3:05 AM', state: 'done' },
-        { label: 'Arrived at destination hub', location: 'Abuja', at: 'Nov 18, 7:40 AM', state: 'done' },
-        { label: 'Out for delivery', location: 'Wuse, Abuja', at: 'Today, 9:10 AM', state: 'current' },
-        { label: 'Delivered to recipient', location: 'Abuja', at: 'Expected today', state: 'pending' },
-      ],
-    },
-    {
-      id: 'shp_2464',
-      reference: 'BOL-2464',
-      provider: 'Swiftline Logistics',
-      service: 'Standard',
-      origin: 'Port Harcourt',
-      destination: 'Enugu',
-      status: 'delayed',
-      currentLocation: 'Port Harcourt sorting centre',
-      eta: 'Delayed — new ETA within 24 hours',
-      weightKg: 2,
-      priceKobo: 310000,
-      events: [
-        { label: 'Booking confirmed', location: 'Port Harcourt', at: 'Nov 15, 8:05 AM', state: 'done' },
-        { label: 'Picked up from sender', location: 'Port Harcourt', at: 'Nov 15, 1:30 PM', state: 'done' },
-        { label: 'Held at sorting centre', location: 'Port Harcourt', at: 'Nov 16, 10:15 AM', state: 'current' },
-        { label: 'In transit', location: 'Aba', at: 'Awaiting update', state: 'pending' },
-        { label: 'Delivered to recipient', location: 'Enugu', at: 'Awaiting update', state: 'pending' },
-      ],
-    },
-    {
-      id: 'shp_2451',
-      reference: 'BOL-2451',
-      provider: 'Metroline Express',
-      service: 'Economy',
-      origin: 'Lagos',
-      destination: 'Ibadan',
-      status: 'delivered',
-      currentLocation: 'Delivered to recipient',
-      eta: 'Delivered Nov 12',
-      weightKg: 1.5,
-      priceKobo: 240000,
-      events: [
-        { label: 'Booking confirmed', location: 'Lagos', at: 'Nov 10, 10:00 AM', state: 'done' },
-        { label: 'Picked up from sender', location: 'Lagos', at: 'Nov 10, 3:20 PM', state: 'done' },
-        { label: 'In transit', location: 'Ibadan', at: 'Nov 11, 8:45 PM', state: 'done' },
-        { label: 'Delivered to recipient', location: 'Ibadan', at: 'Nov 12, 11:05 AM', state: 'done' },
-      ],
-    },
-  ],
-  bookings: [
-    {
-      id: 'bkg_1094',
-      reference: 'BK-1094',
-      provider: 'Swiftline Logistics',
-      service: 'Standard',
-      origin: 'Lekki',
-      destination: 'Abuja',
-      status: 'awaiting_payment',
-      priceKobo: 420000,
-      note: 'Quoted price is held until 6:00 PM today.',
-      createdAt: 'Created today, 9:24 AM',
-    },
-    {
-      id: 'bkg_1091',
-      reference: 'BK-1091',
-      provider: 'Northstar Cargo',
-      service: 'Express',
-      origin: 'Ikeja',
-      destination: 'Port Harcourt',
-      status: 'awaiting_provider',
-      priceKobo: 575000,
-      note: 'Provider is confirming pickup availability.',
-      createdAt: 'Created yesterday, 4:10 PM',
-    },
-  ],
-  spend: {
-    thisMonthKobo: 1840000,
-    lastMonthKobo: 1190000,
-    lifetimeKobo: 8625000,
-    deliveredCount: 27,
-    monthly: [
-      { month: 'Jun', amountKobo: 920000 },
-      { month: 'Jul', amountKobo: 1240000 },
-      { month: 'Aug', amountKobo: 780000 },
-      { month: 'Sep', amountKobo: 1530000 },
-      { month: 'Oct', amountKobo: 1190000 },
-      { month: 'Nov', amountKobo: 1840000 },
-    ],
-  },
+export interface BookingStateMeta {
+  label: string
+  tone: string
+  dot: string
+  active: boolean
 }
 
-const naira = new Intl.NumberFormat('en-NG', {
-  style: 'currency',
-  currency: 'NGN',
-  maximumFractionDigits: 0,
-})
+const terminalStatuses: DeliveryStatus[] = ['delivered', 'cancelled']
 
-export function formatNaira(kobo: number) {
-  return naira.format(kobo / 100)
+function bookingState(booking: CustomerBooking): BookingStateMeta {
+  if (booking.request_status === 'pending') {
+    return {
+      label: 'Awaiting provider',
+      tone: 'border-amber-200 bg-amber-50 text-amber-700',
+      dot: 'bg-amber-500',
+      active: true,
+    }
+  }
+  if (booking.request_status === 'declined' || booking.status === 'cancelled') {
+    return {
+      label: booking.request_status === 'declined' ? 'Declined' : 'Cancelled',
+      tone: 'border-rose-200 bg-rose-50 text-rose-700',
+      dot: 'bg-rose-500',
+      active: false,
+    }
+  }
+  switch (booking.status) {
+    case 'requested':
+    case 'created':
+      return {
+        label: 'Confirmed',
+        tone: 'border-slate-200 bg-slate-50 text-slate-600',
+        dot: 'bg-slate-400',
+        active: true,
+      }
+    case 'assigned':
+      return {
+        label: 'Rider assigned',
+        tone: 'border-sky-200 bg-sky-50 text-sky-700',
+        dot: 'bg-sky-500',
+        active: true,
+      }
+    case 'picked_up':
+      return {
+        label: 'Picked up',
+        tone: 'border-sky-200 bg-sky-50 text-sky-700',
+        dot: 'bg-sky-500',
+        active: true,
+      }
+    case 'in_transit':
+      return {
+        label: 'In transit',
+        tone: 'border-brand-200 bg-brand-50 text-brand-700',
+        dot: 'bg-brand-500',
+        active: true,
+      }
+    case 'delivered':
+      return {
+        label: 'Delivered',
+        tone: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+        dot: 'bg-emerald-500',
+        active: false,
+      }
+    default:
+      return {
+        label: 'Cancelled',
+        tone: 'border-rose-200 bg-rose-50 text-rose-700',
+        dot: 'bg-rose-500',
+        active: false,
+      }
+  }
 }
 
-export const shipmentStatusMeta: Record<
-  ShipmentStatus,
-  { label: string; tone: string; dot: string }
-> = {
-  confirmed: {
-    label: 'Confirmed',
-    tone: 'border-slate-200 bg-slate-50 text-slate-600',
-    dot: 'bg-slate-400',
-  },
-  picked_up: {
-    label: 'Picked up',
-    tone: 'border-sky-200 bg-sky-50 text-sky-700',
-    dot: 'bg-sky-500',
-  },
-  in_transit: {
-    label: 'In transit',
-    tone: 'border-brand-200 bg-brand-50 text-brand-700',
-    dot: 'bg-brand-500',
-  },
-  out_for_delivery: {
-    label: 'Out for delivery',
-    tone: 'border-amber-200 bg-amber-50 text-amber-700',
-    dot: 'bg-amber-500',
-  },
-  delivered: {
-    label: 'Delivered',
-    tone: 'border-emerald-200 bg-emerald-50 text-emerald-700',
-    dot: 'bg-emerald-500',
-  },
-  delayed: {
-    label: 'Delayed',
-    tone: 'border-red-200 bg-red-50 text-red-700',
-    dot: 'bg-red-500',
-  },
+export function formatBookingMoney(minor: number, currency = 'NGN') {
+  return new Intl.NumberFormat('en-NG', {
+    style: 'currency',
+    currency,
+    maximumFractionDigits: 0,
+  }).format(minor / 100)
+}
+
+export function bookingStatusLabel(status: DeliveryStatus) {
+  return status.replaceAll('_', ' ')
 }
 
 export function useCustomerDashboard() {
-  const data = sampleDashboard
+  const { api } = useApi()
+  const bookings = ref<CustomerBooking[]>([])
+  const loading = ref(false)
+  const error = ref('')
+  const loaded = ref(false)
 
-  const activeShipments = computed(() =>
-    data.shipments.filter((shipment) => shipment.status !== 'delivered'),
+  async function load(force = false) {
+    if (loading.value || (loaded.value && !force)) return
+    loading.value = true
+    error.value = ''
+    try {
+      const result = await api<{ bookings: CustomerBooking[] }>('/customer/bookings')
+      bookings.value = result.bookings
+      loaded.value = true
+    } catch (cause) {
+      error.value = apiErrorMessage(cause, 'Could not load your bookings.')
+    } finally {
+      loading.value = false
+    }
+  }
+
+  const activeBookings = computed(() =>
+    bookings.value.filter((booking) => bookingState(booking).active),
   )
 
   const inTransitCount = computed(
     () =>
-      data.shipments.filter(
-        (shipment) => shipment.status === 'in_transit' || shipment.status === 'out_for_delivery',
+      bookings.value.filter(
+        (booking) =>
+          booking.request_status === 'accepted' &&
+          ['assigned', 'picked_up', 'in_transit'].includes(booking.status),
       ).length,
   )
 
-  const pendingBookings = computed(() => data.bookings)
-
-  const maxMonthlySpend = computed(() =>
-    Math.max(...data.spend.monthly.map((point) => point.amountKobo), 1),
+  const deliveredBookings = computed(() =>
+    bookings.value.filter((booking) => booking.status === 'delivered'),
   )
 
+  const providers = computed(() => {
+    const seen = new Set<string>()
+    return bookings.value.filter((booking) => {
+      if (seen.has(booking.provider_id)) return false
+      seen.add(booking.provider_id)
+      return true
+    })
+  })
+
+  const addresses = computed<CustomerAddress[]>(() => {
+    const seen = new Set<string>()
+    const result: CustomerAddress[] = []
+    for (const booking of bookings.value) {
+      const entries: { address: string; role: CustomerAddress['role'] }[] = [
+        { address: booking.pickup_address, role: 'pickup' },
+        { address: booking.dropoff_address, role: 'dropoff' },
+      ]
+      for (const entry of entries) {
+        if (!entry.address) continue
+        const key = `${entry.role}:${entry.address.toLowerCase()}`
+        if (seen.has(key)) continue
+        seen.add(key)
+        result.push({
+          address: entry.address,
+          role: entry.role,
+          provider: booking.provider_name,
+          lastUsedAt: booking.created_at,
+        })
+      }
+    }
+    return result
+  })
+
+  function stateFor(booking: CustomerBooking) {
+    return bookingState(booking)
+  }
+
+  function formatMoney(booking: CustomerBooking) {
+    return formatBookingMoney(booking.delivery_price_minor, booking.currency)
+  }
+
+  function isTerminal(booking: CustomerBooking) {
+    return terminalStatuses.includes(booking.status)
+  }
+
   return {
-    data,
-    activeShipments,
+    bookings,
+    loading,
+    error,
+    loaded,
+    load,
+    activeBookings,
     inTransitCount,
-    pendingBookings,
-    maxMonthlySpend,
-    formatNaira,
-    shipmentStatusMeta,
-    /** Dashboard data is illustrative until customer booking/tracking endpoints exist. */
-    isSample: true,
+    deliveredBookings,
+    providers,
+    addresses,
+    stateFor,
+    formatMoney,
+    isTerminal,
   }
 }

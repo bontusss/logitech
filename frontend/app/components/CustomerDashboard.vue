@@ -1,77 +1,133 @@
 <script setup lang="ts">
 import {
   ArrowRight,
+  Bell,
   Check,
+  CircleAlert,
   Clock3,
-  Info,
+  ExternalLink,
+  Loader2,
   MapPin,
   Package,
-  PackageCheck,
-  ReceiptText,
   Send,
   Truck,
-  Wallet,
+  UserRound,
+  Users,
 } from 'lucide-vue-next'
-import type { BookingStatus } from '~/types/customer'
+import type { CustomerBooking } from '~/types/customer'
 
-const { user } = useAuth()
+const { user, fetchMe } = useAuth()
+const { api } = useApi()
 const {
-  data,
-  activeShipments,
+  bookings,
+  loading,
+  error,
+  load,
+  activeBookings,
   inTransitCount,
-  pendingBookings,
-  maxMonthlySpend,
-  formatNaira,
-  shipmentStatusMeta,
-  isSample,
+  deliveredBookings,
+  providers,
+  addresses,
+  stateFor,
+  formatMoney,
+  isTerminal,
 } = useCustomerDashboard()
 
-const selectedId = ref(activeShipments.value[0]?.id ?? '')
-const selectedShipment = computed(
-  () => activeShipments.value.find((shipment) => shipment.id === selectedId.value) ?? activeShipments.value[0],
-)
-
-const recentRoutes = computed(() => {
-  const seen = new Set<string>()
-  return activeShipments.value
-    .filter((shipment) => {
-      const route = `${shipment.origin}|${shipment.destination}`
-      if (seen.has(route)) return false
-      seen.add(route)
-      return true
-    })
-    .slice(0, 2)
-    .map((shipment) => ({
-      label: `${shipment.origin} → ${shipment.destination}`,
-      to: '/#rate-search',
-    }))
+const activeTab = ref<'bookings' | 'addresses' | 'profile' | 'notifications'>('bookings')
+const filter = ref<'all' | 'active' | 'completed'>('all')
+const savingProfile = ref(false)
+const profileError = ref('')
+const profileSaved = ref(false)
+const profile = reactive({
+  full_name: user.value?.full_name ?? '',
+  phone: user.value?.phone ?? '',
 })
 
-const bookingMeta: Record<BookingStatus, { label: string; tone: string; action: string }> = {
-  awaiting_payment: {
-    label: 'Payment pending',
-    tone: 'border-amber-200 bg-amber-50 text-amber-700',
-    action: 'Pay & confirm',
-  },
-  awaiting_provider: {
-    label: 'Awaiting provider',
-    tone: 'border-brand-200 bg-brand-50 text-brand-700',
-    action: 'View booking',
-  },
-  awaiting_pickup: {
-    label: 'Pickup scheduled',
-    tone: 'border-emerald-200 bg-emerald-50 text-emerald-700',
-    action: 'View booking',
-  },
-}
-
-const spendStats = computed(() => [
-  { label: 'This month', value: formatNaira(data.spend.thisMonthKobo) },
-  { label: 'Last month', value: formatNaira(data.spend.lastMonthKobo) },
-  { label: 'Lifetime', value: formatNaira(data.spend.lifetimeKobo) },
-])
+onMounted(() => load())
 
 const firstName = computed(() => user.value?.full_name?.split(' ')[0] || 'there')
+
+const stats = computed(() => [
+  {
+    label: 'Active parcels',
+    value: String(activeBookings.value.length),
+    detail: 'Bookings still in progress',
+    icon: Package,
+  },
+  {
+    label: 'In transit',
+    value: String(inTransitCount.value),
+    detail: 'On the road right now',
+    icon: Truck,
+  },
+  {
+    label: 'Delivered',
+    value: String(deliveredBookings.value.length),
+    detail: 'Completed deliveries',
+    icon: Check,
+  },
+  {
+    label: 'Providers used',
+    value: String(providers.value.length),
+    detail: 'Logistics companies booked',
+    icon: Users,
+  },
+])
+
+const tabs = [
+  { key: 'bookings' as const, label: 'Bookings', icon: Package },
+  { key: 'addresses' as const, label: 'Addresses', icon: MapPin },
+  { key: 'profile' as const, label: 'Profile', icon: UserRound },
+  { key: 'notifications' as const, label: 'Notifications', icon: Bell },
+]
+
+const filteredBookings = computed<CustomerBooking[]>(() => {
+  if (filter.value === 'active') return activeBookings.value
+  if (filter.value === 'completed') return bookings.value.filter((booking) => isTerminal(booking))
+  return bookings.value
+})
+
+function formatDate(value: string) {
+  return new Date(value).toLocaleDateString('en-NG', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  })
+}
+
+function formatDateTime(value: string) {
+  return new Date(value).toLocaleString('en-NG', {
+    day: 'numeric',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
+function speedLabel(speed: CustomerBooking['delivery_speed']) {
+  return { standard: 'Standard', express: 'Express', same_day: 'Same-day' }[speed] || speed
+}
+
+async function saveProfile() {
+  profileError.value = ''
+  profileSaved.value = false
+  savingProfile.value = true
+  try {
+    await api('/users/me', {
+      method: 'PATCH',
+      body: {
+        full_name: profile.full_name.trim(),
+        phone: profile.phone.trim(),
+      },
+    })
+    await fetchMe()
+    profileSaved.value = true
+  } catch (cause) {
+    profileError.value = apiErrorMessage(cause, 'Could not save your profile.')
+  } finally {
+    savingProfile.value = false
+  }
+}
 </script>
 
 <template>
@@ -79,13 +135,13 @@ const firstName = computed(() => user.value?.full_name?.split(' ')[0] || 'there'
     <div class="flex flex-wrap items-start justify-between gap-4">
       <div>
         <p class="text-[10.5px] font-semibold tracking-[0.2em] text-brand-600 uppercase">
-          Marketplace dashboard
+          Customer dashboard
         </p>
         <h1 class="mt-2 text-[clamp(1.6rem,3vw,2.1rem)] leading-tight font-semibold tracking-[-0.035em]">
           Welcome back, {{ firstName }}
         </h1>
         <p class="mt-2 max-w-xl text-[13.5px] leading-relaxed text-ink-900/50">
-          Your shipments, bookings and shipping spend in one place.
+          Track parcels, revisit bookings from every provider, and keep your contact details current.
         </p>
       </div>
       <AppButton to="/#rate-search" size="md">
@@ -94,295 +150,255 @@ const firstName = computed(() => user.value?.full_name?.split(' ')[0] || 'there'
       </AppButton>
     </div>
 
-    <div
-      v-if="isSample"
-      class="mt-5 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-2.5 text-[11px] leading-relaxed text-amber-800"
-    >
-      <Info :size="14" class="mt-0.5 shrink-0" />
-      <p>
-        <span class="font-semibold">Sample data.</span>
-        Live tracking, bookings and spend appear here once marketplace booking is connected.
-      </p>
-    </div>
-
     <div class="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-      <div class="rounded-xl border border-ink-900/10 bg-white p-4">
+      <div v-for="stat in stats" :key="stat.label" class="rounded-xl border border-ink-900/10 bg-white p-4">
         <div class="flex items-center justify-between gap-2">
-          <p class="text-[9.5px] font-semibold tracking-[0.16em] text-ink-900/40 uppercase">Active shipments</p>
-          <Package :size="15" class="text-brand-600" />
+          <p class="text-[9.5px] font-semibold tracking-[0.16em] text-ink-900/40 uppercase">{{ stat.label }}</p>
+          <component :is="stat.icon" :size="15" class="text-brand-600" />
         </div>
-        <p class="mt-2 text-[22px] font-semibold tracking-[-0.03em]">{{ activeShipments.length }}</p>
-        <p class="mt-1 text-[10.5px] text-ink-900/40">Moving right now</p>
-      </div>
-
-      <div class="rounded-xl border border-ink-900/10 bg-white p-4">
-        <div class="flex items-center justify-between gap-2">
-          <p class="text-[9.5px] font-semibold tracking-[0.16em] text-ink-900/40 uppercase">In transit</p>
-          <Truck :size="15" class="text-brand-600" />
-        </div>
-        <p class="mt-2 text-[22px] font-semibold tracking-[-0.03em]">{{ inTransitCount }}</p>
-        <p class="mt-1 text-[10.5px] text-ink-900/40">On the road or out for delivery</p>
-      </div>
-
-      <div class="rounded-xl border border-ink-900/10 bg-white p-4">
-        <div class="flex items-center justify-between gap-2">
-          <p class="text-[9.5px] font-semibold tracking-[0.16em] text-ink-900/40 uppercase">Pending bookings</p>
-          <ReceiptText :size="15" class="text-brand-600" />
-        </div>
-        <p class="mt-2 text-[22px] font-semibold tracking-[-0.03em]">{{ pendingBookings.length }}</p>
-        <p class="mt-1 text-[10.5px] text-ink-900/40">Waiting on you or the provider</p>
-      </div>
-
-      <div class="rounded-xl border border-ink-900/10 bg-white p-4">
-        <div class="flex items-center justify-between gap-2">
-          <p class="text-[9.5px] font-semibold tracking-[0.16em] text-ink-900/40 uppercase">Spent this month</p>
-          <Wallet :size="15" class="text-brand-600" />
-        </div>
-        <p class="mt-2 text-[22px] font-semibold tracking-[-0.03em]">{{ formatNaira(data.spend.thisMonthKobo) }}</p>
-        <p class="mt-1 text-[10.5px] text-ink-900/40">Delivered and in-progress orders</p>
+        <p class="mt-2 text-[22px] font-semibold tracking-[-0.03em]">{{ stat.value }}</p>
+        <p class="mt-1 text-[10.5px] text-ink-900/40">{{ stat.detail }}</p>
       </div>
     </div>
 
-    <div class="mt-5 grid gap-5 lg:grid-cols-[minmax(0,1.45fr)_minmax(0,1fr)]">
-      <div class="min-w-0">
-        <section class="rounded-xl border border-ink-900/10 bg-white p-5">
-          <div class="flex flex-wrap items-center justify-between gap-2">
-            <div>
-              <h2 class="text-[14px] font-semibold">Your shipments</h2>
-              <p class="mt-1 text-[11px] text-ink-900/40">Select a shipment to follow its latest scan events.</p>
-            </div>
-            <span class="rounded-md bg-ink-900/5 px-2 py-1 text-[10px] font-medium text-ink-900/50">
-              {{ activeShipments.length }} active
-            </span>
-          </div>
+    <nav class="mt-6 flex flex-wrap gap-1 border-b border-ink-900/10" aria-label="Customer dashboard sections">
+      <button
+        v-for="tab in tabs"
+        :key="tab.key"
+        type="button"
+        class="-mb-px inline-flex items-center gap-1.5 border-b-2 px-3 py-2.5 text-[12px] font-medium transition"
+        :class="activeTab === tab.key
+          ? 'border-brand-500 text-brand-700'
+          : 'border-transparent text-ink-900/50 hover:text-ink-900'"
+        @click="activeTab = tab.key"
+      >
+        <component :is="tab.icon" :size="14" />
+        {{ tab.label }}
+        <span
+          v-if="tab.key === 'notifications'"
+          class="rounded-full border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-[8.5px] font-semibold tracking-wide text-amber-700 uppercase"
+        >
+          Soon
+        </span>
+      </button>
+    </nav>
 
-          <ul class="mt-4 space-y-2">
-            <li v-for="shipment in activeShipments" :key="shipment.id">
-              <button
-                type="button"
-                class="w-full rounded-xl border p-3.5 text-left transition"
-                :class="
-                  shipment.id === selectedShipment?.id
-                    ? 'border-brand-500/40 bg-brand-50/35'
-                    : 'border-ink-900/10 hover:border-ink-900/20 hover:bg-canvas/60'
-                "
-                :aria-pressed="shipment.id === selectedShipment?.id"
-                @click="selectedId = shipment.id"
-              >
-                <div class="flex flex-wrap items-center gap-2">
-                  <span class="text-[12.5px] font-semibold">{{ shipment.reference }}</span>
-                  <span class="text-[11.5px] text-ink-900/45">
-                    {{ shipment.origin }} <span class="px-0.5 text-brand-500">→</span> {{ shipment.destination }}
-                  </span>
-                  <span
-                    class="ml-auto inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[9.5px] font-semibold"
-                    :class="shipmentStatusMeta[shipment.status].tone"
-                  >
-                    <span class="size-1.5 rounded-full" :class="shipmentStatusMeta[shipment.status].dot" />
-                    {{ shipmentStatusMeta[shipment.status].label }}
-                  </span>
-                </div>
+    <p v-if="error" role="alert" class="mt-4 flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 px-3.5 py-2.5 text-[12px] text-red-700">
+      <CircleAlert :size="14" class="mt-0.5 shrink-0" />{{ error }}
+    </p>
 
-                <div class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10.5px] text-ink-900/45">
-                  <span class="inline-flex items-center gap-1">
-                    <MapPin :size="11" class="text-brand-600" />
-                    {{ shipment.currentLocation }}
-                  </span>
-                  <span class="inline-flex items-center gap-1">
-                    <Clock3 :size="11" />
-                    {{ shipment.eta }}
-                  </span>
-                </div>
-
-                <div class="mt-2 flex flex-wrap items-center gap-2 text-[10px] text-ink-900/35">
-                  <span>{{ shipment.provider }} · {{ shipment.service }}</span>
-                  <span class="text-ink-900/15">|</span>
-                  <span>{{ shipment.weightKg }} kg</span>
-                  <span class="ml-auto font-semibold text-ink-900/60">{{ formatNaira(shipment.priceKobo) }}</span>
-                </div>
-              </button>
-            </li>
-          </ul>
-
-          <p v-if="activeShipments.length === 0" class="mt-4 rounded-lg bg-canvas px-3 py-6 text-center text-[12px] text-ink-900/40">
-            No active shipments. Book a delivery to see it here.
+    <section v-if="activeTab === 'bookings'" class="mt-4">
+      <div class="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h2 class="text-[14px] font-semibold">Your bookings</h2>
+          <p class="mt-1 text-[11px] text-ink-900/40">
+            {{ bookings.length }} booking{{ bookings.length === 1 ? '' : 's' }} across
+            {{ providers.length }} provider{{ providers.length === 1 ? '' : 's' }}
           </p>
-        </section>
+        </div>
+        <div class="flex gap-1 rounded-lg border border-ink-900/10 bg-white p-1">
+          <button
+            v-for="option in ([
+              { key: 'all', label: 'All' },
+              { key: 'active', label: 'Active' },
+              { key: 'completed', label: 'Completed' },
+            ] as const)"
+            :key="option.key"
+            type="button"
+            class="rounded-md px-2.5 py-1.5 text-[10.5px] font-semibold transition"
+            :class="filter === option.key ? 'bg-brand-600 text-white' : 'text-ink-900/50 hover:text-ink-900'"
+            @click="filter = option.key"
+          >
+            {{ option.label }}
+          </button>
+        </div>
+      </div>
 
-        <section v-if="selectedShipment" class="mt-5 rounded-xl border border-ink-900/10 bg-white p-5">
+      <div v-if="loading && !bookings.length" class="mt-4 flex items-center justify-center gap-2 rounded-xl border border-ink-900/10 bg-white p-12 text-[12px] text-ink-900/45">
+        <Loader2 :size="15" class="animate-spin" /> Loading your bookings…
+      </div>
+
+      <div v-else-if="!filteredBookings.length" class="mt-4 rounded-xl border border-ink-900/10 bg-white p-10 text-center">
+        <span class="mx-auto flex size-11 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-100 to-cyan-50 text-brand-700">
+          <Truck :size="19" />
+        </span>
+        <h3 class="mt-3 text-[13px] font-semibold">
+          {{ filter === 'all' ? 'No bookings yet' : `No ${filter} bookings` }}
+        </h3>
+        <p class="mt-1 text-[11.5px] text-ink-900/45">
+          Bookings made with a provider while signed in, or saved from a booking page, appear here.
+        </p>
+        <AppButton to="/#rate-search" size="sm" class="mt-4">Compare providers</AppButton>
+      </div>
+
+      <ul v-else class="mt-4 space-y-2.5">
+        <li
+          v-for="booking in filteredBookings"
+          :key="booking.id"
+          class="rounded-xl border border-ink-900/10 bg-white p-4"
+        >
           <div class="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <h2 class="flex items-center gap-2 text-[14px] font-semibold">
-                <MapPin :size="15" class="text-brand-600" />
-                Where your package is
-              </h2>
-              <p class="mt-1 text-[11px] text-ink-900/40">
-                {{ selectedShipment.reference }} · {{ selectedShipment.provider }}
-              </p>
-            </div>
-            <div class="rounded-lg bg-canvas px-3 py-2 text-right">
-              <p class="text-[9px] font-semibold tracking-[0.14em] text-ink-900/35 uppercase">Current location</p>
-              <p class="mt-0.5 text-[12px] font-semibold">{{ selectedShipment.currentLocation }}</p>
-            </div>
-          </div>
-
-          <ol class="mt-5">
-            <li
-              v-for="(event, index) in selectedShipment.events"
-              :key="`${event.label}-${event.at}`"
-              class="flex gap-3"
-            >
-              <div class="flex w-4 shrink-0 flex-col items-center">
-                <span
-                  class="mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full border"
-                  :class="{
-                    'border-brand-500 bg-brand-500 text-white': event.state === 'done',
-                    'border-brand-500 bg-white text-brand-600': event.state === 'current',
-                    'border-ink-900/15 bg-white': event.state === 'pending',
-                  }"
-                >
-                  <Check v-if="event.state === 'done'" :size="9" :stroke-width="3.5" />
-                  <span v-else-if="event.state === 'current'" class="size-1.5 rounded-full bg-brand-500" />
-                </span>
-                <span
-                  v-if="index < selectedShipment.events.length - 1"
-                  class="mt-1 w-px flex-1"
-                  :class="event.state === 'done' ? 'bg-brand-200' : 'bg-ink-900/10'"
-                />
-              </div>
-              <div class="min-w-0 flex-1 pb-5 last:pb-0">
-                <div class="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
-                  <p
-                    class="text-[12px] font-medium"
-                    :class="event.state === 'pending' ? 'text-ink-900/40' : ''"
-                  >
-                    {{ event.label }}
-                  </p>
-                  <p class="text-[10px] text-ink-900/35">{{ event.at }}</p>
-                </div>
-                <p class="mt-0.5 text-[10.5px] text-ink-900/40">{{ event.location }}</p>
-              </div>
-            </li>
-          </ol>
-        </section>
-      </div>
-
-      <div class="min-w-0 space-y-5">
-        <section class="rounded-xl border border-ink-900/10 bg-white p-5">
-          <div class="flex items-center justify-between gap-2">
-            <h2 class="text-[14px] font-semibold">Pending bookings</h2>
-            <span class="rounded-md bg-ink-900/5 px-2 py-1 text-[10px] font-medium text-ink-900/50">
-              {{ pendingBookings.length }}
-            </span>
-          </div>
-
-          <ul v-if="pendingBookings.length" class="mt-4 space-y-3">
-            <li
-              v-for="booking in pendingBookings"
-              :key="booking.id"
-              class="rounded-xl border border-ink-900/10 p-3.5"
-            >
+            <div class="min-w-0">
               <div class="flex flex-wrap items-center gap-2">
-                <span class="text-[12px] font-semibold">{{ booking.reference }}</span>
+                <span class="text-[12.5px] font-semibold">{{ booking.provider_name }}</span>
                 <span
-                  class="ml-auto rounded-full border px-2 py-0.5 text-[9.5px] font-semibold"
-                  :class="bookingMeta[booking.status].tone"
+                  class="inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[9.5px] font-semibold"
+                  :class="stateFor(booking).tone"
                 >
-                  {{ bookingMeta[booking.status].label }}
+                  <span class="size-1.5 rounded-full" :class="stateFor(booking).dot" />
+                  {{ stateFor(booking).label }}
                 </span>
               </div>
-              <p class="mt-1.5 text-[11.5px] text-ink-900/55">
-                {{ booking.origin }} <span class="px-0.5 text-brand-500">→</span> {{ booking.destination }}
-                <span class="text-ink-900/25">·</span>
-                {{ booking.provider }}
+              <p class="mt-1.5 text-[11.5px] text-ink-900/60">
+                {{ booking.pickup_address }}
+                <span class="px-1 text-brand-500">→</span>
+                {{ booking.dropoff_address }}
               </p>
-              <p class="mt-1 text-[10.5px] leading-relaxed text-ink-900/40">{{ booking.note }}</p>
-              <div class="mt-3 flex items-center justify-between gap-2 border-t border-ink-900/8 pt-2.5">
-                <div>
-                  <p class="text-[12.5px] font-semibold">{{ formatNaira(booking.priceKobo) }}</p>
-                  <p class="text-[9.5px] text-ink-900/35">{{ booking.createdAt }}</p>
-                </div>
-                <NuxtLink
-                  to="/#rate-search"
-                  class="inline-flex items-center gap-1 text-[10.5px] font-semibold text-brand-600 hover:text-brand-700"
-                >
-                  {{ bookingMeta[booking.status].action }}
-                  <ArrowRight :size="11" />
-                </NuxtLink>
+              <div class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10.5px] text-ink-900/45">
+                <span class="inline-flex items-center gap-1">
+                  <Clock3 :size="11" /> {{ formatDateTime(booking.created_at) }}
+                </span>
+                <span>{{ speedLabel(booking.delivery_speed) }}</span>
+                <span>{{ booking.weight_kg }} kg</span>
+                <span v-if="booking.tracking_code" class="font-mono text-[10px]">{{ booking.tracking_code }}</span>
               </div>
-            </li>
-          </ul>
-
-          <p v-else class="mt-4 rounded-lg bg-canvas px-3 py-5 text-center text-[11.5px] text-ink-900/40">
-            No pending bookings.
-          </p>
-        </section>
-
-        <section class="rounded-xl border border-brand-100 bg-brand-50/60 p-5">
-          <div class="flex items-center gap-2">
-            <Send :size="16" class="text-brand-600" />
-            <h2 class="text-[14px] font-semibold">Send another package</h2>
-          </div>
-          <p class="mt-1.5 text-[11.5px] leading-relaxed text-ink-900/50">
-            Compare verified providers on price and delivery time, then book in a few steps.
-          </p>
-          <AppButton to="/#rate-search" size="sm" block class="mt-4">
-            Compare shipping rates
-            <ArrowRight :size="13" />
-          </AppButton>
-          <div v-if="recentRoutes.length" class="mt-3">
-            <p class="text-[9.5px] font-semibold tracking-[0.14em] text-ink-900/35 uppercase">Recent routes</p>
-            <div class="mt-1.5 flex flex-wrap gap-1.5">
-              <NuxtLink
-                v-for="route in recentRoutes"
-                :key="route.label"
-                :to="route.to"
-                class="rounded-md border border-ink-900/10 bg-white px-2 py-1 text-[10.5px] font-medium text-ink-900/60 transition hover:border-brand-200 hover:text-brand-700"
+            </div>
+            <div class="flex shrink-0 flex-col items-end gap-2">
+              <p class="text-[13px] font-semibold">{{ formatMoney(booking) }}</p>
+              <a
+                v-if="booking.tracking_url"
+                :href="booking.tracking_url"
+                target="_blank"
+                rel="noopener"
+                class="inline-flex items-center gap-1.5 rounded-lg border border-brand-200 bg-brand-50/60 px-2.5 py-1.5 text-[10.5px] font-semibold text-brand-700 transition hover:bg-brand-50"
               >
-                {{ route.label }}
-              </NuxtLink>
+                Track parcel <ExternalLink :size="12" />
+              </a>
             </div>
           </div>
-        </section>
-      </div>
-    </div>
+          <p class="mt-2 border-t border-ink-900/8 pt-2 text-[10px] text-ink-900/45">
+            <template v-if="booking.request_status === 'pending'">
+              {{ booking.provider_name }} is reviewing your request. Tracking will update once they accept.
+            </template>
+            <template v-else-if="booking.request_status === 'declined'">
+              This request was declined. You can book with another provider.
+            </template>
+            <template v-else-if="booking.price_is_estimate">
+              Final price is confirmed by {{ booking.provider_name }} on dispatch.
+            </template>
+            <template v-else>
+              Delivery fee confirmed at booking.
+            </template>
+          </p>
+        </li>
+      </ul>
+    </section>
 
-    <section class="mt-5 rounded-xl border border-ink-900/10 bg-white p-5">
+    <section v-else-if="activeTab === 'addresses'" class="mt-4 rounded-xl border border-ink-900/10 bg-white p-5">
       <div class="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 class="flex items-center gap-2 text-[14px] font-semibold">
-            <PackageCheck :size="15" class="text-brand-600" />
-            Shipping spend
-          </h2>
+          <h2 class="text-[14px] font-semibold">Addresses</h2>
           <p class="mt-1 text-[11px] text-ink-900/40">
-            {{ data.spend.deliveredCount }} deliveries completed with BOL.
+            Pickup and drop-off places from your bookings. Reuse them when you send another package.
           </p>
         </div>
-        <div class="grid grid-cols-3 gap-4 text-right">
-          <div v-for="stat in spendStats" :key="stat.label">
-            <p class="text-[9px] font-semibold tracking-[0.12em] text-ink-900/35 uppercase">{{ stat.label }}</p>
-            <p class="mt-0.5 text-[13px] font-semibold tracking-[-0.02em]">{{ stat.value }}</p>
-          </div>
-        </div>
+        <AppButton to="/#rate-search" size="sm" variant="secondary">Send a package</AppButton>
       </div>
 
-      <div class="mt-5 flex h-28 items-end gap-2 sm:gap-4">
-        <div
-          v-for="(point, index) in data.spend.monthly"
-          :key="point.month"
-          class="flex h-full flex-1 flex-col items-center justify-end gap-1.5"
-          :title="`${point.month}: ${formatNaira(point.amountKobo)}`"
-        >
-          <div class="flex w-full flex-1 items-end">
-            <div
-              class="w-full rounded-t-md transition-all"
-              :class="index === data.spend.monthly.length - 1 ? 'bg-brand-500' : 'bg-brand-200'"
-              :style="{ height: `${Math.max(6, (point.amountKobo / maxMonthlySpend) * 100)}%` }"
-            />
+      <ul v-if="addresses.length" class="mt-4 divide-y divide-ink-900/8">
+        <li v-for="address in addresses" :key="`${address.role}-${address.address}`" class="flex items-start gap-3 py-3">
+          <span
+            class="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-lg"
+            :class="address.role === 'pickup' ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'"
+          >
+            <MapPin :size="13" />
+          </span>
+          <div class="min-w-0 flex-1">
+            <p class="text-[12px] font-medium">{{ address.address }}</p>
+            <p class="mt-0.5 text-[10.5px] text-ink-900/45">
+              {{ address.role === 'pickup' ? 'Pickup' : 'Drop-off' }} · {{ address.provider }} ·
+              last used {{ formatDate(address.lastUsedAt) }}
+            </p>
           </div>
-          <span class="text-[9.5px] font-medium text-ink-900/40">{{ point.month }}</span>
+        </li>
+      </ul>
+      <p v-else class="mt-4 rounded-lg bg-canvas px-3 py-8 text-center text-[12px] text-ink-900/40">
+        Addresses you use in bookings will be listed here.
+      </p>
+    </section>
+
+    <section v-else-if="activeTab === 'profile'" class="mt-4 rounded-xl border border-ink-900/10 bg-white p-5">
+      <h2 class="text-[14px] font-semibold">Personal information</h2>
+      <p class="mt-1 text-[11px] text-ink-900/40">
+        Providers use these details to coordinate your deliveries.
+      </p>
+
+      <p v-if="profileError" role="alert" class="mt-3 flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-[11px] text-red-700">
+        <CircleAlert :size="13" class="mt-0.5 shrink-0" />{{ profileError }}
+      </p>
+      <p v-if="profileSaved" role="status" class="mt-3 flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-[11px] text-emerald-700">
+        <Check :size="13" /> Profile updated.
+      </p>
+
+      <form class="mt-4 grid max-w-lg gap-3 sm:grid-cols-2" @submit.prevent="saveProfile">
+        <label class="block">
+          <span class="mb-1.5 block text-[11px] font-medium">Full name</span>
+          <input
+            v-model="profile.full_name"
+            required
+            minlength="2"
+            maxlength="120"
+            autocomplete="name"
+            class="w-full rounded-lg border border-ink-900/15 px-3 py-2.5 text-[12px] outline-none focus:border-brand-500"
+          />
+        </label>
+        <label class="block">
+          <span class="mb-1.5 block text-[11px] font-medium">Phone number</span>
+          <input
+            v-model="profile.phone"
+            maxlength="30"
+            type="tel"
+            autocomplete="tel"
+            placeholder="+234 800 000 0000"
+            class="w-full rounded-lg border border-ink-900/15 px-3 py-2.5 text-[12px] outline-none focus:border-brand-500"
+          />
+        </label>
+        <label class="block sm:col-span-2">
+          <span class="mb-1.5 block text-[11px] font-medium">Email address</span>
+          <input
+            :value="user?.email"
+            disabled
+            class="w-full rounded-lg border border-ink-900/10 bg-canvas px-3 py-2.5 text-[12px] text-ink-900/50"
+          />
+          <span class="mt-1 block text-[10px] text-ink-900/35">
+            {{ user?.email_verified ? 'Email verified' : 'Email verification pending' }}
+          </span>
+        </label>
+        <div class="sm:col-span-2">
+          <button
+            type="submit"
+            :disabled="savingProfile"
+            class="inline-flex min-h-10 items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-[11.5px] font-semibold text-white transition hover:bg-brand-700 disabled:opacity-50"
+          >
+            <Loader2 v-if="savingProfile" :size="14" class="animate-spin" />
+            {{ savingProfile ? 'Saving…' : 'Save changes' }}
+          </button>
         </div>
-      </div>
+      </form>
+    </section>
+
+    <section v-else class="mt-4 rounded-xl border border-ink-900/10 bg-white p-10 text-center">
+      <span class="mx-auto flex size-11 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-100 to-orange-50 text-amber-700">
+        <Bell :size="19" />
+      </span>
+      <h2 class="mt-3 text-[13.5px] font-semibold">Notifications are coming soon</h2>
+      <p class="mx-auto mt-1 max-w-md text-[11.5px] leading-relaxed text-ink-900/45">
+        You’ll be able to choose email and WhatsApp updates for pickup, transit and delivery events.
+        For now, follow each parcel from its tracking page.
+      </p>
+      <AppButton to="/#rate-search" size="sm" variant="secondary" class="mt-4">
+        <Send :size="13" /> Send a package
+      </AppButton>
     </section>
   </div>
 </template>

@@ -33,7 +33,7 @@ interface RequestItem {
   price_is_estimate?: boolean
   request_status: 'pending' | 'accepted' | 'declined'
 }
-interface Driver { id: string; full_name: string; phone: string; vehicle_plate: string; status: 'active' | 'suspended' }
+interface Driver { id: string; full_name: string; phone: string; vehicle_plate: string; status: 'active' | 'suspended' | 'inactive' }
 
 const { api } = useApi()
 const { detail, load, can, notify, confirm } = useWorkspace()

@@ -15,10 +15,11 @@ import (
 
 const acceptBookingRequest = `-- name: AcceptBookingRequest :one
 UPDATE deliveries
-SET request_status = 'accepted', status = 'created', accepted_at = now(), tracking_code =
-  'TRK-' || upper(substr(replace(id::text, '-', ''), 1, 12)), updated_at = now()
+SET request_status = 'accepted', status = 'created', accepted_at = now(),
+    tracking_code = COALESCE(tracking_code, 'TRK-' || upper(substr(replace(id::text, '-', ''), 1, 12))),
+    updated_at = now()
 WHERE company_id = $1 AND id = $2 AND request_status = 'pending'
-RETURNING id, company_id, sender_name, sender_phone, receiver_name, receiver_phone, pickup_address, dropoff_address, item_description, declared_value_minor, delivery_price_minor, payer, is_paid, payment_method, assigned_driver_id, status, created_by, created_at, updated_at, package_category, weight_kg, additional_instructions, package_photo_url, pickup_latitude, pickup_longitude, dropoff_latitude, dropoff_longitude, selected_route_id, selected_rate_card_id, price_is_estimate, booking_source, delivery_speed, distance_km, request_status, tracking_code, rider_link_token, declined_at, accepted_at
+RETURNING id, company_id, sender_name, sender_phone, receiver_name, receiver_phone, pickup_address, dropoff_address, item_description, declared_value_minor, delivery_price_minor, payer, is_paid, payment_method, assigned_driver_id, status, created_by, created_at, updated_at, package_category, weight_kg, additional_instructions, package_photo_url, pickup_latitude, pickup_longitude, dropoff_latitude, dropoff_longitude, selected_route_id, price_is_estimate, booking_source, delivery_speed, distance_km, request_status, tracking_code, rider_link_token, declined_at, accepted_at, customer_id
 `
 
 type AcceptBookingRequestParams struct {
@@ -58,7 +59,6 @@ func (q *Queries) AcceptBookingRequest(ctx context.Context, arg AcceptBookingReq
 		&i.DropoffLatitude,
 		&i.DropoffLongitude,
 		&i.SelectedRouteID,
-		&i.SelectedRateCardID,
 		&i.PriceIsEstimate,
 		&i.BookingSource,
 		&i.DeliverySpeed,
@@ -68,6 +68,7 @@ func (q *Queries) AcceptBookingRequest(ctx context.Context, arg AcceptBookingReq
 		&i.RiderLinkToken,
 		&i.DeclinedAt,
 		&i.AcceptedAt,
+		&i.CustomerID,
 	)
 	return i, err
 }
@@ -117,7 +118,7 @@ WHERE delivery.company_id = $1 AND delivery.id = $2
   AND (NULLIF($3::uuid, '00000000-0000-0000-0000-000000000000') IS NULL
        OR EXISTS (SELECT 1 FROM driver_profiles driver
                   WHERE driver.id = $3::uuid AND driver.company_id = $1 AND driver.status = 'active'))
-RETURNING id, company_id, sender_name, sender_phone, receiver_name, receiver_phone, pickup_address, dropoff_address, item_description, declared_value_minor, delivery_price_minor, payer, is_paid, payment_method, assigned_driver_id, status, created_by, created_at, updated_at, package_category, weight_kg, additional_instructions, package_photo_url, pickup_latitude, pickup_longitude, dropoff_latitude, dropoff_longitude, selected_route_id, selected_rate_card_id, price_is_estimate, booking_source, delivery_speed, distance_km, request_status, tracking_code, rider_link_token, declined_at, accepted_at
+RETURNING id, company_id, sender_name, sender_phone, receiver_name, receiver_phone, pickup_address, dropoff_address, item_description, declared_value_minor, delivery_price_minor, payer, is_paid, payment_method, assigned_driver_id, status, created_by, created_at, updated_at, package_category, weight_kg, additional_instructions, package_photo_url, pickup_latitude, pickup_longitude, dropoff_latitude, dropoff_longitude, selected_route_id, price_is_estimate, booking_source, delivery_speed, distance_km, request_status, tracking_code, rider_link_token, declined_at, accepted_at, customer_id
 `
 
 type AssignDeliveryDriverParams struct {
@@ -158,7 +159,6 @@ func (q *Queries) AssignDeliveryDriver(ctx context.Context, arg AssignDeliveryDr
 		&i.DropoffLatitude,
 		&i.DropoffLongitude,
 		&i.SelectedRouteID,
-		&i.SelectedRateCardID,
 		&i.PriceIsEstimate,
 		&i.BookingSource,
 		&i.DeliverySpeed,
@@ -168,6 +168,7 @@ func (q *Queries) AssignDeliveryDriver(ctx context.Context, arg AssignDeliveryDr
 		&i.RiderLinkToken,
 		&i.DeclinedAt,
 		&i.AcceptedAt,
+		&i.CustomerID,
 	)
 	return i, err
 }
@@ -193,7 +194,7 @@ WHERE NULLIF($14::uuid, '00000000-0000-0000-0000-000000000000'::uuid) IS NULL
        AND d.company_id = $1::uuid
        AND d.status = 'active'
    )
-RETURNING id, company_id, sender_name, sender_phone, receiver_name, receiver_phone, pickup_address, dropoff_address, item_description, declared_value_minor, delivery_price_minor, payer, is_paid, payment_method, assigned_driver_id, status, created_by, created_at, updated_at, package_category, weight_kg, additional_instructions, package_photo_url, pickup_latitude, pickup_longitude, dropoff_latitude, dropoff_longitude, selected_route_id, selected_rate_card_id, price_is_estimate, booking_source, delivery_speed, distance_km, request_status, tracking_code, rider_link_token, declined_at, accepted_at
+RETURNING id, company_id, sender_name, sender_phone, receiver_name, receiver_phone, pickup_address, dropoff_address, item_description, declared_value_minor, delivery_price_minor, payer, is_paid, payment_method, assigned_driver_id, status, created_by, created_at, updated_at, package_category, weight_kg, additional_instructions, package_photo_url, pickup_latitude, pickup_longitude, dropoff_latitude, dropoff_longitude, selected_route_id, price_is_estimate, booking_source, delivery_speed, distance_km, request_status, tracking_code, rider_link_token, declined_at, accepted_at, customer_id
 `
 
 type CreateDeliveryParams struct {
@@ -264,7 +265,6 @@ func (q *Queries) CreateDelivery(ctx context.Context, arg CreateDeliveryParams) 
 		&i.DropoffLatitude,
 		&i.DropoffLongitude,
 		&i.SelectedRouteID,
-		&i.SelectedRateCardID,
 		&i.PriceIsEstimate,
 		&i.BookingSource,
 		&i.DeliverySpeed,
@@ -274,6 +274,7 @@ func (q *Queries) CreateDelivery(ctx context.Context, arg CreateDeliveryParams) 
 		&i.RiderLinkToken,
 		&i.DeclinedAt,
 		&i.AcceptedAt,
+		&i.CustomerID,
 	)
 	return i, err
 }
@@ -282,7 +283,7 @@ const declineBookingRequest = `-- name: DeclineBookingRequest :one
 UPDATE deliveries
 SET request_status = 'declined', status = 'cancelled', declined_at = now(), updated_at = now()
 WHERE company_id = $1 AND id = $2 AND request_status = 'pending'
-RETURNING id, company_id, sender_name, sender_phone, receiver_name, receiver_phone, pickup_address, dropoff_address, item_description, declared_value_minor, delivery_price_minor, payer, is_paid, payment_method, assigned_driver_id, status, created_by, created_at, updated_at, package_category, weight_kg, additional_instructions, package_photo_url, pickup_latitude, pickup_longitude, dropoff_latitude, dropoff_longitude, selected_route_id, selected_rate_card_id, price_is_estimate, booking_source, delivery_speed, distance_km, request_status, tracking_code, rider_link_token, declined_at, accepted_at
+RETURNING id, company_id, sender_name, sender_phone, receiver_name, receiver_phone, pickup_address, dropoff_address, item_description, declared_value_minor, delivery_price_minor, payer, is_paid, payment_method, assigned_driver_id, status, created_by, created_at, updated_at, package_category, weight_kg, additional_instructions, package_photo_url, pickup_latitude, pickup_longitude, dropoff_latitude, dropoff_longitude, selected_route_id, price_is_estimate, booking_source, delivery_speed, distance_km, request_status, tracking_code, rider_link_token, declined_at, accepted_at, customer_id
 `
 
 type DeclineBookingRequestParams struct {
@@ -322,7 +323,6 @@ func (q *Queries) DeclineBookingRequest(ctx context.Context, arg DeclineBookingR
 		&i.DropoffLatitude,
 		&i.DropoffLongitude,
 		&i.SelectedRouteID,
-		&i.SelectedRateCardID,
 		&i.PriceIsEstimate,
 		&i.BookingSource,
 		&i.DeliverySpeed,
@@ -332,12 +332,13 @@ func (q *Queries) DeclineBookingRequest(ctx context.Context, arg DeclineBookingR
 		&i.RiderLinkToken,
 		&i.DeclinedAt,
 		&i.AcceptedAt,
+		&i.CustomerID,
 	)
 	return i, err
 }
 
 const getCompanyDelivery = `-- name: GetCompanyDelivery :one
-SELECT d.id, d.company_id, d.sender_name, d.sender_phone, d.receiver_name, d.receiver_phone, d.pickup_address, d.dropoff_address, d.item_description, d.declared_value_minor, d.delivery_price_minor, d.payer, d.is_paid, d.payment_method, d.assigned_driver_id, d.status, d.created_by, d.created_at, d.updated_at, d.package_category, d.weight_kg, d.additional_instructions, d.package_photo_url, d.pickup_latitude, d.pickup_longitude, d.dropoff_latitude, d.dropoff_longitude, d.selected_route_id, d.selected_rate_card_id, d.price_is_estimate, d.booking_source, d.delivery_speed, d.distance_km, d.request_status, d.tracking_code, d.rider_link_token, d.declined_at, d.accepted_at, driver.full_name AS assigned_driver_name
+SELECT d.id, d.company_id, d.sender_name, d.sender_phone, d.receiver_name, d.receiver_phone, d.pickup_address, d.dropoff_address, d.item_description, d.declared_value_minor, d.delivery_price_minor, d.payer, d.is_paid, d.payment_method, d.assigned_driver_id, d.status, d.created_by, d.created_at, d.updated_at, d.package_category, d.weight_kg, d.additional_instructions, d.package_photo_url, d.pickup_latitude, d.pickup_longitude, d.dropoff_latitude, d.dropoff_longitude, d.selected_route_id, d.price_is_estimate, d.booking_source, d.delivery_speed, d.distance_km, d.request_status, d.tracking_code, d.rider_link_token, d.declined_at, d.accepted_at, d.customer_id, driver.full_name AS assigned_driver_name
 FROM deliveries d
 LEFT JOIN driver_profiles driver ON driver.id = d.assigned_driver_id
 WHERE d.company_id = $1 AND d.id = $2
@@ -377,7 +378,6 @@ type GetCompanyDeliveryRow struct {
 	DropoffLatitude        pgtype.Numeric `json:"dropoff_latitude"`
 	DropoffLongitude       pgtype.Numeric `json:"dropoff_longitude"`
 	SelectedRouteID        *uuid.UUID     `json:"selected_route_id"`
-	SelectedRateCardID     *uuid.UUID     `json:"selected_rate_card_id"`
 	PriceIsEstimate        bool           `json:"price_is_estimate"`
 	BookingSource          string         `json:"booking_source"`
 	DeliverySpeed          string         `json:"delivery_speed"`
@@ -387,6 +387,7 @@ type GetCompanyDeliveryRow struct {
 	RiderLinkToken         *string        `json:"rider_link_token"`
 	DeclinedAt             *time.Time     `json:"declined_at"`
 	AcceptedAt             *time.Time     `json:"accepted_at"`
+	CustomerID             *uuid.UUID     `json:"customer_id"`
 	AssignedDriverName     *string        `json:"assigned_driver_name"`
 }
 
@@ -422,7 +423,6 @@ func (q *Queries) GetCompanyDelivery(ctx context.Context, arg GetCompanyDelivery
 		&i.DropoffLatitude,
 		&i.DropoffLongitude,
 		&i.SelectedRouteID,
-		&i.SelectedRateCardID,
 		&i.PriceIsEstimate,
 		&i.BookingSource,
 		&i.DeliverySpeed,
@@ -432,6 +432,7 @@ func (q *Queries) GetCompanyDelivery(ctx context.Context, arg GetCompanyDelivery
 		&i.RiderLinkToken,
 		&i.DeclinedAt,
 		&i.AcceptedAt,
+		&i.CustomerID,
 		&i.AssignedDriverName,
 	)
 	return i, err
@@ -439,7 +440,7 @@ func (q *Queries) GetCompanyDelivery(ctx context.Context, arg GetCompanyDelivery
 
 const listCompanyDeliveries = `-- name: ListCompanyDeliveries :many
 SELECT
-  d.id, d.company_id, d.sender_name, d.sender_phone, d.receiver_name, d.receiver_phone, d.pickup_address, d.dropoff_address, d.item_description, d.declared_value_minor, d.delivery_price_minor, d.payer, d.is_paid, d.payment_method, d.assigned_driver_id, d.status, d.created_by, d.created_at, d.updated_at, d.package_category, d.weight_kg, d.additional_instructions, d.package_photo_url, d.pickup_latitude, d.pickup_longitude, d.dropoff_latitude, d.dropoff_longitude, d.selected_route_id, d.selected_rate_card_id, d.price_is_estimate, d.booking_source, d.delivery_speed, d.distance_km, d.request_status, d.tracking_code, d.rider_link_token, d.declined_at, d.accepted_at,
+  d.id, d.company_id, d.sender_name, d.sender_phone, d.receiver_name, d.receiver_phone, d.pickup_address, d.dropoff_address, d.item_description, d.declared_value_minor, d.delivery_price_minor, d.payer, d.is_paid, d.payment_method, d.assigned_driver_id, d.status, d.created_by, d.created_at, d.updated_at, d.package_category, d.weight_kg, d.additional_instructions, d.package_photo_url, d.pickup_latitude, d.pickup_longitude, d.dropoff_latitude, d.dropoff_longitude, d.selected_route_id, d.price_is_estimate, d.booking_source, d.delivery_speed, d.distance_km, d.request_status, d.tracking_code, d.rider_link_token, d.declined_at, d.accepted_at, d.customer_id,
   driver.full_name AS assigned_driver_name
 FROM deliveries d
 LEFT JOIN driver_profiles driver ON driver.id = d.assigned_driver_id
@@ -477,7 +478,6 @@ type ListCompanyDeliveriesRow struct {
 	DropoffLatitude        pgtype.Numeric `json:"dropoff_latitude"`
 	DropoffLongitude       pgtype.Numeric `json:"dropoff_longitude"`
 	SelectedRouteID        *uuid.UUID     `json:"selected_route_id"`
-	SelectedRateCardID     *uuid.UUID     `json:"selected_rate_card_id"`
 	PriceIsEstimate        bool           `json:"price_is_estimate"`
 	BookingSource          string         `json:"booking_source"`
 	DeliverySpeed          string         `json:"delivery_speed"`
@@ -487,6 +487,7 @@ type ListCompanyDeliveriesRow struct {
 	RiderLinkToken         *string        `json:"rider_link_token"`
 	DeclinedAt             *time.Time     `json:"declined_at"`
 	AcceptedAt             *time.Time     `json:"accepted_at"`
+	CustomerID             *uuid.UUID     `json:"customer_id"`
 	AssignedDriverName     *string        `json:"assigned_driver_name"`
 }
 
@@ -528,7 +529,6 @@ func (q *Queries) ListCompanyDeliveries(ctx context.Context, companyID uuid.UUID
 			&i.DropoffLatitude,
 			&i.DropoffLongitude,
 			&i.SelectedRouteID,
-			&i.SelectedRateCardID,
 			&i.PriceIsEstimate,
 			&i.BookingSource,
 			&i.DeliverySpeed,
@@ -538,6 +538,7 @@ func (q *Queries) ListCompanyDeliveries(ctx context.Context, companyID uuid.UUID
 			&i.RiderLinkToken,
 			&i.DeclinedAt,
 			&i.AcceptedAt,
+			&i.CustomerID,
 			&i.AssignedDriverName,
 		); err != nil {
 			return nil, err
@@ -551,7 +552,7 @@ func (q *Queries) ListCompanyDeliveries(ctx context.Context, companyID uuid.UUID
 }
 
 const listCompanyRequests = `-- name: ListCompanyRequests :many
-SELECT d.id, d.company_id, d.sender_name, d.sender_phone, d.receiver_name, d.receiver_phone, d.pickup_address, d.dropoff_address, d.item_description, d.declared_value_minor, d.delivery_price_minor, d.payer, d.is_paid, d.payment_method, d.assigned_driver_id, d.status, d.created_by, d.created_at, d.updated_at, d.package_category, d.weight_kg, d.additional_instructions, d.package_photo_url, d.pickup_latitude, d.pickup_longitude, d.dropoff_latitude, d.dropoff_longitude, d.selected_route_id, d.selected_rate_card_id, d.price_is_estimate, d.booking_source, d.delivery_speed, d.distance_km, d.request_status, d.tracking_code, d.rider_link_token, d.declined_at, d.accepted_at, driver.full_name AS assigned_driver_name
+SELECT d.id, d.company_id, d.sender_name, d.sender_phone, d.receiver_name, d.receiver_phone, d.pickup_address, d.dropoff_address, d.item_description, d.declared_value_minor, d.delivery_price_minor, d.payer, d.is_paid, d.payment_method, d.assigned_driver_id, d.status, d.created_by, d.created_at, d.updated_at, d.package_category, d.weight_kg, d.additional_instructions, d.package_photo_url, d.pickup_latitude, d.pickup_longitude, d.dropoff_latitude, d.dropoff_longitude, d.selected_route_id, d.price_is_estimate, d.booking_source, d.delivery_speed, d.distance_km, d.request_status, d.tracking_code, d.rider_link_token, d.declined_at, d.accepted_at, d.customer_id, driver.full_name AS assigned_driver_name
 FROM deliveries d
 LEFT JOIN driver_profiles driver ON driver.id = d.assigned_driver_id
 WHERE d.company_id = $1
@@ -589,7 +590,6 @@ type ListCompanyRequestsRow struct {
 	DropoffLatitude        pgtype.Numeric `json:"dropoff_latitude"`
 	DropoffLongitude       pgtype.Numeric `json:"dropoff_longitude"`
 	SelectedRouteID        *uuid.UUID     `json:"selected_route_id"`
-	SelectedRateCardID     *uuid.UUID     `json:"selected_rate_card_id"`
 	PriceIsEstimate        bool           `json:"price_is_estimate"`
 	BookingSource          string         `json:"booking_source"`
 	DeliverySpeed          string         `json:"delivery_speed"`
@@ -599,6 +599,7 @@ type ListCompanyRequestsRow struct {
 	RiderLinkToken         *string        `json:"rider_link_token"`
 	DeclinedAt             *time.Time     `json:"declined_at"`
 	AcceptedAt             *time.Time     `json:"accepted_at"`
+	CustomerID             *uuid.UUID     `json:"customer_id"`
 	AssignedDriverName     *string        `json:"assigned_driver_name"`
 }
 
@@ -640,7 +641,6 @@ func (q *Queries) ListCompanyRequests(ctx context.Context, companyID uuid.UUID) 
 			&i.DropoffLatitude,
 			&i.DropoffLongitude,
 			&i.SelectedRouteID,
-			&i.SelectedRateCardID,
 			&i.PriceIsEstimate,
 			&i.BookingSource,
 			&i.DeliverySpeed,
@@ -650,6 +650,7 @@ func (q *Queries) ListCompanyRequests(ctx context.Context, companyID uuid.UUID) 
 			&i.RiderLinkToken,
 			&i.DeclinedAt,
 			&i.AcceptedAt,
+			&i.CustomerID,
 			&i.AssignedDriverName,
 		); err != nil {
 			return nil, err
@@ -711,7 +712,7 @@ SET sender_name = $3, sender_phone = $4, receiver_name = $5, receiver_phone = $6
     package_category = $12, weight_kg = $13, additional_instructions = $14,
     updated_at = now()
 WHERE company_id = $1 AND id = $2
-RETURNING id, company_id, sender_name, sender_phone, receiver_name, receiver_phone, pickup_address, dropoff_address, item_description, declared_value_minor, delivery_price_minor, payer, is_paid, payment_method, assigned_driver_id, status, created_by, created_at, updated_at, package_category, weight_kg, additional_instructions, package_photo_url, pickup_latitude, pickup_longitude, dropoff_latitude, dropoff_longitude, selected_route_id, selected_rate_card_id, price_is_estimate, booking_source, delivery_speed, distance_km, request_status, tracking_code, rider_link_token, declined_at, accepted_at
+RETURNING id, company_id, sender_name, sender_phone, receiver_name, receiver_phone, pickup_address, dropoff_address, item_description, declared_value_minor, delivery_price_minor, payer, is_paid, payment_method, assigned_driver_id, status, created_by, created_at, updated_at, package_category, weight_kg, additional_instructions, package_photo_url, pickup_latitude, pickup_longitude, dropoff_latitude, dropoff_longitude, selected_route_id, price_is_estimate, booking_source, delivery_speed, distance_km, request_status, tracking_code, rider_link_token, declined_at, accepted_at, customer_id
 `
 
 type UpdateCompanyDeliveryParams struct {
@@ -778,7 +779,6 @@ func (q *Queries) UpdateCompanyDelivery(ctx context.Context, arg UpdateCompanyDe
 		&i.DropoffLatitude,
 		&i.DropoffLongitude,
 		&i.SelectedRouteID,
-		&i.SelectedRateCardID,
 		&i.PriceIsEstimate,
 		&i.BookingSource,
 		&i.DeliverySpeed,
@@ -788,6 +788,7 @@ func (q *Queries) UpdateCompanyDelivery(ctx context.Context, arg UpdateCompanyDe
 		&i.RiderLinkToken,
 		&i.DeclinedAt,
 		&i.AcceptedAt,
+		&i.CustomerID,
 	)
 	return i, err
 }
@@ -796,7 +797,7 @@ const updateCompanyDeliveryStatus = `-- name: UpdateCompanyDeliveryStatus :one
 UPDATE deliveries
 SET status = $3, updated_at = now()
 WHERE company_id = $1 AND id = $2
-RETURNING id, company_id, sender_name, sender_phone, receiver_name, receiver_phone, pickup_address, dropoff_address, item_description, declared_value_minor, delivery_price_minor, payer, is_paid, payment_method, assigned_driver_id, status, created_by, created_at, updated_at, package_category, weight_kg, additional_instructions, package_photo_url, pickup_latitude, pickup_longitude, dropoff_latitude, dropoff_longitude, selected_route_id, selected_rate_card_id, price_is_estimate, booking_source, delivery_speed, distance_km, request_status, tracking_code, rider_link_token, declined_at, accepted_at
+RETURNING id, company_id, sender_name, sender_phone, receiver_name, receiver_phone, pickup_address, dropoff_address, item_description, declared_value_minor, delivery_price_minor, payer, is_paid, payment_method, assigned_driver_id, status, created_by, created_at, updated_at, package_category, weight_kg, additional_instructions, package_photo_url, pickup_latitude, pickup_longitude, dropoff_latitude, dropoff_longitude, selected_route_id, price_is_estimate, booking_source, delivery_speed, distance_km, request_status, tracking_code, rider_link_token, declined_at, accepted_at, customer_id
 `
 
 type UpdateCompanyDeliveryStatusParams struct {
@@ -837,7 +838,6 @@ func (q *Queries) UpdateCompanyDeliveryStatus(ctx context.Context, arg UpdateCom
 		&i.DropoffLatitude,
 		&i.DropoffLongitude,
 		&i.SelectedRouteID,
-		&i.SelectedRateCardID,
 		&i.PriceIsEstimate,
 		&i.BookingSource,
 		&i.DeliverySpeed,
@@ -847,6 +847,7 @@ func (q *Queries) UpdateCompanyDeliveryStatus(ctx context.Context, arg UpdateCom
 		&i.RiderLinkToken,
 		&i.DeclinedAt,
 		&i.AcceptedAt,
+		&i.CustomerID,
 	)
 	return i, err
 }

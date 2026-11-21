@@ -66,7 +66,7 @@ INSERT INTO companies (
 ) VALUES (
   $1, $2, $3, $4, $5, $6, NULLIF($7::text, ''), NULLIF($8::text, ''), NULLIF($9::text, ''), $10
 )
-RETURNING id, name, slug, business_email, phone, business_type, cac_business_name, country, state, city, address, status, onboarding_status, owner_user_id, verified_at, created_at, updated_at, deleted_at, description, cover_image_url, operating_hours
+RETURNING id, name, slug, business_email, phone, business_type, cac_business_name, country, state, city, address, accepted_item_categories, prohibited_item_categories, status, onboarding_status, owner_user_id, verified_at, created_at, updated_at, deleted_at, description, cover_image_url, operating_hours, website_url, instagram_url, facebook_url, twitter_url, linkedin_url, year_established, photo_urls
 `
 
 type CreateCompanyParams struct {
@@ -108,6 +108,8 @@ func (q *Queries) CreateCompany(ctx context.Context, arg CreateCompanyParams) (C
 		&i.State,
 		&i.City,
 		&i.Address,
+		&i.AcceptedItemCategories,
+		&i.ProhibitedItemCategories,
 		&i.Status,
 		&i.OnboardingStatus,
 		&i.OwnerUserID,
@@ -118,6 +120,13 @@ func (q *Queries) CreateCompany(ctx context.Context, arg CreateCompanyParams) (C
 		&i.Description,
 		&i.CoverImageUrl,
 		&i.OperatingHours,
+		&i.WebsiteUrl,
+		&i.InstagramUrl,
+		&i.FacebookUrl,
+		&i.TwitterUrl,
+		&i.LinkedinUrl,
+		&i.YearEstablished,
+		&i.PhotoUrls,
 	)
 	return i, err
 }
@@ -315,7 +324,7 @@ func (q *Queries) GetCompanyBranding(ctx context.Context, companyID uuid.UUID) (
 }
 
 const getCompanyByID = `-- name: GetCompanyByID :one
-SELECT id, name, slug, business_email, phone, business_type, cac_business_name, country, state, city, address, status, onboarding_status, owner_user_id, verified_at, created_at, updated_at, deleted_at, description, cover_image_url, operating_hours FROM companies
+SELECT id, name, slug, business_email, phone, business_type, cac_business_name, country, state, city, address, accepted_item_categories, prohibited_item_categories, status, onboarding_status, owner_user_id, verified_at, created_at, updated_at, deleted_at, description, cover_image_url, operating_hours, website_url, instagram_url, facebook_url, twitter_url, linkedin_url, year_established, photo_urls FROM companies
 WHERE id = $1 AND deleted_at IS NULL
 `
 
@@ -334,6 +343,8 @@ func (q *Queries) GetCompanyByID(ctx context.Context, id uuid.UUID) (Company, er
 		&i.State,
 		&i.City,
 		&i.Address,
+		&i.AcceptedItemCategories,
+		&i.ProhibitedItemCategories,
 		&i.Status,
 		&i.OnboardingStatus,
 		&i.OwnerUserID,
@@ -344,6 +355,13 @@ func (q *Queries) GetCompanyByID(ctx context.Context, id uuid.UUID) (Company, er
 		&i.Description,
 		&i.CoverImageUrl,
 		&i.OperatingHours,
+		&i.WebsiteUrl,
+		&i.InstagramUrl,
+		&i.FacebookUrl,
+		&i.TwitterUrl,
+		&i.LinkedinUrl,
+		&i.YearEstablished,
+		&i.PhotoUrls,
 	)
 	return i, err
 }
@@ -445,6 +463,24 @@ func (q *Queries) GetInvitationByToken(ctx context.Context, tokenHash string) (C
 		&i.CreatedAt,
 		&i.AcceptedByUserID,
 	)
+	return i, err
+}
+
+const getItemCategoryPolicy = `-- name: GetItemCategoryPolicy :one
+SELECT accepted_item_categories, prohibited_item_categories
+FROM companies
+WHERE id = $1 AND deleted_at IS NULL
+`
+
+type GetItemCategoryPolicyRow struct {
+	AcceptedItemCategories   []string `json:"accepted_item_categories"`
+	ProhibitedItemCategories []string `json:"prohibited_item_categories"`
+}
+
+func (q *Queries) GetItemCategoryPolicy(ctx context.Context, id uuid.UUID) (GetItemCategoryPolicyRow, error) {
+	row := q.db.QueryRow(ctx, getItemCategoryPolicy, id)
+	var i GetItemCategoryPolicyRow
+	err := row.Scan(&i.AcceptedItemCategories, &i.ProhibitedItemCategories)
 	return i, err
 }
 
@@ -711,9 +747,16 @@ SET name = $2,
     description = NULLIF($10::text, ''),
     cover_image_url = NULLIF($11::text, ''),
     operating_hours = $12,
+    website_url = NULLIF($13::text, ''),
+    instagram_url = NULLIF($14::text, ''),
+    facebook_url = NULLIF($15::text, ''),
+    twitter_url = NULLIF($16::text, ''),
+    linkedin_url = NULLIF($17::text, ''),
+    year_established = NULLIF($18::int, 0),
+    photo_urls = $19::text[],
     updated_at = now()
 WHERE id = $1 AND deleted_at IS NULL
-RETURNING id, name, slug, business_email, phone, business_type, cac_business_name, country, state, city, address, status, onboarding_status, owner_user_id, verified_at, created_at, updated_at, deleted_at, description, cover_image_url, operating_hours
+RETURNING id, name, slug, business_email, phone, business_type, cac_business_name, country, state, city, address, accepted_item_categories, prohibited_item_categories, status, onboarding_status, owner_user_id, verified_at, created_at, updated_at, deleted_at, description, cover_image_url, operating_hours, website_url, instagram_url, facebook_url, twitter_url, linkedin_url, year_established, photo_urls
 `
 
 type UpdateCompanyParams struct {
@@ -729,6 +772,13 @@ type UpdateCompanyParams struct {
 	Column10       string    `json:"column_10"`
 	Column11       string    `json:"column_11"`
 	OperatingHours []byte    `json:"operating_hours"`
+	Column13       string    `json:"column_13"`
+	Column14       string    `json:"column_14"`
+	Column15       string    `json:"column_15"`
+	Column16       string    `json:"column_16"`
+	Column17       string    `json:"column_17"`
+	Column18       int32     `json:"column_18"`
+	Column19       []string  `json:"column_19"`
 }
 
 func (q *Queries) UpdateCompany(ctx context.Context, arg UpdateCompanyParams) (Company, error) {
@@ -745,6 +795,13 @@ func (q *Queries) UpdateCompany(ctx context.Context, arg UpdateCompanyParams) (C
 		arg.Column10,
 		arg.Column11,
 		arg.OperatingHours,
+		arg.Column13,
+		arg.Column14,
+		arg.Column15,
+		arg.Column16,
+		arg.Column17,
+		arg.Column18,
+		arg.Column19,
 	)
 	var i Company
 	err := row.Scan(
@@ -759,6 +816,8 @@ func (q *Queries) UpdateCompany(ctx context.Context, arg UpdateCompanyParams) (C
 		&i.State,
 		&i.City,
 		&i.Address,
+		&i.AcceptedItemCategories,
+		&i.ProhibitedItemCategories,
 		&i.Status,
 		&i.OnboardingStatus,
 		&i.OwnerUserID,
@@ -769,6 +828,13 @@ func (q *Queries) UpdateCompany(ctx context.Context, arg UpdateCompanyParams) (C
 		&i.Description,
 		&i.CoverImageUrl,
 		&i.OperatingHours,
+		&i.WebsiteUrl,
+		&i.InstagramUrl,
+		&i.FacebookUrl,
+		&i.TwitterUrl,
+		&i.LinkedinUrl,
+		&i.YearEstablished,
+		&i.PhotoUrls,
 	)
 	return i, err
 }
@@ -834,7 +900,7 @@ UPDATE companies
 SET cac_business_name = NULLIF($2::text, ''),
     updated_at = now()
 WHERE id = $1 AND deleted_at IS NULL
-RETURNING id, name, slug, business_email, phone, business_type, cac_business_name, country, state, city, address, status, onboarding_status, owner_user_id, verified_at, created_at, updated_at, deleted_at, description, cover_image_url, operating_hours
+RETURNING id, name, slug, business_email, phone, business_type, cac_business_name, country, state, city, address, accepted_item_categories, prohibited_item_categories, status, onboarding_status, owner_user_id, verified_at, created_at, updated_at, deleted_at, description, cover_image_url, operating_hours, website_url, instagram_url, facebook_url, twitter_url, linkedin_url, year_established, photo_urls
 `
 
 type UpdateCompanyCACNameParams struct {
@@ -857,6 +923,8 @@ func (q *Queries) UpdateCompanyCACName(ctx context.Context, arg UpdateCompanyCAC
 		&i.State,
 		&i.City,
 		&i.Address,
+		&i.AcceptedItemCategories,
+		&i.ProhibitedItemCategories,
 		&i.Status,
 		&i.OnboardingStatus,
 		&i.OwnerUserID,
@@ -867,6 +935,13 @@ func (q *Queries) UpdateCompanyCACName(ctx context.Context, arg UpdateCompanyCAC
 		&i.Description,
 		&i.CoverImageUrl,
 		&i.OperatingHours,
+		&i.WebsiteUrl,
+		&i.InstagramUrl,
+		&i.FacebookUrl,
+		&i.TwitterUrl,
+		&i.LinkedinUrl,
+		&i.YearEstablished,
+		&i.PhotoUrls,
 	)
 	return i, err
 }
@@ -922,7 +997,7 @@ SET status = $2,
     verified_at = $4,
     updated_at = now()
 WHERE id = $1 AND deleted_at IS NULL
-RETURNING id, name, slug, business_email, phone, business_type, cac_business_name, country, state, city, address, status, onboarding_status, owner_user_id, verified_at, created_at, updated_at, deleted_at, description, cover_image_url, operating_hours
+RETURNING id, name, slug, business_email, phone, business_type, cac_business_name, country, state, city, address, accepted_item_categories, prohibited_item_categories, status, onboarding_status, owner_user_id, verified_at, created_at, updated_at, deleted_at, description, cover_image_url, operating_hours, website_url, instagram_url, facebook_url, twitter_url, linkedin_url, year_established, photo_urls
 `
 
 type UpdateCompanyVerificationParams struct {
@@ -952,6 +1027,8 @@ func (q *Queries) UpdateCompanyVerification(ctx context.Context, arg UpdateCompa
 		&i.State,
 		&i.City,
 		&i.Address,
+		&i.AcceptedItemCategories,
+		&i.ProhibitedItemCategories,
 		&i.Status,
 		&i.OnboardingStatus,
 		&i.OwnerUserID,
@@ -962,7 +1039,41 @@ func (q *Queries) UpdateCompanyVerification(ctx context.Context, arg UpdateCompa
 		&i.Description,
 		&i.CoverImageUrl,
 		&i.OperatingHours,
+		&i.WebsiteUrl,
+		&i.InstagramUrl,
+		&i.FacebookUrl,
+		&i.TwitterUrl,
+		&i.LinkedinUrl,
+		&i.YearEstablished,
+		&i.PhotoUrls,
 	)
+	return i, err
+}
+
+const updateItemCategoryPolicy = `-- name: UpdateItemCategoryPolicy :one
+UPDATE companies
+SET accepted_item_categories = $2::text[],
+    prohibited_item_categories = $3::text[],
+    updated_at = now()
+WHERE id = $1 AND deleted_at IS NULL
+RETURNING accepted_item_categories, prohibited_item_categories
+`
+
+type UpdateItemCategoryPolicyParams struct {
+	ID      uuid.UUID `json:"id"`
+	Column2 []string  `json:"column_2"`
+	Column3 []string  `json:"column_3"`
+}
+
+type UpdateItemCategoryPolicyRow struct {
+	AcceptedItemCategories   []string `json:"accepted_item_categories"`
+	ProhibitedItemCategories []string `json:"prohibited_item_categories"`
+}
+
+func (q *Queries) UpdateItemCategoryPolicy(ctx context.Context, arg UpdateItemCategoryPolicyParams) (UpdateItemCategoryPolicyRow, error) {
+	row := q.db.QueryRow(ctx, updateItemCategoryPolicy, arg.ID, arg.Column2, arg.Column3)
+	var i UpdateItemCategoryPolicyRow
+	err := row.Scan(&i.AcceptedItemCategories, &i.ProhibitedItemCategories)
 	return i, err
 }
 

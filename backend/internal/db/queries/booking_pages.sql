@@ -42,6 +42,17 @@ SELECT
   b.primary_color,
   b.secondary_color,
   b.cover_image_url,
+  COALESCE(b.description, c.description) AS description,
+  c.website_url,
+  c.instagram_url,
+  c.facebook_url,
+  c.twitter_url,
+  c.linkedin_url,
+  c.year_established,
+  c.photo_urls,
+  c.verified_at,
+  c.accepted_item_categories,
+  c.prohibited_item_categories,
   COALESCE(cs.currency, 'NGN') AS currency
 FROM booking_pages bp
 JOIN companies c ON c.id = bp.company_id
@@ -52,51 +63,7 @@ LEFT JOIN company_subdomains s ON s.company_id = c.id
 LEFT JOIN company_settings cs ON cs.company_id = c.id
 WHERE bp.slug = $1 AND bp.is_published;
 
--- name: ListPublicBookingRates :many
-SELECT DISTINCT ON (rc.id)
-  rc.id AS rate_card_id,
-  rc.name,
-  rc.currency,
-  pt.price_cents
-FROM rate_cards rc
-JOIN rate_card_versions v ON v.rate_card_id = rc.id
-  AND v.is_active
-  AND v.deleted_at IS NULL
-  AND v.effective_from <= now()
-  AND (v.effective_until IS NULL OR v.effective_until > now())
-JOIN pricing_tiers pt ON pt.rate_card_version_id = v.id
-  AND pt.deleted_at IS NULL
-  AND pt.min_weight_kg <= sqlc.arg(weight_kg)
-  AND pt.max_weight_kg >= sqlc.arg(weight_kg)
-WHERE rc.company_id = sqlc.arg(company_id)
-  AND rc.status = 'published'
-  AND rc.is_published
-  AND rc.deleted_at IS NULL
-  AND (rc.effective_start IS NULL OR rc.effective_start <= now())
-  AND (rc.effective_end IS NULL OR rc.effective_end > now())
-ORDER BY rc.id, pt.min_weight_kg DESC;
 
--- name: GetPublicBookingRate :one
-SELECT rc.id AS rate_card_id, rc.name, rc.currency, pt.price_cents
-FROM rate_cards rc
-JOIN rate_card_versions v ON v.rate_card_id = rc.id
-  AND v.is_active
-  AND v.deleted_at IS NULL
-  AND v.effective_from <= now()
-  AND (v.effective_until IS NULL OR v.effective_until > now())
-JOIN pricing_tiers pt ON pt.rate_card_version_id = v.id
-  AND pt.deleted_at IS NULL
-  AND pt.min_weight_kg <= sqlc.arg(weight_kg)
-  AND pt.max_weight_kg >= sqlc.arg(weight_kg)
-WHERE rc.company_id = sqlc.arg(company_id)
-  AND rc.id = sqlc.arg(rate_card_id)
-  AND rc.status = 'published'
-  AND rc.is_published
-  AND rc.deleted_at IS NULL
-  AND (rc.effective_start IS NULL OR rc.effective_start <= now())
-  AND (rc.effective_end IS NULL OR rc.effective_end > now())
-ORDER BY pt.min_weight_kg DESC
-LIMIT 1;
 
 -- name: CreatePublicBookingDelivery :one
 INSERT INTO deliveries (
@@ -105,8 +72,8 @@ INSERT INTO deliveries (
   delivery_price_minor, payer, is_paid, payment_method, assigned_driver_id,
   status, created_by, request_status, package_category, weight_kg, additional_instructions,
   package_photo_url, pickup_latitude, pickup_longitude, dropoff_latitude,
-  dropoff_longitude, selected_route_id, selected_rate_card_id, price_is_estimate, booking_source,
-  delivery_speed, distance_km
+  dropoff_longitude, selected_route_id, price_is_estimate, booking_source,
+  delivery_speed, distance_km, customer_id, tracking_code
 )
 SELECT
   sqlc.arg(company_id), sqlc.arg(sender_name), sqlc.arg(sender_phone),
@@ -117,8 +84,9 @@ SELECT
   sqlc.arg(additional_instructions), NULLIF(sqlc.arg(package_photo_url)::text, ''),
   sqlc.narg(pickup_latitude), sqlc.narg(pickup_longitude),
   sqlc.narg(dropoff_latitude), sqlc.narg(dropoff_longitude),
-  sqlc.narg(selected_route_id), sqlc.narg(selected_rate_card_id),
-  sqlc.arg(price_is_estimate), 'booking_page', sqlc.arg(delivery_speed), sqlc.arg(distance_km)
+  sqlc.narg(selected_route_id),
+  sqlc.arg(price_is_estimate), 'booking_page', sqlc.arg(delivery_speed), sqlc.arg(distance_km),
+  sqlc.narg(customer_id), sqlc.arg(tracking_code)
 WHERE sqlc.narg(selected_route_id)::uuid IS NULL
    OR EXISTS (
      SELECT 1 FROM company_booking_routes r

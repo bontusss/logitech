@@ -10,6 +10,19 @@ RETURNING *;
 SELECT * FROM companies
 WHERE id = $1 AND deleted_at IS NULL;
 
+-- name: GetItemCategoryPolicy :one
+SELECT accepted_item_categories, prohibited_item_categories
+FROM companies
+WHERE id = $1 AND deleted_at IS NULL;
+
+-- name: UpdateItemCategoryPolicy :one
+UPDATE companies
+SET accepted_item_categories = $2::text[],
+    prohibited_item_categories = $3::text[],
+    updated_at = now()
+WHERE id = $1 AND deleted_at IS NULL
+RETURNING accepted_item_categories, prohibited_item_categories;
+
 -- name: UpdateCompany :one
 UPDATE companies
 SET name = $2,
@@ -23,6 +36,13 @@ SET name = $2,
     description = NULLIF($10::text, ''),
     cover_image_url = NULLIF($11::text, ''),
     operating_hours = $12,
+    website_url = NULLIF($13::text, ''),
+    instagram_url = NULLIF($14::text, ''),
+    facebook_url = NULLIF($15::text, ''),
+    twitter_url = NULLIF($16::text, ''),
+    linkedin_url = NULLIF($17::text, ''),
+    year_established = NULLIF($18::int, 0),
+    photo_urls = $19::text[],
     updated_at = now()
 WHERE id = $1 AND deleted_at IS NULL
 RETURNING *;

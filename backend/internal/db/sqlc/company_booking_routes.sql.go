@@ -20,7 +20,7 @@ INSERT INTO company_booking_routes (
 ) VALUES (
   $1, $2, $3, $4, $5, $6, $7, $8, $9, $10
 )
-RETURNING id, company_id, origin_state, origin_city, destination_state, destination_city, distance_km, standard_price_per_km_minor, express_price_per_km_minor, same_day_price_per_km_minor, minimum_charge_minor, status, created_at, updated_at, transportation_method, pricing_model, origin_branch_id, destination_branch_id, estimated_transit_time, departure_schedule, pickup_available, delivery_available, description, max_weight_kg, max_length_cm, max_width_cm, max_height_cm, price_is_estimate
+RETURNING id, company_id, origin_state, origin_city, destination_state, destination_city, distance_km, standard_price_per_km_minor, express_price_per_km_minor, same_day_price_per_km_minor, minimum_charge_minor, status, created_at, updated_at, estimated_transit_time, departure_schedule, pickup_available, delivery_available, description, max_weight_kg, max_length_cm, max_width_cm, max_height_cm, price_is_estimate
 `
 
 type CreateCompanyBookingRouteParams struct {
@@ -65,10 +65,6 @@ func (q *Queries) CreateCompanyBookingRoute(ctx context.Context, arg CreateCompa
 		&i.Status,
 		&i.CreatedAt,
 		&i.UpdatedAt,
-		&i.TransportationMethod,
-		&i.PricingModel,
-		&i.OriginBranchID,
-		&i.DestinationBranchID,
 		&i.EstimatedTransitTime,
 		&i.DepartureSchedule,
 		&i.PickupAvailable,
@@ -95,6 +91,7 @@ SELECT
   r.express_price_per_km_minor,
   r.same_day_price_per_km_minor,
   r.minimum_charge_minor,
+  r.price_is_estimate,
   COALESCE(s.currency, 'NGN') AS currency
 FROM company_booking_routes r
 LEFT JOIN company_settings s ON s.company_id = r.company_id
@@ -119,6 +116,7 @@ type GetPublicBookingRouteRow struct {
 	ExpressPricePerKmMinor  pgtype.Int8    `json:"express_price_per_km_minor"`
 	SameDayPricePerKmMinor  pgtype.Int8    `json:"same_day_price_per_km_minor"`
 	MinimumChargeMinor      int64          `json:"minimum_charge_minor"`
+	PriceIsEstimate         bool           `json:"price_is_estimate"`
 	Currency                string         `json:"currency"`
 }
 
@@ -136,13 +134,14 @@ func (q *Queries) GetPublicBookingRoute(ctx context.Context, arg GetPublicBookin
 		&i.ExpressPricePerKmMinor,
 		&i.SameDayPricePerKmMinor,
 		&i.MinimumChargeMinor,
+		&i.PriceIsEstimate,
 		&i.Currency,
 	)
 	return i, err
 }
 
 const listCompanyBookingRoutes = `-- name: ListCompanyBookingRoutes :many
-SELECT id, company_id, origin_state, origin_city, destination_state, destination_city, distance_km, standard_price_per_km_minor, express_price_per_km_minor, same_day_price_per_km_minor, minimum_charge_minor, status, created_at, updated_at, transportation_method, pricing_model, origin_branch_id, destination_branch_id, estimated_transit_time, departure_schedule, pickup_available, delivery_available, description, max_weight_kg, max_length_cm, max_width_cm, max_height_cm, price_is_estimate
+SELECT id, company_id, origin_state, origin_city, destination_state, destination_city, distance_km, standard_price_per_km_minor, express_price_per_km_minor, same_day_price_per_km_minor, minimum_charge_minor, status, created_at, updated_at, estimated_transit_time, departure_schedule, pickup_available, delivery_available, description, max_weight_kg, max_length_cm, max_width_cm, max_height_cm, price_is_estimate
 FROM company_booking_routes
 WHERE company_id = $1
 ORDER BY created_at DESC
@@ -172,10 +171,6 @@ func (q *Queries) ListCompanyBookingRoutes(ctx context.Context, companyID uuid.U
 			&i.Status,
 			&i.CreatedAt,
 			&i.UpdatedAt,
-			&i.TransportationMethod,
-			&i.PricingModel,
-			&i.OriginBranchID,
-			&i.DestinationBranchID,
 			&i.EstimatedTransitTime,
 			&i.DepartureSchedule,
 			&i.PickupAvailable,
@@ -209,6 +204,7 @@ SELECT
   r.express_price_per_km_minor,
   r.same_day_price_per_km_minor,
   r.minimum_charge_minor,
+  r.price_is_estimate,
   COALESCE(s.currency, 'NGN') AS currency
 FROM company_booking_routes r
 LEFT JOIN company_settings s ON s.company_id = r.company_id
@@ -229,6 +225,7 @@ type ListPublicBookingRoutesRow struct {
 	ExpressPricePerKmMinor  pgtype.Int8    `json:"express_price_per_km_minor"`
 	SameDayPricePerKmMinor  pgtype.Int8    `json:"same_day_price_per_km_minor"`
 	MinimumChargeMinor      int64          `json:"minimum_charge_minor"`
+	PriceIsEstimate         bool           `json:"price_is_estimate"`
 	Currency                string         `json:"currency"`
 }
 
@@ -252,6 +249,7 @@ func (q *Queries) ListPublicBookingRoutes(ctx context.Context, companyID uuid.UU
 			&i.ExpressPricePerKmMinor,
 			&i.SameDayPricePerKmMinor,
 			&i.MinimumChargeMinor,
+			&i.PriceIsEstimate,
 			&i.Currency,
 		); err != nil {
 			return nil, err
@@ -268,7 +266,7 @@ const setCompanyBookingRouteStatus = `-- name: SetCompanyBookingRouteStatus :one
 UPDATE company_booking_routes
 SET status = $3, updated_at = now()
 WHERE company_id = $1 AND id = $2
-RETURNING id, company_id, origin_state, origin_city, destination_state, destination_city, distance_km, standard_price_per_km_minor, express_price_per_km_minor, same_day_price_per_km_minor, minimum_charge_minor, status, created_at, updated_at, transportation_method, pricing_model, origin_branch_id, destination_branch_id, estimated_transit_time, departure_schedule, pickup_available, delivery_available, description, max_weight_kg, max_length_cm, max_width_cm, max_height_cm, price_is_estimate
+RETURNING id, company_id, origin_state, origin_city, destination_state, destination_city, distance_km, standard_price_per_km_minor, express_price_per_km_minor, same_day_price_per_km_minor, minimum_charge_minor, status, created_at, updated_at, estimated_transit_time, departure_schedule, pickup_available, delivery_available, description, max_weight_kg, max_length_cm, max_width_cm, max_height_cm, price_is_estimate
 `
 
 type SetCompanyBookingRouteStatusParams struct {
@@ -295,10 +293,6 @@ func (q *Queries) SetCompanyBookingRouteStatus(ctx context.Context, arg SetCompa
 		&i.Status,
 		&i.CreatedAt,
 		&i.UpdatedAt,
-		&i.TransportationMethod,
-		&i.PricingModel,
-		&i.OriginBranchID,
-		&i.DestinationBranchID,
 		&i.EstimatedTransitTime,
 		&i.DepartureSchedule,
 		&i.PickupAvailable,
@@ -326,7 +320,7 @@ SET origin_state = $3,
     minimum_charge_minor = $11,
     updated_at = now()
 WHERE company_id = $1 AND id = $2
-RETURNING id, company_id, origin_state, origin_city, destination_state, destination_city, distance_km, standard_price_per_km_minor, express_price_per_km_minor, same_day_price_per_km_minor, minimum_charge_minor, status, created_at, updated_at, transportation_method, pricing_model, origin_branch_id, destination_branch_id, estimated_transit_time, departure_schedule, pickup_available, delivery_available, description, max_weight_kg, max_length_cm, max_width_cm, max_height_cm, price_is_estimate
+RETURNING id, company_id, origin_state, origin_city, destination_state, destination_city, distance_km, standard_price_per_km_minor, express_price_per_km_minor, same_day_price_per_km_minor, minimum_charge_minor, status, created_at, updated_at, estimated_transit_time, departure_schedule, pickup_available, delivery_available, description, max_weight_kg, max_length_cm, max_width_cm, max_height_cm, price_is_estimate
 `
 
 type UpdateCompanyBookingRouteParams struct {
@@ -373,10 +367,6 @@ func (q *Queries) UpdateCompanyBookingRoute(ctx context.Context, arg UpdateCompa
 		&i.Status,
 		&i.CreatedAt,
 		&i.UpdatedAt,
-		&i.TransportationMethod,
-		&i.PricingModel,
-		&i.OriginBranchID,
-		&i.DestinationBranchID,
 		&i.EstimatedTransitTime,
 		&i.DepartureSchedule,
 		&i.PickupAvailable,

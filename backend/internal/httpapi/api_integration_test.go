@@ -68,6 +68,7 @@ func newTestEnv(t *testing.T) *testEnv {
 	// Delete tenant data only. TRUNCATE ... CASCADE would also wipe the global
 	// role templates that the seed migration installs once.
 	_, err = pool.Exec(t.Context(), `
+		DELETE FROM marketplace_search_logs;
 		DELETE FROM audit_logs;
 		DELETE FROM branch_members;
 		DELETE FROM invitation_branches;
@@ -299,6 +300,11 @@ func TestCompanyVerificationRequiresVerifiedEmailAndWhatsApp(t *testing.T) {
 			(user_id, phone, token_hash, expires_at, verified_at, last_sent_at, window_started_at)
 		VALUES ($1, '+2348000000000', '', now() + interval '10 minutes', now(), now(), now())`,
 		owner.User.ID)
+	require.NoError(t, err)
+
+	// CAC alignment is part of verification since migration 7.
+	_, err = env.pool.Exec(t.Context(), `
+		UPDATE companies SET cac_business_name = 'Verify Freight Limited' WHERE id = $1`, companyID)
 	require.NoError(t, err)
 
 	rec = do(t, env.router, http.MethodPost, "/api/v1/companies/me/submit-verification", owner.AccessToken, companyID, nil)

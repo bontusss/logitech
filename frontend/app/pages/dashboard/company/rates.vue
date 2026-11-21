@@ -391,6 +391,8 @@ async function toggleStatus(route: BookingRoute) {
       <CircleAlert :size="14" class="mt-0.5 shrink-0" /> {{ error }}
     </p>
 
+    <ItemCategoryPolicy />
+
     <section v-if="activeTab === 'intercity'" class="mt-5 grid gap-3 sm:grid-cols-3" aria-label="Rate overview">
       <article class="rates-stat rates-stat--blue rounded-2xl border p-4">
         <span class="flex size-8 items-center justify-center rounded-xl bg-white/70 text-blue-700 dark:bg-white/10 dark:text-blue-200"><Route :size="16" /></span>

@@ -1,5 +1,17 @@
 <script setup lang="ts">
-import { AlertCircle, Check, Copy, Loader2, Plus, Search, UserRound, X } from 'lucide-vue-next'
+import {
+  AlertCircle,
+  Check,
+  Copy,
+  ExternalLink,
+  Loader2,
+  Pencil,
+  Plus,
+  Search,
+  Share2,
+  UserRound,
+  X,
+} from 'lucide-vue-next'
 
 definePageMeta({ middleware: 'auth', layout: 'app' })
 useSeoMeta({ title: 'Drivers' })
@@ -10,7 +22,8 @@ interface Driver {
   phone: string
   vehicle_plate: string
   email: string
-  status: 'active' | 'suspended'
+  status: 'active' | 'suspended' | 'inactive'
+  portal_url: string
 }
 
 const { api } = useApi()
@@ -22,10 +35,13 @@ const loading = ref(true)
 const saving = ref(false)
 const error = ref('')
 const formOpen = ref(false)
+const editingDriverId = ref('')
 const newPortalURL = ref('')
 const emailSent = ref(false)
-const copied = ref(false)
+const copiedPortalId = ref('')
 const searchQuery = ref('')
+const canEdit = computed(() => can('staff.update'))
+const canManageStatus = computed(() => can('staff.deactivate'))
 
 const form = reactive({
   full_name: '',
@@ -37,7 +53,7 @@ const form = reactive({
 onMounted(async () => {
   await load()
   if (route.query.create === '1' && can('staff.invite')) {
-    formOpen.value = true
+    openCreateForm()
   }
   await fetchDrivers()
   window.addEventListener('keydown', onModalKeydown)
@@ -46,18 +62,41 @@ onMounted(async () => {
 onBeforeUnmount(() => window.removeEventListener('keydown', onModalKeydown))
 
 function closeCreateForm() {
-  if (!saving.value) formOpen.value = false
+  if (!saving.value) {
+    formOpen.value = false
+    editingDriverId.value = ''
+    error.value = ''
+  }
 }
 
 function onModalKeydown(event: KeyboardEvent) {
   if (event.key === 'Escape') closeCreateForm()
 }
 
+function openCreateForm() {
+  editingDriverId.value = ''
+  Object.assign(form, { full_name: '', phone: '', vehicle_plate: '', email: '' })
+  error.value = ''
+  formOpen.value = true
+}
+
+function openEditForm(driver: Driver) {
+  editingDriverId.value = driver.id
+  Object.assign(form, {
+    full_name: driver.full_name,
+    phone: driver.phone,
+    vehicle_plate: driver.vehicle_plate,
+    email: driver.email,
+  })
+  error.value = ''
+  formOpen.value = true
+}
+
 const counts = computed(() => ({
   total: drivers.value.length,
   available: drivers.value.filter((driver) => driver.status === 'active').length,
   assigned: 0,
-  attention: drivers.value.filter((driver) => driver.status === 'suspended').length,
+  attention: drivers.value.filter((driver) => driver.status !== 'active').length,
 }))
 
 const filteredDrivers = computed(() => {
@@ -81,52 +120,82 @@ async function fetchDrivers() {
   }
 }
 
-async function createDriver() {
+async function saveDriver() {
   error.value = ''
   saving.value = true
   try {
-    const result = await api<{ driver: Driver; portal_url: string; email_sent: boolean }>('/companies/me/drivers', {
-      method: 'POST',
-      body: {
-        full_name: form.full_name.trim(),
-        phone: form.phone.trim(),
-        vehicle_plate: form.vehicle_plate.trim(),
-        email: form.email.trim(),
-      },
-    })
-    newPortalURL.value = result.portal_url
-    emailSent.value = result.email_sent
-    form.full_name = ''
-    form.phone = ''
-    form.vehicle_plate = ''
-    form.email = ''
+    const body = {
+      full_name: form.full_name.trim(),
+      phone: form.phone.trim(),
+      vehicle_plate: form.vehicle_plate.trim(),
+      email: form.email.trim(),
+    }
+    if (editingDriverId.value) {
+      await api(`/companies/me/drivers/${editingDriverId.value}`, { method: 'PATCH', body })
+      notify('Driver details updated.')
+    } else {
+      const result = await api<{ driver: Driver; portal_url: string; email_sent: boolean }>(
+        '/companies/me/drivers',
+        { method: 'POST', body },
+      )
+      newPortalURL.value = result.portal_url
+      emailSent.value = result.email_sent
+      notify(result.email_sent ? 'Driver created and welcome email sent.' : 'Driver created; welcome email could not be sent.')
+    }
     formOpen.value = false
-    notify(result.email_sent ? 'Driver created and welcome email sent.' : 'Driver created; welcome email could not be sent.')
+    editingDriverId.value = ''
     await fetchDrivers()
   } catch (err) {
-    error.value = apiErrorMessage(err, 'Could not create this driver.')
+    error.value = apiErrorMessage(err, editingDriverId.value ? 'Could not update this driver.' : 'Could not create this driver.')
   } finally {
     saving.value = false
   }
 }
 
-async function copyPortalLink() {
+async function copyPortalLink(url: string, driverId: string) {
+  if (!url) {
+    error.value = 'This driver does not have a portal link yet.'
+    return
+  }
   try {
-    await navigator.clipboard.writeText(newPortalURL.value)
-    copied.value = true
-    window.setTimeout(() => (copied.value = false), 1800)
+    await navigator.clipboard.writeText(url)
+    copiedPortalId.value = driverId
+    window.setTimeout(() => {
+      if (copiedPortalId.value === driverId) copiedPortalId.value = ''
+    }, 1800)
   } catch {
     error.value = 'Could not copy the portal link. Select and copy the link directly.'
   }
 }
 
-async function toggleStatus(driver: Driver) {
-  const nextStatus = driver.status === 'active' ? 'suspended' : 'active'
-  if (nextStatus === 'suspended') {
+async function sharePortalLink(driver: Driver) {
+  if (!driver.portal_url) return
+  const shareData = {
+    title: `${driver.full_name}'s driver portal`,
+    text: `Open your delivery portal for ${driver.full_name}.`,
+    url: driver.portal_url,
+  }
+  if (navigator.share) {
+    try {
+      await navigator.share(shareData)
+      return
+    } catch (err) {
+      if (err instanceof DOMException && err.name === 'AbortError') return
+    }
+  }
+  await copyPortalLink(driver.portal_url, driver.id)
+  notify('Portal link copied — paste it into a message to share.')
+}
+
+async function setDriverStatus(driver: Driver, nextStatus: Driver['status']) {
+  if (nextStatus === driver.status) return
+  if (nextStatus !== 'active') {
     const approved = await confirm({
-      title: 'Suspend driver portal?',
-      message: `${driver.full_name} will no longer be able to open their portal link.`,
-      confirmLabel: 'Suspend portal',
+      title: nextStatus === 'inactive' ? 'Deactivate driver?' : 'Suspend driver portal?',
+      message: nextStatus === 'inactive'
+        ? `${driver.full_name} will be removed from active assignment and cannot open their portal. You can reactivate them later.`
+        : `${driver.full_name} will temporarily lose portal access until you reactivate them.`,
+      confirmLabel: nextStatus === 'inactive' ? 'Deactivate driver' : 'Suspend portal',
       danger: true,
     })
     if (!approved) return
@@ -136,10 +205,10 @@ async function toggleStatus(driver: Driver) {
       method: 'PATCH',
       body: { status: nextStatus },
     })
-    notify(nextStatus === 'active' ? 'Driver portal reactivated.' : 'Driver portal suspended.')
+    notify(nextStatus === 'active' ? 'Driver reactivated.' : nextStatus === 'inactive' ? 'Driver deactivated.' : 'Driver portal suspended.')
     await fetchDrivers()
   } catch (err) {
-    error.value = apiErrorMessage(err, 'Could not update the driver portal.')
+    error.value = apiErrorMessage(err, 'Could not update the driver.')
   }
 }
 </script>
@@ -158,7 +227,7 @@ async function toggleStatus(driver: Driver) {
         v-if="can('staff.invite')"
         type="button"
         class="inline-flex min-h-10 items-center gap-1.5 rounded-xl bg-brand-600 px-4 py-2.5 text-[12px] font-semibold text-white shadow-sm shadow-brand-600/20 transition hover:-translate-y-0.5 hover:bg-brand-700"
-        @click="formOpen = true"
+        @click="openCreateForm"
       >
         <Plus :size="14" />
         Add driver
@@ -192,7 +261,7 @@ async function toggleStatus(driver: Driver) {
       <article class="driver-stat driver-stat--peach rounded-xl border p-4">
         <p class="text-[10px] font-semibold tracking-wide text-ink-900/50 uppercase">Needs attention</p>
         <p class="mt-2 text-[22px] font-semibold tracking-tight">{{ counts.attention }}</p>
-        <p class="mt-1 text-[10px] text-ink-900/40">Suspended driver portals</p>
+        <p class="mt-1 text-[10px] text-ink-900/40">Suspended or deactivated portals</p>
       </article>
     </section>
 
@@ -209,11 +278,11 @@ async function toggleStatus(driver: Driver) {
         <button
           type="button"
           class="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-emerald-300 bg-white px-3 py-2 text-[11px] font-semibold text-emerald-800"
-          @click="copyPortalLink"
+          @click="copyPortalLink(newPortalURL, 'new')"
         >
-          <Check v-if="copied" :size="13" />
+          <Check v-if="copiedPortalId === 'new'" :size="13" />
           <Copy v-else :size="13" />
-          {{ copied ? 'Copied' : 'Copy link' }}
+          {{ copiedPortalId === 'new' ? 'Copied' : 'Copy link' }}
         </button>
       </div>
       <button type="button" class="mt-2 text-[10.5px] text-emerald-900/60 underline" @click="newPortalURL = ''">
@@ -226,20 +295,20 @@ async function toggleStatus(driver: Driver) {
       class="fixed inset-0 z-[80] flex items-center justify-center bg-ink-950/55 px-4 py-6 backdrop-blur-md"
       role="dialog"
       aria-modal="true"
-      aria-labelledby="create-driver-title"
+      :aria-labelledby="editingDriverId ? 'edit-driver-title' : 'create-driver-title'"
       @click.self="closeCreateForm"
     >
       <form
         class="driver-modal w-full max-w-xl overflow-hidden rounded-2xl border shadow-2xl"
-        @submit.prevent="createDriver"
+        @submit.prevent="saveDriver"
       >
         <div class="driver-modal-heading flex items-start justify-between gap-4 p-5 sm:p-6">
           <div class="flex items-start gap-3">
             <span class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-violet-100 text-violet-700 dark:bg-violet-400/15 dark:text-violet-200"><UserRound :size="18" /></span>
             <div>
-              <p class="text-[9.5px] font-semibold tracking-[0.16em] text-brand-700 uppercase dark:text-indigo-200">NEW TEAM MEMBER</p>
-              <h2 id="create-driver-title" class="mt-1 text-[15px] font-semibold">Add a driver</h2>
-              <p class="mt-1 text-[11px] text-ink-900/50">Their private portal is ready as soon as you add them.</p>
+              <p class="text-[9.5px] font-semibold tracking-[0.16em] text-brand-700 uppercase dark:text-indigo-200">{{ editingDriverId ? 'DRIVER DETAILS' : 'NEW TEAM MEMBER' }}</p>
+              <h2 :id="editingDriverId ? 'edit-driver-title' : 'create-driver-title'" class="mt-1 text-[15px] font-semibold">{{ editingDriverId ? 'Edit driver' : 'Add a driver' }}</h2>
+              <p class="mt-1 text-[11px] text-ink-900/50">{{ editingDriverId ? 'Update their contact and vehicle details. Their portal link stays the same.' : 'Their private portal is ready as soon as you add them.' }}</p>
             </div>
           </div>
           <button
@@ -287,7 +356,7 @@ async function toggleStatus(driver: Driver) {
           >
             <Loader2 v-if="saving" :size="14" class="animate-spin" />
             <UserRound v-else :size="14" />
-            Add driver
+            {{ editingDriverId ? 'Save changes' : 'Add driver' }}
           </button>
         </div>
       </form>
@@ -333,23 +402,97 @@ async function toggleStatus(driver: Driver) {
                 <p class="truncate text-[10.5px] text-ink-900/40">{{ driver.email }}</p>
               </div>
             </div>
-            <span class="rounded-full border px-2 py-0.5 text-[9.5px] font-medium capitalize" :class="driver.status === 'active' ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-slate-200 bg-slate-50 text-slate-500'">
-              {{ driver.status }}
+            <span
+              class="rounded-full border px-2 py-0.5 text-[9.5px] font-medium capitalize"
+              :class="driver.status === 'active'
+                ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                : driver.status === 'suspended'
+                  ? 'border-amber-200 bg-amber-50 text-amber-700'
+                  : 'border-slate-200 bg-slate-50 text-slate-500'"
+            >
+              {{ driver.status === 'inactive' ? 'deactivated' : driver.status }}
             </span>
           </div>
           <dl class="mt-4 space-y-2 border-t border-ink-900/8 pt-3 text-[11px]">
             <div class="flex justify-between gap-3"><dt class="text-ink-900/40">Phone</dt><dd class="font-medium">{{ driver.phone }}</dd></div>
             <div class="flex justify-between gap-3"><dt class="text-ink-900/40">Vehicle</dt><dd class="font-medium uppercase">{{ driver.vehicle_plate }}</dd></div>
           </dl>
-          <button
-            v-if="can('staff.deactivate')"
-            type="button"
-            class="mt-3 text-[10.5px] font-semibold"
-            :class="driver.status === 'active' ? 'text-red-600 hover:text-red-700' : 'text-brand-600 hover:text-brand-700'"
-            @click="toggleStatus(driver)"
-          >
-            {{ driver.status === 'active' ? 'Suspend portal' : 'Reactivate portal' }}
-          </button>
+
+          <div class="mt-3 rounded-lg border border-ink-900/8 bg-canvas/70 p-2.5">
+            <div class="flex items-center justify-between gap-2">
+              <p class="text-[9px] font-bold tracking-[0.12em] text-ink-900/45 uppercase">Driver portal link</p>
+              <a
+                v-if="driver.portal_url && driver.status === 'active'"
+                :href="driver.portal_url"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="inline-flex items-center gap-0.5 text-[9.5px] font-semibold text-brand-700 hover:text-brand-800"
+              >
+                Open <ExternalLink :size="10" />
+              </a>
+            </div>
+            <code class="mt-1.5 block truncate rounded-md bg-white px-2 py-1.5 text-[9.5px] text-ink-900/55 dark:bg-white/5" :title="driver.portal_url">
+              {{ driver.portal_url || 'No portal link available' }}
+            </code>
+            <div class="mt-2 flex flex-wrap items-center gap-1.5">
+              <button
+                type="button"
+                class="inline-flex items-center gap-1 rounded-md border border-ink-900/10 bg-white px-2 py-1 text-[9.5px] font-semibold text-ink-900/65 hover:border-brand-200 hover:text-brand-700 disabled:opacity-50 dark:bg-white/5"
+                :disabled="!driver.portal_url"
+                @click="copyPortalLink(driver.portal_url, driver.id)"
+              >
+                <Check v-if="copiedPortalId === driver.id" :size="11" />
+                <Copy v-else :size="11" />
+                {{ copiedPortalId === driver.id ? 'Copied' : 'Copy' }}
+              </button>
+              <button
+                type="button"
+                class="inline-flex items-center gap-1 rounded-md border border-ink-900/10 bg-white px-2 py-1 text-[9.5px] font-semibold text-ink-900/65 hover:border-brand-200 hover:text-brand-700 disabled:opacity-50 dark:bg-white/5"
+                :disabled="!driver.portal_url"
+                @click="sharePortalLink(driver)"
+              >
+                <Share2 :size="11" /> Share
+              </button>
+            </div>
+            <p v-if="driver.status !== 'active'" class="mt-1.5 text-[9px] text-amber-700">
+              {{ driver.status === 'suspended' ? 'Suspended' : 'Deactivated' }} links stay private and inactive until you reactivate this driver.
+            </p>
+          </div>
+
+          <div class="mt-3 flex flex-wrap items-center gap-1.5 border-t border-ink-900/8 pt-3">
+            <button
+              v-if="canEdit"
+              type="button"
+              class="inline-flex items-center gap-1 rounded-md border border-ink-900/10 px-2 py-1.5 text-[10px] font-semibold text-ink-900/65 hover:bg-canvas"
+              @click="openEditForm(driver)"
+            >
+              <Pencil :size="11" /> Edit info
+            </button>
+            <button
+              v-if="canManageStatus && driver.status === 'active'"
+              type="button"
+              class="rounded-md border border-amber-200 px-2 py-1.5 text-[10px] font-semibold text-amber-700 hover:bg-amber-50"
+              @click="setDriverStatus(driver, 'suspended')"
+            >
+              Suspend
+            </button>
+            <button
+              v-if="canManageStatus && driver.status !== 'inactive'"
+              type="button"
+              class="rounded-md border border-rose-200 px-2 py-1.5 text-[10px] font-semibold text-rose-700 hover:bg-rose-50"
+              @click="setDriverStatus(driver, 'inactive')"
+            >
+              Deactivate
+            </button>
+            <button
+              v-if="canManageStatus && driver.status !== 'active'"
+              type="button"
+              class="rounded-md border border-emerald-200 px-2 py-1.5 text-[10px] font-semibold text-emerald-700 hover:bg-emerald-50"
+              @click="setDriverStatus(driver, 'active')"
+            >
+              Reactivate
+            </button>
+          </div>
         </article>
       </div>
     </section>
