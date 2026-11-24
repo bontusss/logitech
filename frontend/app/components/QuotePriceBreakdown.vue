@@ -25,8 +25,8 @@ const rows = computed(() => props.quote.breakdown ?? [])
         </dd>
       </div>
       <div v-if="quote.discount_minor > 0" class="flex items-center justify-between gap-3">
-        <dt class="text-[12px] font-medium text-emerald-700">Discount</dt>
-        <dd class="text-[12px] font-semibold tabular-nums text-emerald-700">
+        <dt class="text-[12px] font-medium text-success-700">Discount</dt>
+        <dd class="text-[12px] font-semibold tabular-nums text-success-700">
           -{{ formatMinor(quote.discount_minor, currency) }}
         </dd>
       </div>

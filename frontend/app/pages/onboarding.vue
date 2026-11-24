@@ -289,19 +289,19 @@ const whatsappVerified = computed(() =>
           </p>
           <div class="mt-3 flex flex-wrap items-center gap-2">
             <span class="inline-flex items-center gap-1.5 rounded-full border border-white/80 bg-white/80 px-2.5 py-1 text-[11px] font-semibold text-ink-900/75 capitalize shadow-sm dark:border-white/10 dark:bg-white/10">
-              <span class="size-1.5 rounded-full bg-amber-500" />
+              <span class="size-1.5 rounded-full bg-accent-500" />
               {{ statusLabel }}
             </span>
             <span
               class="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-semibold shadow-sm"
-              :class="whatsappVerified ? 'border-emerald-200/80 bg-emerald-50 text-emerald-800 dark:border-emerald-400/20 dark:bg-emerald-400/10 dark:text-emerald-200' : 'border-amber-200/80 bg-amber-50 text-amber-800 dark:border-amber-400/20 dark:bg-amber-400/10 dark:text-amber-200'"
+              :class="whatsappVerified ? 'border-success-200/80 bg-success-50 text-success-700 dark:border-success-500/20 dark:bg-success-500/10 dark:text-success-200' : 'border-accent-200/80 bg-accent-50 text-accent-800 dark:border-accent-400/20 dark:bg-accent-400/10 dark:text-accent-200'"
             >
               <MessageCircle :size="12" />
               WhatsApp {{ whatsappVerified ? 'verified' : 'unverified' }}
             </span>
           </div>
         </div>
-        <span class="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-600 to-violet-600 text-white shadow-lg shadow-brand-600/25">
+        <span class="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-600 to-brand-600 text-white shadow-lg shadow-brand-600/25">
           <ClipboardCheck :size="21" />
         </span>
       </div>
@@ -312,7 +312,7 @@ const whatsappVerified = computed(() =>
     </div>
 
     <div v-else-if="!detail" class="dash-panel mt-4 rounded-2xl border p-6">
-      <span class="flex size-10 items-center justify-center rounded-xl bg-amber-100 text-amber-700 dark:bg-amber-400/15 dark:text-amber-200">
+      <span class="flex size-10 items-center justify-center rounded-xl bg-accent-100 text-accent-700 dark:bg-accent-400/15 dark:text-accent-200">
         <CircleAlert :size="19" />
       </span>
       <h2 class="mt-3 text-[15px] font-semibold">This account is not attached to a company</h2>
@@ -334,7 +334,7 @@ const whatsappVerified = computed(() =>
               class="flex items-center gap-2.5 rounded-2xl border px-3 py-2.5 transition"
               :class="
                 index === step
-                  ? 'border-brand-500/40 bg-gradient-to-br from-brand-50 to-violet-50 shadow-sm dark:border-brand-400/30 dark:from-brand-400/10 dark:to-violet-400/5'
+                  ? 'border-brand-500/40 bg-gradient-to-br from-brand-50 to-brand-50 shadow-sm dark:border-brand-400/30 dark:from-brand-400/10 dark:to-brand-400/5'
                   : index < step
                     ? 'dash-panel border'
                     : 'border-ink-900/8 bg-white/60 dark:border-white/10 dark:bg-white/5'
@@ -344,9 +344,9 @@ const whatsappVerified = computed(() =>
                 class="flex size-7 shrink-0 items-center justify-center rounded-xl text-[11px] font-semibold shadow-sm"
                 :class="
                   index < step
-                    ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-400/15 dark:text-emerald-200'
+                    ? 'bg-success-100 text-success-700 dark:bg-success-500/15 dark:text-success-200'
                     : index === step
-                      ? 'bg-gradient-to-br from-brand-600 to-violet-600 text-white'
+                      ? 'bg-gradient-to-br from-brand-600 to-brand-600 text-white'
                       : 'bg-ink-900/5 text-ink-900/45 dark:bg-white/10 dark:text-slate-300'
                 "
               >
@@ -363,7 +363,7 @@ const whatsappVerified = computed(() =>
 
         <div class="dash-panel mt-3 rounded-2xl border p-5 sm:p-6">
           <div class="flex items-center gap-2.5">
-            <span class="flex size-9 items-center justify-center rounded-xl bg-violet-100 text-violet-700 dark:bg-violet-400/15 dark:text-violet-200">
+            <span class="flex size-9 items-center justify-center rounded-xl bg-brand-100 text-brand-700 dark:bg-brand-400/15 dark:text-brand-200">
               <component :is="steps[step].icon" :size="16" />
             </span>
             <div>
@@ -385,7 +385,7 @@ const whatsappVerified = computed(() =>
                   v-for="type in providerBusinessTypes"
                   :key="type.value"
                   class="flex cursor-pointer items-center gap-2 rounded-full border px-3 py-2 text-[11.5px] font-medium transition"
-                  :class="form.business_types.includes(type.value) ? 'border-brand-400 bg-brand-50 text-brand-700 dark:border-brand-400/40 dark:bg-brand-400/10 dark:text-indigo-200' : 'border-slate-200 bg-canvas text-ink-900/65 hover:border-slate-300 dark:border-white/10 dark:bg-white/5'"
+                  :class="form.business_types.includes(type.value) ? 'border-brand-400 bg-brand-50 text-brand-700 dark:border-brand-400/40 dark:bg-brand-400/10 dark:text-brand-200' : 'border-slate-200 bg-canvas text-ink-900/65 hover:border-slate-300 dark:border-white/10 dark:bg-white/5'"
                 >
                   <input v-model="form.business_types" type="checkbox" :value="type.value" class="size-3.5 rounded border-slate-300" />
                   {{ type.label }}
@@ -415,7 +415,7 @@ const whatsappVerified = computed(() =>
             </label>
             <div class="dash-soft sm:col-span-2 rounded-xl border p-3.5">
               <p class="flex items-center gap-1.5 text-[12px] font-semibold">
-                <MessageCircle :size="14" :class="whatsappVerified ? 'text-emerald-700 dark:text-emerald-300' : 'text-amber-700 dark:text-amber-300'" />
+                <MessageCircle :size="14" :class="whatsappVerified ? 'text-success-700 dark:text-success-200' : 'text-accent-700 dark:text-accent-300'" />
                 {{ whatsappVerified ? 'WhatsApp number verified' : 'Verify your WhatsApp number' }}
               </p>
               <p class="mt-1 text-[11.5px] leading-relaxed text-ink-900/60">
@@ -445,7 +445,7 @@ const whatsappVerified = computed(() =>
                   <button
                     type="submit"
                     :disabled="verifyingWhatsAppCode || whatsappCode.length !== 6"
-                    class="rounded-xl bg-gradient-to-r from-brand-600 to-violet-600 px-3 py-2 text-[11.5px] font-semibold text-white shadow-sm shadow-brand-600/25 transition hover:-translate-y-0.5 disabled:translate-y-0 disabled:opacity-50"
+                    class="rounded-xl bg-gradient-to-r from-brand-600 to-brand-600 px-3 py-2 text-[11.5px] font-semibold text-white shadow-sm shadow-brand-600/25 transition hover:-translate-y-0.5 disabled:translate-y-0 disabled:opacity-50"
                   >
                     {{ verifyingWhatsAppCode ? 'Verifying…' : 'Verify' }}
                   </button>
@@ -454,7 +454,7 @@ const whatsappVerified = computed(() =>
             </div>
             <div class="dash-soft sm:col-span-2 rounded-xl border p-3.5">
               <p class="flex items-center gap-1.5 text-[12px] font-semibold">
-                <MailCheck :size="14" :class="user?.email_verified ? 'text-emerald-700 dark:text-emerald-300' : 'text-amber-700 dark:text-amber-300'" />
+                <MailCheck :size="14" :class="user?.email_verified ? 'text-success-700 dark:text-success-200' : 'text-accent-700 dark:text-accent-300'" />
                 {{ user?.email_verified ? 'Email verified' : 'Email not verified yet' }}
               </p>
               <p class="mt-1 text-[11.5px] leading-relaxed text-ink-900/60">
@@ -549,7 +549,7 @@ const whatsappVerified = computed(() =>
 
             <div class="dash-soft rounded-xl border p-3.5">
               <p class="flex items-center gap-1.5 text-[12px] font-semibold">
-                <ShieldCheck :size="14" class="text-brand-600 dark:text-indigo-300" />
+                <ShieldCheck :size="14" class="text-brand-600 dark:text-brand-300" />
                 What we review
               </p>
               <p class="mt-1 text-[11.5px] leading-relaxed text-ink-900/60">
@@ -563,7 +563,7 @@ const whatsappVerified = computed(() =>
             <CircleAlert :size="14" class="mt-0.5 shrink-0" />
             {{ error }}
           </p>
-          <p v-if="success" role="status" class="mt-4 flex items-start gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-[12px] text-emerald-700">
+          <p v-if="success" role="status" class="mt-4 flex items-start gap-2 rounded-lg border border-success-200 bg-success-50 px-3 py-2.5 text-[12px] text-success-700">
             <CircleCheck :size="14" class="mt-0.5 shrink-0" />
             {{ success }}
           </p>
@@ -582,7 +582,7 @@ const whatsappVerified = computed(() =>
               v-if="step < steps.length - 1"
               type="button"
               :disabled="saving"
-              class="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-brand-600 to-violet-600 px-4 py-2.5 text-[12.5px] font-semibold text-white shadow-[0_12px_26px_-16px_rgba(43,75,255,0.9)] transition hover:-translate-y-0.5 disabled:translate-y-0 disabled:opacity-60"
+              class="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-brand-600 to-brand-600 px-4 py-2.5 text-[12.5px] font-semibold text-white shadow-[0_12px_26px_-16px_rgba(43,75,255,0.9)] transition hover:-translate-y-0.5 disabled:translate-y-0 disabled:opacity-60"
               @click="next"
             >
               <Loader2 v-if="saving" :size="14" class="animate-spin" />
@@ -594,7 +594,7 @@ const whatsappVerified = computed(() =>
               v-else
               type="button"
               :disabled="saving || detail.company.status === 'under_review' || detail.company.status === 'verified'"
-              class="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-brand-600 to-violet-600 px-4 py-2.5 text-[12.5px] font-semibold text-white shadow-[0_12px_26px_-16px_rgba(43,75,255,0.9)] transition hover:-translate-y-0.5 disabled:translate-y-0 disabled:opacity-60"
+              class="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-brand-600 to-brand-600 px-4 py-2.5 text-[12.5px] font-semibold text-white shadow-[0_12px_26px_-16px_rgba(43,75,255,0.9)] transition hover:-translate-y-0.5 disabled:translate-y-0 disabled:opacity-60"
               @click="submitForReview"
             >
               <Loader2 v-if="saving" :size="14" class="animate-spin" />
@@ -609,14 +609,14 @@ const whatsappVerified = computed(() =>
       <aside class="space-y-3">
         <div class="dash-panel rounded-2xl border p-4">
           <div class="flex items-center gap-2.5">
-            <span class="flex size-8 items-center justify-center rounded-xl bg-gradient-to-br from-brand-600 to-violet-600 text-white shadow-sm shadow-brand-600/25">
+            <span class="flex size-8 items-center justify-center rounded-xl bg-gradient-to-br from-brand-600 to-brand-600 text-white shadow-sm shadow-brand-600/25">
               <Building2 :size="15" />
             </span>
             <p class="text-[10px] font-bold tracking-[0.16em] text-ink-900/60 uppercase">Company status</p>
           </div>
           <div class="mt-3 flex items-center gap-2">
-            <span class="inline-flex items-center gap-1.5 rounded-full border border-amber-200/80 bg-amber-50 px-2.5 py-1 text-[12px] font-semibold capitalize text-amber-800 dark:border-amber-400/20 dark:bg-amber-400/10 dark:text-amber-200">
-              <span class="size-1.5 rounded-full bg-amber-500" />
+            <span class="inline-flex items-center gap-1.5 rounded-full border border-accent-200/80 bg-accent-50 px-2.5 py-1 text-[12px] font-semibold capitalize text-accent-800 dark:border-accent-400/20 dark:bg-accent-400/10 dark:text-accent-200">
+              <span class="size-1.5 rounded-full bg-accent-500" />
               {{ statusLabel }}
             </span>
           </div>
@@ -631,35 +631,35 @@ const whatsappVerified = computed(() =>
             </div>
             <div class="flex justify-between gap-2">
               <dt class="font-medium text-ink-900/55">Owner email</dt>
-              <dd class="font-semibold" :class="user?.email_verified ? 'text-emerald-700 dark:text-emerald-300' : 'text-amber-700 dark:text-amber-300'">
+              <dd class="font-semibold" :class="user?.email_verified ? 'text-success-700 dark:text-success-200' : 'text-accent-700 dark:text-accent-300'">
                 {{ user?.email_verified ? 'Verified' : 'Unverified' }}
               </dd>
             </div>
           </dl>
         </div>
 
-        <div v-if="!user?.email_verified" class="rounded-2xl border border-amber-200/80 bg-gradient-to-br from-amber-50 to-orange-50/60 p-4 shadow-sm dark:border-amber-400/20 dark:from-amber-400/10 dark:to-orange-400/5">
-          <p class="flex items-center gap-1.5 text-[12px] font-semibold text-amber-900 dark:text-amber-100">
+        <div v-if="!user?.email_verified" class="rounded-2xl border border-accent-200/80 bg-gradient-to-br from-accent-50 to-accent-50/60 p-4 shadow-sm dark:border-accent-400/20 dark:from-accent-400/10 dark:to-accent-400/5">
+          <p class="flex items-center gap-1.5 text-[12px] font-semibold text-accent-800 dark:text-accent-100">
             <MailCheck :size="14" /> Verify your email
           </p>
-          <p class="mt-1.5 text-[11.5px] leading-relaxed text-amber-900/80 dark:text-amber-100/70">
+          <p class="mt-1.5 text-[11.5px] leading-relaxed text-accent-800/80 dark:text-accent-100/70">
             Use the development verification link below to confirm the owner email before
             submitting.
           </p>
-          <NuxtLink :to="verifyLink" class="mt-2 inline-block rounded-full bg-white/70 px-2.5 py-1 text-[11.5px] font-semibold text-amber-900 underline underline-offset-2 dark:bg-white/10 dark:text-amber-100">
+          <NuxtLink :to="verifyLink" class="mt-2 inline-block rounded-full bg-white/70 px-2.5 py-1 text-[11.5px] font-semibold text-accent-800 underline underline-offset-2 dark:bg-white/10 dark:text-accent-100">
             Open verification page
           </NuxtLink>
         </div>
 
         <div class="dash-soft rounded-2xl border p-4">
           <p class="flex items-center gap-1.5 text-[11.5px] font-semibold">
-            <CircleCheck :size="14" class="text-emerald-700 dark:text-emerald-300" />
+            <CircleCheck :size="14" class="text-success-700 dark:text-success-200" />
             What happens next?
           </p>
           <ol class="mt-2.5 space-y-2 text-[11.5px] leading-relaxed text-ink-900/65">
-            <li class="flex gap-2"><span class="flex size-4 shrink-0 items-center justify-center rounded-full bg-violet-100 text-[9px] font-bold text-violet-700 dark:bg-violet-400/15 dark:text-violet-200">1</span> We review your company profile and CAC business name.</li>
-            <li class="flex gap-2"><span class="flex size-4 shrink-0 items-center justify-center rounded-full bg-sky-100 text-[9px] font-bold text-sky-700 dark:bg-sky-400/15 dark:text-sky-200">2</span> Once verified, you can publish rates and receive bookings.</li>
-            <li class="flex gap-2"><span class="flex size-4 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-[9px] font-bold text-emerald-700 dark:bg-emerald-400/15 dark:text-emerald-200">3</span> Shipment tools arrive in the next development stage.</li>
+            <li class="flex gap-2"><span class="flex size-4 shrink-0 items-center justify-center rounded-full bg-brand-100 text-[9px] font-bold text-brand-700 dark:bg-brand-400/15 dark:text-brand-200">1</span> We review your company profile and CAC business name.</li>
+            <li class="flex gap-2"><span class="flex size-4 shrink-0 items-center justify-center rounded-full bg-brand-100 text-[9px] font-bold text-brand-700 dark:bg-brand-400/15 dark:text-brand-200">2</span> Once verified, you can publish rates and receive bookings.</li>
+            <li class="flex gap-2"><span class="flex size-4 shrink-0 items-center justify-center rounded-full bg-success-100 text-[9px] font-bold text-success-700 dark:bg-success-500/15 dark:text-success-200">3</span> Shipment tools arrive in the next development stage.</li>
           </ol>
         </div>
       </aside>

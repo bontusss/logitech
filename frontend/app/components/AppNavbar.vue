@@ -37,7 +37,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
           v-for="link in links"
           :key="link.to"
           :to="link.to"
-          class="rounded-full px-3 py-2 text-[13px] font-medium text-ink-900/60 transition hover:bg-brand-50/70 hover:text-brand-700 dark:hover:bg-white/5"
+          class="rounded-full px-3 py-2 text-[13px] font-medium text-ink-900/65 transition hover:bg-brand-50 hover:text-ink-900 dark:hover:bg-white/5"
         >
           {{ link.label }}
         </NuxtLink>
@@ -48,7 +48,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
         <AppButton to="/login" variant="ghost">Sign in</AppButton>
         <NuxtLink
           to="/#rate-search"
-          class="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-brand-600 to-violet-600 px-4 py-2.5 text-[14px] font-semibold text-white shadow-[0_12px_26px_-16px_rgba(43,75,255,0.9)] transition hover:-translate-y-0.5 hover:shadow-[0_16px_30px_-16px_rgba(43,75,255,0.95)]"
+          class="inline-flex items-center gap-2 rounded-full bg-accent-500 px-4 py-2.5 text-[14px] font-semibold text-ink-950 shadow-[0_12px_26px_-16px_rgba(255,122,0,0.8)] transition hover:-translate-y-0.5 hover:bg-accent-400 hover:shadow-[0_16px_30px_-16px_rgba(255,122,0,0.9)]"
         >
           Compare rates
           <ArrowRight :size="15" />
@@ -59,7 +59,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
         <ThemeToggle />
         <button
           type="button"
-          class="flex size-10 items-center justify-center rounded-xl border border-ink-900/10 bg-white/70 text-ink-900 transition hover:bg-white dark:bg-white/5"
+          class="flex size-10 items-center justify-center rounded-xl border border-ink-900/12 bg-surface text-ink-900 transition hover:border-accent-500/40"
           :aria-expanded="open"
           aria-controls="mobile-menu"
           :aria-label="open ? 'Close menu' : 'Open menu'"

@@ -83,7 +83,7 @@ async function useAnotherAccount() {
     </div>
 
     <div v-else-if="!preview" class="rounded-2xl border border-ink-900/10 bg-canvas p-6 text-center dark:border-white/10 dark:bg-white/5">
-      <div class="mx-auto flex size-11 items-center justify-center rounded-2xl bg-amber-100 text-amber-700 dark:bg-amber-400/15 dark:text-amber-200">
+      <div class="mx-auto flex size-11 items-center justify-center rounded-2xl bg-accent-100 text-accent-700 dark:bg-accent-400/15 dark:text-accent-200">
         <CircleAlert :size="20" />
       </div>
       <h1 class="mt-3 text-[18px] font-semibold tracking-[-0.02em]">Invitation unavailable</h1>
@@ -96,18 +96,18 @@ async function useAnotherAccount() {
 
     <template v-else>
       <div class="text-center">
-        <span class="mx-auto flex size-12 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-600 to-violet-600 text-[15px] font-semibold text-white shadow-lg shadow-brand-600/25">
+        <span class="mx-auto flex size-12 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-600 to-brand-600 text-[15px] font-semibold text-white shadow-lg shadow-brand-600/25">
           {{ preview.company.name.slice(0, 1).toUpperCase() }}
         </span>
         <p class="mt-3 inline-flex items-center gap-1.5 text-[10px] font-bold tracking-[0.18em] text-brand-600 uppercase">
-          <span class="size-1.5 rounded-full bg-gradient-to-r from-brand-500 to-violet-500" />
+          <span class="size-1.5 rounded-full bg-gradient-to-r from-brand-500 to-brand-500" />
           Staff invitation
         </p>
         <h1 class="mt-1.5 text-[22px] font-semibold tracking-[-0.03em]">{{ preview.company.name }}</h1>
         <p class="mt-1 text-[12.5px] font-medium text-ink-900/60">has invited you to join their workspace</p>
       </div>
 
-      <div class="mt-5 rounded-2xl border border-ink-900/8 bg-gradient-to-br from-violet-50/50 to-cyan-50/40 p-4 dark:border-white/10 dark:from-violet-400/8 dark:to-cyan-400/5">
+      <div class="mt-5 rounded-2xl border border-ink-900/8 bg-gradient-to-br from-brand-50/50 to-brand-50/40 p-4 dark:border-white/10 dark:from-brand-400/8 dark:to-brand-400/5">
         <dl class="space-y-2.5 text-[12px]">
           <div class="flex items-start justify-between gap-3">
             <dt class="flex items-center gap-1.5 text-ink-900/60"><MailCheck :size="13" /> Invited email</dt>
@@ -139,7 +139,7 @@ async function useAnotherAccount() {
         <button
           type="button"
           :disabled="accepting"
-          class="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-brand-600 to-violet-600 px-4 py-3 text-[13px] font-semibold text-white shadow-[0_12px_26px_-16px_rgba(43,75,255,0.9)] transition hover:-translate-y-0.5 disabled:translate-y-0 disabled:opacity-60"
+          class="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-brand-600 to-brand-600 px-4 py-3 text-[13px] font-semibold text-white shadow-[0_12px_26px_-16px_rgba(43,75,255,0.9)] transition hover:-translate-y-0.5 disabled:translate-y-0 disabled:opacity-60"
           @click="accept"
         >
           <Loader2 v-if="accepting" :size="15" class="animate-spin" />
@@ -153,7 +153,7 @@ async function useAnotherAccount() {
 
       <!-- Existing account that needs to sign in -->
       <div v-else-if="preview.invitation.account_exists" class="mt-4">
-        <p class="mb-3 rounded-xl border border-brand-200/60 bg-gradient-to-br from-brand-50 to-violet-50/60 px-3 py-2.5 text-[11.5px] leading-relaxed text-brand-800 dark:border-brand-400/20 dark:from-brand-400/10 dark:to-violet-400/5 dark:text-indigo-200">
+        <p class="mb-3 rounded-xl border border-brand-200/60 bg-gradient-to-br from-brand-50 to-brand-50/60 px-3 py-2.5 text-[11.5px] leading-relaxed text-brand-700 dark:border-brand-400/20 dark:from-brand-400/10 dark:to-brand-400/5 dark:text-brand-200">
           This email already has a BOL account. Sign in with that account to accept the invitation.
         </p>
         <AppButton :to="signInLink" block size="md">
@@ -192,7 +192,7 @@ async function useAnotherAccount() {
         <button
           type="submit"
           :disabled="accepting"
-          class="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-brand-600 to-violet-600 px-4 py-3 text-[13px] font-semibold text-white shadow-[0_12px_26px_-16px_rgba(43,75,255,0.9)] transition hover:-translate-y-0.5 disabled:translate-y-0 disabled:opacity-60"
+          class="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-brand-600 to-brand-600 px-4 py-3 text-[13px] font-semibold text-white shadow-[0_12px_26px_-16px_rgba(43,75,255,0.9)] transition hover:-translate-y-0.5 disabled:translate-y-0 disabled:opacity-60"
         >
           <Loader2 v-if="accepting" :size="15" class="animate-spin" />
           <CircleCheck v-else :size="15" />

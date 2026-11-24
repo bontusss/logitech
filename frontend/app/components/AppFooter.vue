@@ -50,8 +50,8 @@ const socials = [
 
 <template>
   <footer id="contact" class="relative border-t border-white/10 bg-ink-950 text-white">
-    <div aria-hidden="true" class="h-px w-full bg-gradient-to-r from-transparent via-brand-500/50 to-transparent" />
-    <div aria-hidden="true" class="pointer-events-none absolute -top-24 right-10 size-72 rounded-full bg-brand-500/10 blur-3xl" />
+    <div aria-hidden="true" class="h-px w-full bg-gradient-to-r from-transparent via-accent-500/70 to-transparent" />
+    <div aria-hidden="true" class="pointer-events-none absolute -top-24 right-10 size-72 rounded-full bg-accent-500/10 blur-3xl" />
     <div class="relative mx-auto max-w-[1200px] px-5 py-14 sm:px-8">
       <div class="grid gap-12 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,2fr)]">
         <div>
@@ -83,7 +83,7 @@ const socials = [
               :key="social.label"
               :href="social.to"
               :aria-label="`${social.label} (placeholder)`"
-              class="flex size-9 items-center justify-center rounded-xl border border-white/12 bg-white/5 text-white/50 transition hover:-translate-y-0.5 hover:border-brand-400/40 hover:bg-brand-500/15 hover:text-white"
+              class="flex size-9 items-center justify-center rounded-xl border border-white/12 bg-white/5 text-white/50 transition hover:-translate-y-0.5 hover:border-accent-500/50 hover:bg-accent-500/15 hover:text-white"
             >
               <component :is="social.icon" :size="15" />
             </a>
@@ -93,7 +93,7 @@ const socials = [
         <div class="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
           <div v-for="column in columns" :key="column.title">
             <p class="flex items-center gap-2 text-[10.5px] font-semibold tracking-[0.2em] text-white/40 uppercase">
-              <span class="h-px w-3 rounded-full bg-brand-400/70" />
+              <span class="h-px w-3 rounded-full bg-accent-500" />
               {{ column.title }}
             </p>
             <ul class="mt-4 space-y-2.5">

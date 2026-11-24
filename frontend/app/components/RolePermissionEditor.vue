@@ -105,7 +105,7 @@ function permissionLabel(key: string) {
   <div class="space-y-4">
     <div class="dash-panel flex flex-wrap items-start justify-between gap-3 rounded-2xl border p-5">
       <div class="flex items-start gap-3">
-        <span class="flex size-9 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700 dark:bg-emerald-400/15 dark:text-emerald-200">
+        <span class="flex size-9 shrink-0 items-center justify-center rounded-xl bg-success-100 text-success-700 dark:bg-success-500/15 dark:text-success-200">
           <ShieldCheck :size="16" />
         </span>
         <div>
@@ -119,7 +119,7 @@ function permissionLabel(key: string) {
       <button
         v-if="canManage"
         type="button"
-        class="inline-flex items-center gap-1.5 rounded-lg bg-brand-600 px-3.5 py-2 text-[12px] font-semibold text-white shadow-sm shadow-brand-600/20 transition hover:bg-brand-700"
+        class="inline-flex items-center gap-1.5 rounded-lg bg-accent-500 px-3.5 py-2 text-[12px] font-semibold text-ink-950 shadow-sm shadow-accent-500/20 transition hover:bg-accent-400"
         @click="startCreate"
       >
         <Plus :size="14" /> New role
@@ -128,7 +128,7 @@ function permissionLabel(key: string) {
 
     <form
       v-if="creating || editing"
-      class="rounded-2xl border border-violet-200/70 bg-gradient-to-br from-violet-50/70 via-white to-cyan-50/40 p-5 dark:border-violet-400/20 dark:from-violet-400/10 dark:via-transparent dark:to-cyan-400/5"
+      class="rounded-2xl border border-brand-200/70 bg-gradient-to-br from-brand-50/70 via-white to-brand-50/40 p-5 dark:border-brand-400/20 dark:from-brand-400/10 dark:via-transparent dark:to-brand-400/5"
       @submit.prevent="submit"
     >
       <div class="flex items-start justify-between gap-3">
@@ -188,7 +188,7 @@ function permissionLabel(key: string) {
         <button type="button" class="rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-[12px] font-medium transition hover:bg-slate-50" @click="reset">
           Cancel
         </button>
-        <button type="submit" class="rounded-lg bg-brand-500 px-4 py-2 text-[12px] font-semibold text-white transition hover:bg-brand-600">
+        <button type="submit" class="rounded-lg bg-accent-500 px-4 py-2 text-[12px] font-semibold text-ink-950 transition hover:bg-accent-500">
           {{ editing ? 'Save role' : 'Create role' }}
         </button>
       </div>
@@ -201,8 +201,8 @@ function permissionLabel(key: string) {
             <span
               class="flex size-8 shrink-0 items-center justify-center rounded-lg"
               :class="role.key === 'owner'
-                ? 'bg-amber-100 text-amber-700 dark:bg-amber-400/15 dark:text-amber-200'
-                : 'bg-gradient-to-br from-violet-100 to-sky-50 text-violet-700 dark:from-violet-400/15 dark:to-sky-400/10 dark:text-violet-200'"
+                ? 'bg-accent-100 text-accent-700 dark:bg-accent-400/15 dark:text-accent-200'
+                : 'bg-gradient-to-br from-brand-100 to-brand-50 text-brand-700 dark:from-brand-400/15 dark:to-brand-400/10 dark:text-brand-200'"
             >
               <ShieldCheck :size="15" />
             </span>

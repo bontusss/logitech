@@ -69,8 +69,8 @@ async function removeRole(role: Role) {
 <template>
   <div class="dash-page">
     <header class="dash-hero relative overflow-hidden rounded-2xl border p-5 sm:p-6">
-      <div class="pointer-events-none absolute -top-16 right-10 size-44 rounded-full bg-fuchsia-400/15 blur-3xl" />
-      <div class="pointer-events-none absolute -right-8 -bottom-24 size-52 rounded-full bg-cyan-400/15 blur-3xl" />
+      <div class="pointer-events-none absolute -top-16 right-10 size-44 rounded-full bg-accent-400/15 blur-3xl" />
+      <div class="pointer-events-none absolute -right-8 -bottom-24 size-52 rounded-full bg-brand-400/15 blur-3xl" />
       <div class="relative flex flex-wrap items-start justify-between gap-4">
         <div>
           <p class="dash-eyebrow inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-semibold tracking-wide">

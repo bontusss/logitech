@@ -705,7 +705,7 @@ const bookingCode = computed(() => bookingReference.value
       />
       <div class="absolute inset-0 -z-10" :style="{ background: `linear-gradient(115deg, ${secondary} 5%, ${primary} 145%)`, opacity: 0.96 }" />
       <div class="pointer-events-none absolute -top-24 right-16 -z-10 size-56 rounded-full bg-white/15 blur-3xl" />
-      <div class="pointer-events-none absolute -bottom-28 -left-10 -z-10 size-60 rounded-full bg-cyan-300/20 blur-3xl" />
+      <div class="pointer-events-none absolute -bottom-28 -left-10 -z-10 size-60 rounded-full bg-brand-300/20 blur-3xl" />
       <div class="mx-auto flex max-w-6xl items-center justify-between gap-4 px-5 py-5 sm:px-8 sm:py-6">
         <div class="flex min-w-0 items-center gap-3">
           <div
@@ -718,7 +718,7 @@ const bookingCode = computed(() => bookingReference.value
           <div class="min-w-0 text-white">
             <p class="flex items-center gap-1 truncate text-[14px] font-bold tracking-tight">
               {{ displayName }}
-              <BadgeCheck v-if="data?.company.verified_at" :size="13" class="shrink-0 text-emerald-300" />
+              <BadgeCheck v-if="data?.company.verified_at" :size="13" class="shrink-0 text-success-200" />
             </p>
             <p class="mt-0.5 flex items-center gap-1 truncate text-[11px] text-white/65">
               <MapPin :size="11" class="shrink-0" /> {{ location || 'Local delivery, made simple' }}
@@ -745,7 +745,7 @@ const bookingCode = computed(() => bookingReference.value
         v-else-if="pageLoadError || !data || !company"
         class="booking-panel mx-auto mt-8 max-w-2xl rounded-3xl border p-8 text-center sm:p-12"
       >
-        <span class="mx-auto flex size-14 items-center justify-center rounded-2xl bg-gradient-to-br from-rose-100 to-orange-50 text-rose-600 shadow-sm"><CircleAlert :size="24" /></span>
+        <span class="mx-auto flex size-14 items-center justify-center rounded-2xl bg-gradient-to-br from-red-100 to-accent-50 text-red-600 shadow-sm"><CircleAlert :size="24" /></span>
         <h1 class="mt-4 text-xl font-bold tracking-tight">This booking page isn’t available</h1>
         <p class="mx-auto mt-2 max-w-sm text-sm leading-6 text-slate-500">The link may have changed. Please check with the business that shared it.</p>
         <NuxtLink to="/" class="mt-6 inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold text-white" :style="{ backgroundColor: primary }">
@@ -772,13 +772,13 @@ const bookingCode = computed(() => bookingReference.value
               <div class="grid gap-5 p-4 sm:p-5 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
                 <div class="min-w-0">
                   <div class="flex flex-wrap items-center gap-1.5">
-                    <span class="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[9.5px] font-semibold text-emerald-700">
+                    <span class="inline-flex items-center gap-1 rounded-full border border-success-200 bg-success-50 px-2 py-0.5 text-[9.5px] font-semibold text-success-700">
                       <BadgeCheck :size="12" /> Verified provider
                     </span>
-                    <span class="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[9.5px] font-semibold text-amber-700">
-                      <Star :size="11" class="fill-amber-500 text-amber-500" />
+                    <span class="inline-flex items-center gap-1 rounded-full border border-accent-200 bg-accent-50 px-2 py-0.5 text-[9.5px] font-semibold text-accent-700">
+                      <Star :size="11" class="fill-accent-500 text-accent-500" />
                       {{ averageRating }}
-                      <span class="font-normal text-amber-700/80">
+                      <span class="font-normal text-accent-700/80">
                         {{ reviewSummary.review_count
                           ? `(${reviewSummary.review_count} review${reviewSummary.review_count === 1 ? '' : 's'})`
                           : 'no reviews yet' }}
@@ -928,7 +928,7 @@ const bookingCode = computed(() => bookingReference.value
                             v-for="index in 5"
                             :key="index"
                             :size="11"
-                            :class="index <= Math.round(reviewSummary.average_rating) ? 'fill-amber-500 text-amber-500' : 'text-slate-300'"
+                            :class="index <= Math.round(reviewSummary.average_rating) ? 'fill-accent-500 text-accent-500' : 'text-slate-300'"
                           />
                         </span>
                         <span class="font-semibold text-slate-700">{{ averageRating }}</span>
@@ -947,10 +947,10 @@ const bookingCode = computed(() => bookingReference.value
                   </button>
                 </div>
 
-                <p v-if="reviewError" role="alert" class="mt-2.5 flex items-start gap-1.5 rounded-lg border border-rose-200 bg-rose-50 px-2.5 py-2 text-[10.5px] text-rose-700">
+                <p v-if="reviewError" role="alert" class="mt-2.5 flex items-start gap-1.5 rounded-lg border border-red-200 bg-red-50 px-2.5 py-2 text-[10.5px] text-red-700">
                   <CircleAlert :size="12" class="mt-0.5 shrink-0" />{{ reviewError }}
                 </p>
-                <p v-if="reviewSuccess" role="status" class="mt-2.5 flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-2 text-[10.5px] text-emerald-700">
+                <p v-if="reviewSuccess" role="status" class="mt-2.5 flex items-center gap-1.5 rounded-lg border border-success-200 bg-success-50 px-2.5 py-2 text-[10.5px] text-success-700">
                   <CheckCircle2 :size="12" /> Thanks! Your review is now live.
                 </p>
 
@@ -984,7 +984,7 @@ const bookingCode = computed(() => bookingReference.value
                       >
                         <Star
                           :size="20"
-                          :class="value <= (hoverRating || reviewForm.rating) ? 'fill-amber-500 text-amber-500' : 'text-slate-300'"
+                          :class="value <= (hoverRating || reviewForm.rating) ? 'fill-accent-500 text-accent-500' : 'text-slate-300'"
                         />
                       </button>
                     </div>
@@ -1024,7 +1024,7 @@ const bookingCode = computed(() => bookingReference.value
                           v-for="index in 5"
                           :key="index"
                           :size="9"
-                          :class="index <= review.rating ? 'fill-amber-500 text-amber-500' : 'text-slate-200'"
+                          :class="index <= review.rating ? 'fill-accent-500 text-accent-500' : 'text-slate-200'"
                         />
                       </span>
                     </div>
@@ -1062,14 +1062,14 @@ const bookingCode = computed(() => bookingReference.value
               </div>
             </div>
 
-            <div v-if="error" role="alert" class="mb-4 flex items-start gap-2 rounded-xl border border-rose-200 bg-rose-50 px-3.5 py-3 text-[12px] leading-5 text-rose-700">
+            <div v-if="error" role="alert" class="mb-4 flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 px-3.5 py-3 text-[12px] leading-5 text-red-700">
               <CircleAlert :size="15" class="mt-0.5 shrink-0" /> {{ error }}
             </div>
 
             <div v-if="currentStep === 0" class="booking-panel rounded-3xl border p-4 sm:p-6">
               <div class="flex items-start justify-between gap-3">
                 <div class="flex items-start gap-3">
-                  <span class="booking-icon-tile flex size-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-sky-100 to-cyan-50 text-sky-700 dark:from-sky-400/15 dark:to-cyan-400/10 dark:text-sky-200"><MapPin :size="18" /></span>
+                  <span class="booking-icon-tile flex size-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-brand-100 to-brand-50 text-brand-700 dark:from-brand-400/15 dark:to-brand-400/10 dark:text-brand-200"><MapPin :size="18" /></span>
                   <div>
                     <h2 class="text-[16px] font-bold tracking-tight">Where are we going?</h2>
                     <p class="mt-1 text-[11.5px] leading-5 text-slate-500">Choose a provider route or pin exact pickup and drop-off places.</p>
@@ -1078,7 +1078,7 @@ const bookingCode = computed(() => bookingReference.value
                 <span class="hidden shrink-0 rounded-full bg-slate-100 px-2 py-1 text-[9px] font-semibold tracking-wide text-slate-500 uppercase sm:inline dark:bg-white/10 dark:text-slate-300">Step 1 of 5</span>
               </div>
 
-              <div v-if="routeLoadError" role="status" class="mt-4 rounded-xl bg-amber-50 px-3 py-2.5 text-[11px] text-amber-800">
+              <div v-if="routeLoadError" role="status" class="mt-4 rounded-xl bg-accent-50 px-3 py-2.5 text-[11px] text-accent-800">
                 We couldn’t load the provider’s routes. You can still enter the locations manually.
               </div>
               <div v-if="routes.length" class="booking-soft mt-5 grid grid-cols-2 gap-1 rounded-xl border p-1">
@@ -1109,7 +1109,7 @@ const bookingCode = computed(() => bookingReference.value
                   :style="form.selectedRouteId === providerRoute.id ? { borderColor: primary, backgroundColor: `${primary}08`, boxShadow: `0 0 0 1px ${primary}` } : {}"
                   @click="selectRoute(providerRoute)"
                 >
-                  <span class="flex size-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-sky-100 to-cyan-50 text-sky-700 dark:from-sky-400/15 dark:to-cyan-400/10 dark:text-sky-200"><MapPin :size="16" /></span>
+                  <span class="flex size-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-brand-100 to-brand-50 text-brand-700 dark:from-brand-400/15 dark:to-brand-400/10 dark:text-brand-200"><MapPin :size="16" /></span>
                   <span class="min-w-0 flex-1">
                     <span class="block text-[12px] font-bold">{{ providerRoute.origin_city }}, {{ providerRoute.origin_state }} <span class="mx-1 text-slate-400">→</span> {{ providerRoute.destination_city }}, {{ providerRoute.destination_state }}</span>
                     <span class="mt-1 block text-[10px] text-slate-600">{{ providerRoute.distance_km }} km · {{ formatCurrency(Math.min(...[providerRoute.standard_price_per_km_minor, providerRoute.express_price_per_km_minor, providerRoute.same_day_price_per_km_minor].filter((price): price is number => price !== null)), providerRoute.currency) }}/km from</span>
@@ -1123,7 +1123,7 @@ const bookingCode = computed(() => bookingReference.value
                 <div class="h-px bg-slate-200 dark:bg-white/10" />
                 <BookingLocationField v-model="form.dropoff" label="Drop-off location" />
               </div>
-              <div v-if="!routes.length && !routeLoadError" class="mt-4 flex items-start gap-2 rounded-xl bg-blue-50 px-3 py-2.5 text-[10.5px] leading-5 text-blue-800">
+              <div v-if="!routes.length && !routeLoadError" class="mt-4 flex items-start gap-2 rounded-xl bg-brand-50 px-3 py-2.5 text-[10.5px] leading-5 text-brand-700">
                 <BadgeCheck :size="14" class="mt-0.5 shrink-0" /> Search and select a Mapbox suggestion to verify each map pin.
               </div>
               <div v-if="routeMode === 'route' && routeSelected" class="booking-soft mt-4 rounded-2xl border p-3.5 sm:p-4">
@@ -1153,17 +1153,17 @@ const bookingCode = computed(() => bookingReference.value
             <div v-else-if="currentStep === 1" class="booking-panel rounded-3xl border p-4 sm:p-6">
               <div class="flex items-start justify-between gap-3">
                 <div class="flex items-start gap-3">
-                  <span class="booking-icon-tile flex size-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-amber-100 to-orange-50 text-amber-700 dark:from-amber-400/15 dark:to-orange-400/10 dark:text-amber-200"><Package :size="18" /></span>
+                  <span class="booking-icon-tile flex size-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-accent-100 to-accent-50 text-accent-700 dark:from-accent-400/15 dark:to-accent-400/10 dark:text-accent-200"><Package :size="18" /></span>
                   <div><h2 class="text-[16px] font-bold tracking-tight">Tell us about the package</h2><p class="mt-1 text-[11.5px] text-slate-500">A little detail helps the team handle it with care.</p></div>
                 </div>
                 <span class="hidden shrink-0 rounded-full bg-slate-100 px-2 py-1 text-[9px] font-semibold tracking-wide text-slate-500 uppercase sm:inline dark:bg-white/10 dark:text-slate-300">Step 2 of 5</span>
               </div>
               <fieldset class="mt-5">
                 <legend class="mb-2.5 text-[11px] font-semibold text-slate-700">What are you sending?</legend>
-                <p v-if="prohibitedCategoryLabels.length" class="mb-2.5 rounded-lg bg-rose-50 px-2.5 py-2 text-[10px] leading-4 text-rose-700">
+                <p v-if="prohibitedCategoryLabels.length" class="mb-2.5 rounded-lg bg-red-50 px-2.5 py-2 text-[10px] leading-4 text-red-700">
                   This provider cannot move: {{ prohibitedCategoryLabels.join(', ') }}.
                 </p>
-                <p v-if="!availableCategoryOptions.length" class="mb-2.5 rounded-lg bg-amber-50 px-2.5 py-2 text-[10px] leading-4 text-amber-800">
+                <p v-if="!availableCategoryOptions.length" class="mb-2.5 rounded-lg bg-accent-50 px-2.5 py-2 text-[10px] leading-4 text-accent-800">
                   This provider has not published an acceptable item category. Contact them before booking.
                 </p>
                 <div class="grid grid-cols-2 gap-2 sm:grid-cols-3">
@@ -1204,9 +1204,9 @@ const bookingCode = computed(() => bookingReference.value
               </label>
               <div class="mt-4">
                 <p class="mb-1.5 text-[11px] font-semibold text-slate-700">Package photo <span class="font-normal text-slate-400">· optional</span></p>
-                <div v-if="form.photoUrl" class="flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-2.5">
+                <div v-if="form.photoUrl" class="flex items-center gap-3 rounded-xl border border-success-200 bg-success-50 p-2.5">
                   <img :src="form.photoUrl" alt="Package photo preview" class="size-14 rounded-lg object-cover" />
-                  <div class="min-w-0 flex-1"><p class="text-[11px] font-semibold text-emerald-800">Photo added</p><p class="text-[9.5px] text-emerald-700">Stored securely with Cloudinary</p></div>
+                  <div class="min-w-0 flex-1"><p class="text-[11px] font-semibold text-success-700">Photo added</p><p class="text-[9.5px] text-success-700">Stored securely with Cloudinary</p></div>
                   <button type="button" aria-label="Remove photo" class="rounded-lg p-2 text-slate-500 hover:bg-white" @click="form.photoUrl = ''"><X :size="15" /></button>
                 </div>
                 <label v-else class="booking-soft flex cursor-pointer items-center gap-3 rounded-xl border border-dashed border-slate-300 px-3.5 py-3 transition hover:border-[var(--booking-primary)]">
@@ -1220,7 +1220,7 @@ const bookingCode = computed(() => bookingReference.value
             <div v-else-if="currentStep === 2" class="booking-panel rounded-3xl border p-4 sm:p-6">
               <div class="flex items-start justify-between gap-3">
                 <div class="flex items-start gap-3">
-                  <span class="booking-icon-tile flex size-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-violet-100 to-fuchsia-50 text-violet-700 dark:from-violet-400/15 dark:to-fuchsia-400/10 dark:text-violet-200"><UserRound :size="18" /></span>
+                  <span class="booking-icon-tile flex size-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-brand-100 to-accent-50 text-brand-700 dark:from-brand-400/15 dark:to-accent-400/10 dark:text-brand-200"><UserRound :size="18" /></span>
                   <div><h2 class="text-[16px] font-bold tracking-tight">Who’s sending and receiving?</h2><p class="mt-1 text-[11.5px] text-slate-500">We’ll use these details to coordinate your delivery.</p></div>
                 </div>
                 <span class="hidden shrink-0 rounded-full bg-slate-100 px-2 py-1 text-[9px] font-semibold tracking-wide text-slate-500 uppercase sm:inline dark:bg-white/10 dark:text-slate-300">Step 3 of 5</span>
@@ -1231,8 +1231,8 @@ const bookingCode = computed(() => bookingReference.value
                   <label class="mb-3 block"><span class="mb-1 block text-[10px] font-semibold text-slate-600">Full name</span><input v-model="form.senderName" maxlength="120" autocomplete="name" placeholder="Your name" class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-[12px] outline-none focus:border-[var(--booking-primary)]" /></label>
                   <label class="block"><span class="mb-1 block text-[10px] font-semibold text-slate-600">Phone number</span><input v-model="form.senderPhone" maxlength="30" type="tel" autocomplete="tel" placeholder="+234 800 000 0000" class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-[12px] outline-none focus:border-[var(--booking-primary)]" /></label>
                 </section>
-                <section class="rounded-2xl border border-rose-200/70 bg-gradient-to-br from-rose-50 to-orange-50/50 p-3.5 sm:p-4 dark:border-rose-400/20 dark:from-rose-400/10 dark:to-orange-400/5">
-                  <p class="mb-3 inline-flex items-center gap-1.5 text-[11px] font-bold text-rose-700 dark:text-rose-200"><MapPin :size="13" /> Receiver</p>
+                <section class="rounded-2xl border border-red-200/70 bg-gradient-to-br from-red-50 to-accent-50/50 p-3.5 sm:p-4 dark:border-red-400/20 dark:from-red-400/10 dark:to-accent-400/5">
+                  <p class="mb-3 inline-flex items-center gap-1.5 text-[11px] font-bold text-red-700 dark:text-red-200"><MapPin :size="13" /> Receiver</p>
                   <label class="mb-3 block"><span class="mb-1 block text-[10px] font-semibold text-slate-600">Full name</span><input v-model="form.receiverName" maxlength="120" autocomplete="name" placeholder="Who should receive it?" class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-[12px] outline-none focus:border-[var(--booking-primary)]" /></label>
                   <label class="block"><span class="mb-1 block text-[10px] font-semibold text-slate-600">Phone number</span><input v-model="form.receiverPhone" maxlength="30" type="tel" placeholder="+234 800 000 0000" class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-[12px] outline-none focus:border-[var(--booking-primary)]" /></label>
                 </section>
@@ -1242,22 +1242,22 @@ const bookingCode = computed(() => bookingReference.value
             <div v-else-if="currentStep === 3 && !bookingReference" class="booking-panel rounded-3xl border p-4 sm:p-6">
               <div class="flex items-start justify-between gap-3">
                 <div class="flex items-start gap-3">
-                  <span class="booking-icon-tile flex size-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-100 to-teal-50 text-emerald-700 dark:from-emerald-400/15 dark:to-teal-400/10 dark:text-emerald-200"><CheckCircle2 :size="18" /></span>
+                  <span class="booking-icon-tile flex size-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-success-100 to-success-50 text-success-700 dark:from-success-500/15 dark:to-success-500/10 dark:text-success-200"><CheckCircle2 :size="18" /></span>
                   <div><h2 class="text-[16px] font-bold tracking-tight">Everything look right?</h2><p class="mt-1 text-[11.5px] text-slate-500">Review your details before sending this booking request.</p></div>
                 </div>
                 <span class="hidden shrink-0 rounded-full bg-slate-100 px-2 py-1 text-[9px] font-semibold tracking-wide text-slate-500 uppercase sm:inline dark:bg-white/10 dark:text-slate-300">Step 4 of 5</span>
               </div>
               <div class="mt-5 space-y-3">
-                <section class="rounded-2xl border border-sky-200/60 bg-gradient-to-br from-sky-50 to-cyan-50/60 p-3.5 dark:border-sky-400/20 dark:from-sky-400/10 dark:to-cyan-400/5">
-                  <p class="text-[9px] font-bold tracking-[0.14em] text-sky-700/70 uppercase dark:text-sky-200/70">Route</p>
+                <section class="rounded-2xl border border-brand-200/60 bg-gradient-to-br from-brand-50 to-brand-50/60 p-3.5 dark:border-brand-400/20 dark:from-brand-400/10 dark:to-brand-400/5">
+                  <p class="text-[9px] font-bold tracking-[0.14em] text-brand-700/70 uppercase dark:text-brand-200/70">Route</p>
                   <div class="mt-2 grid gap-2 text-[11px] sm:grid-cols-2">
-                    <p class="flex gap-2"><MapPin :size="13" class="mt-0.5 shrink-0 text-emerald-600" /><span><b>Pickup</b><br />{{ pickupText }}</span></p>
-                    <p class="flex gap-2"><MapPin :size="13" class="mt-0.5 shrink-0 text-rose-600" /><span><b>Drop-off</b><br />{{ dropoffText }}</span></p>
+                    <p class="flex gap-2"><MapPin :size="13" class="mt-0.5 shrink-0 text-success-600" /><span><b>Pickup</b><br />{{ pickupText }}</span></p>
+                    <p class="flex gap-2"><MapPin :size="13" class="mt-0.5 shrink-0 text-red-600" /><span><b>Drop-off</b><br />{{ dropoffText }}</span></p>
                   </div>
-                  <p v-if="routeMode === 'map'" class="mt-2 text-[9px] font-medium text-emerald-700">Both locations have verified map pins.</p>
+                  <p v-if="routeMode === 'map'" class="mt-2 text-[9px] font-medium text-success-700">Both locations have verified map pins.</p>
                 </section>
-                <section class="rounded-2xl border border-amber-200/60 bg-gradient-to-br from-amber-50 to-orange-50/60 p-3.5 dark:border-amber-400/20 dark:from-amber-400/10 dark:to-orange-400/5">
-                  <p class="text-[9px] font-bold tracking-[0.14em] text-amber-700/70 uppercase dark:text-amber-200/70">Package</p>
+                <section class="rounded-2xl border border-accent-200/60 bg-gradient-to-br from-accent-50 to-accent-50/60 p-3.5 dark:border-accent-400/20 dark:from-accent-400/10 dark:to-accent-400/5">
+                  <p class="text-[9px] font-bold tracking-[0.14em] text-accent-700/70 uppercase dark:text-accent-200/70">Package</p>
                   <div class="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2 text-[11px]">
                     <span class="font-semibold">{{ availableCategoryOptions.find((item) => item.value === form.category)?.label }}</span>
                     <span>{{ form.weightKg }} kg</span>
@@ -1266,23 +1266,23 @@ const bookingCode = computed(() => bookingReference.value
                   <p v-if="form.instructions" class="mt-2 text-[10.5px] leading-5 text-slate-500">{{ form.instructions }}</p>
                   <img v-if="form.photoUrl" :src="form.photoUrl" alt="Package" class="mt-3 h-24 w-28 rounded-xl object-cover" />
                 </section>
-                <section class="rounded-2xl border border-violet-200/60 bg-gradient-to-br from-violet-50 to-fuchsia-50/50 p-3.5 dark:border-violet-400/20 dark:from-violet-400/10 dark:to-fuchsia-400/5">
-                  <p class="text-[9px] font-bold tracking-[0.14em] text-violet-700/70 uppercase dark:text-violet-200/70">People</p>
+                <section class="rounded-2xl border border-brand-200/60 bg-gradient-to-br from-brand-50 to-accent-50/50 p-3.5 dark:border-brand-400/20 dark:from-brand-400/10 dark:to-accent-400/5">
+                  <p class="text-[9px] font-bold tracking-[0.14em] text-brand-700/70 uppercase dark:text-brand-200/70">People</p>
                   <div class="mt-2 grid gap-2 text-[11px] sm:grid-cols-2">
                     <p><b>{{ form.senderName }}</b><br /><span class="text-slate-500">{{ form.senderPhone }} · Sender</span></p>
                     <p><b>{{ form.receiverName }}</b><br /><span class="text-slate-500">{{ form.receiverPhone }} · Receiver</span></p>
                   </div>
                 </section>
               </div>
-              <div class="mt-4 flex items-start gap-2 rounded-2xl border border-amber-200/70 bg-gradient-to-br from-amber-50 via-white to-emerald-50/60 p-3.5 dark:border-amber-400/20 dark:from-amber-400/10 dark:via-transparent dark:to-emerald-400/5">
-                <span class="flex size-6 shrink-0 items-center justify-center rounded-lg bg-white text-amber-700 shadow-sm dark:bg-white/10 dark:text-amber-200">
+              <div class="mt-4 flex items-start gap-2 rounded-2xl border border-accent-200/70 bg-gradient-to-br from-accent-50 via-white to-success-50/60 p-3.5 dark:border-accent-400/20 dark:from-accent-400/10 dark:via-transparent dark:to-success-500/5">
+                <span class="flex size-6 shrink-0 items-center justify-center rounded-lg bg-white text-accent-700 shadow-sm dark:bg-white/10 dark:text-accent-200">
                   <Sparkles :size="13" />
                 </span>
-                <p v-if="estimatedDeliveryPrice !== null" class="text-[10.5px] leading-5 text-emerald-900 dark:text-emerald-200">
+                <p v-if="estimatedDeliveryPrice !== null" class="text-[10.5px] leading-5 text-success-700 dark:text-success-200">
                   <b>{{ serviceLabels[form.deliverySpeed] }} delivery: {{ formatMoney(estimatedDeliveryPrice) }} for {{ routeSelected?.distance_km }} km.</b>
                   Calculated from the provider’s published per-kilometre rate and minimum charge.
                 </p>
-                <p v-else class="text-[10.5px] leading-5 text-amber-900 dark:text-amber-200">
+                <p v-else class="text-[10.5px] leading-5 text-accent-800 dark:text-accent-200">
                   <b>Delivery fee: confirmed by {{ displayName }}.</b>
                   There isn’t a published rate for this package weight. They’ll confirm the amount with you before dispatch.
                 </p>
@@ -1291,21 +1291,21 @@ const bookingCode = computed(() => bookingReference.value
 
             <div
               v-else-if="currentStep === 4 && bookingReference"
-              class="relative overflow-hidden rounded-3xl border border-emerald-200/70 bg-gradient-to-br from-emerald-50 via-white to-cyan-50/60 px-4 py-8 sm:px-8 sm:py-10 dark:border-emerald-400/20 dark:from-emerald-400/10 dark:via-transparent dark:to-cyan-400/5"
+              class="relative overflow-hidden rounded-3xl border border-success-200/70 bg-gradient-to-br from-success-50 via-white to-brand-50/60 px-4 py-8 sm:px-8 sm:py-10 dark:border-success-500/20 dark:from-success-500/10 dark:via-transparent dark:to-brand-400/5"
             >
-              <div class="pointer-events-none absolute -top-16 right-0 size-44 rounded-full bg-emerald-300/25 blur-3xl" />
-              <div class="pointer-events-none absolute -bottom-20 -left-8 size-48 rounded-full bg-cyan-300/25 blur-3xl" />
+              <div class="pointer-events-none absolute -top-16 right-0 size-44 rounded-full bg-success-200/25 blur-3xl" />
+              <div class="pointer-events-none absolute -bottom-20 -left-8 size-48 rounded-full bg-brand-300/25 blur-3xl" />
               <div class="relative text-center">
-                <span class="booking-icon-tile mx-auto flex size-14 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-500 text-white shadow-lg"><CheckCircle2 :size="27" /></span>
-                <p class="mt-5 text-[10px] font-bold tracking-[0.16em] text-emerald-700 uppercase dark:text-emerald-200">Request received</p>
+                <span class="booking-icon-tile mx-auto flex size-14 items-center justify-center rounded-2xl bg-gradient-to-br from-success-500 to-success-500 text-white shadow-lg"><CheckCircle2 :size="27" /></span>
+                <p class="mt-5 text-[10px] font-bold tracking-[0.16em] text-success-700 uppercase dark:text-success-200">Request received</p>
                 <h2 class="mt-2 text-[clamp(1.45rem,3vw,2rem)] font-extrabold tracking-tight">You’re all set.</h2>
                 <p class="mx-auto mt-2 max-w-md text-[12px] leading-6 text-slate-500">
                   {{ displayName }} has your delivery request and will coordinate the pickup.
                   <template v-if="submittedPriceIsEstimate">They’ll confirm the delivery fee with you.</template>
                   <template v-else-if="submittedPriceMinor !== null">Your published {{ serviceLabels[form.deliverySpeed] }} price is {{ formatMoney(submittedPriceMinor) }}.</template>
                 </p>
-                <p class="mx-auto mt-4 inline-flex flex-wrap items-center justify-center gap-2 rounded-full border border-emerald-200/70 bg-white/80 px-4 py-2 font-mono text-[10.5px] font-bold text-slate-700 shadow-sm dark:border-emerald-400/20 dark:bg-white/10 dark:text-slate-100">
-                  Booking reference <span class="text-emerald-700 dark:text-emerald-200">{{ bookingCode }}</span>
+                <p class="mx-auto mt-4 inline-flex flex-wrap items-center justify-center gap-2 rounded-full border border-success-200/70 bg-white/80 px-4 py-2 font-mono text-[10.5px] font-bold text-slate-700 shadow-sm dark:border-success-500/20 dark:bg-white/10 dark:text-slate-100">
+                  Booking reference <span class="text-success-700 dark:text-success-200">{{ bookingCode }}</span>
                 </p>
               </div>
 
@@ -1314,7 +1314,7 @@ const bookingCode = computed(() => bookingReference.value
                   v-if="!bookingSavedToAccount"
                   class="rounded-2xl border border-white/70 bg-white/85 p-4 shadow-sm dark:border-white/10 dark:bg-white/5"
                 >
-                  <p class="inline-flex items-center gap-1.5 text-[10px] font-bold tracking-[0.14em] text-emerald-700 uppercase dark:text-emerald-200">
+                  <p class="inline-flex items-center gap-1.5 text-[10px] font-bold tracking-[0.14em] text-success-700 uppercase dark:text-success-200">
                     <UserPlus :size="13" /> Optional
                   </p>
                   <h3 class="mt-1.5 text-[13.5px] font-bold">Save this booking</h3>
@@ -1325,7 +1325,7 @@ const bookingCode = computed(() => bookingReference.value
                   <p
                     v-if="registerError"
                     role="alert"
-                    class="mt-3 flex items-start gap-1.5 rounded-lg border border-rose-200 bg-rose-50 px-2.5 py-2 text-[10.5px] leading-4 text-rose-700"
+                    class="mt-3 flex items-start gap-1.5 rounded-lg border border-red-200 bg-red-50 px-2.5 py-2 text-[10.5px] leading-4 text-red-700"
                   >
                     <CircleAlert :size="12" class="mt-0.5 shrink-0" />{{ registerError }}
                   </p>
@@ -1394,9 +1394,9 @@ const bookingCode = computed(() => bookingReference.value
 
                 <section
                   v-else
-                  class="rounded-2xl border border-emerald-200/70 bg-white/85 p-4 shadow-sm dark:border-emerald-400/20 dark:bg-white/5"
+                  class="rounded-2xl border border-success-200/70 bg-white/85 p-4 shadow-sm dark:border-success-500/20 dark:bg-white/5"
                 >
-                  <p class="inline-flex items-center gap-1.5 text-[10px] font-bold tracking-[0.14em] text-emerald-700 uppercase dark:text-emerald-200">
+                  <p class="inline-flex items-center gap-1.5 text-[10px] font-bold tracking-[0.14em] text-success-700 uppercase dark:text-success-200">
                     <CheckCircle2 :size="13" /> Saved
                   </p>
                   <h3 class="mt-1.5 text-[13.5px] font-bold">This booking is in your dashboard</h3>
@@ -1412,8 +1412,8 @@ const bookingCode = computed(() => bookingReference.value
                   </NuxtLink>
                 </section>
 
-                <section class="rounded-2xl border border-cyan-200/70 bg-white/85 p-4 shadow-sm dark:border-cyan-400/20 dark:bg-white/5">
-                  <p class="inline-flex items-center gap-1.5 text-[10px] font-bold tracking-[0.14em] text-cyan-700 uppercase dark:text-cyan-200">
+                <section class="rounded-2xl border border-brand-200/70 bg-white/85 p-4 shadow-sm dark:border-brand-400/20 dark:bg-white/5">
+                  <p class="inline-flex items-center gap-1.5 text-[10px] font-bold tracking-[0.14em] text-brand-700 uppercase dark:text-brand-200">
                     <MapPin :size="13" /> Track without an account
                   </p>
                   <h3 class="mt-1.5 text-[13.5px] font-bold">Your tracking link</h3>
@@ -1430,7 +1430,7 @@ const bookingCode = computed(() => bookingReference.value
                         class="inline-flex min-h-9 flex-1 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 text-[10.5px] font-semibold text-slate-700 transition hover:bg-slate-50"
                         @click="copyTrackingLink"
                       >
-                        <Check v-if="copiedTracking" :size="13" class="text-emerald-600" />
+                        <Check v-if="copiedTracking" :size="13" class="text-success-600" />
                         <Copy v-else :size="13" />
                         {{ copiedTracking ? 'Copied' : 'Copy link' }}
                       </button>
@@ -1442,7 +1442,7 @@ const bookingCode = computed(() => bookingReference.value
                         Open tracker <ArrowRight :size="12" />
                       </NuxtLink>
                     </div>
-                    <p v-if="copyError" class="mt-1.5 text-[9.5px] text-rose-600">{{ copyError }}</p>
+                    <p v-if="copyError" class="mt-1.5 text-[9.5px] text-red-600">{{ copyError }}</p>
                   </div>
                 </section>
               </div>
@@ -1498,12 +1498,12 @@ const bookingCode = computed(() => bookingReference.value
               <div class="p-4 sm:p-5">
                 <div class="space-y-3">
                   <div class="flex gap-2.5">
-                    <span class="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-400/15 dark:text-emerald-200"><MapPin :size="12" /></span>
+                    <span class="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-success-50 text-success-700 dark:bg-success-500/15 dark:text-success-200"><MapPin :size="12" /></span>
                     <div class="min-w-0"><p class="text-[9px] font-bold text-slate-400 uppercase">From</p><p class="mt-0.5 truncate text-[11px] font-semibold">{{ pickupText || 'Pickup location' }}</p></div>
                   </div>
                   <div class="ml-3 h-4 border-l border-dashed border-slate-300 dark:border-white/20" />
                   <div class="flex gap-2.5">
-                    <span class="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-rose-50 text-rose-700 dark:bg-rose-400/15 dark:text-rose-200"><MapPin :size="12" /></span>
+                    <span class="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-red-50 text-red-700 dark:bg-red-400/15 dark:text-red-200"><MapPin :size="12" /></span>
                     <div class="min-w-0"><p class="text-[9px] font-bold text-slate-400 uppercase">To</p><p class="mt-0.5 truncate text-[11px] font-semibold">{{ dropoffText || 'Drop-off location' }}</p></div>
                   </div>
                 </div>
@@ -1511,7 +1511,7 @@ const bookingCode = computed(() => bookingReference.value
                 <div class="flex items-center justify-between gap-3">
                   <span class="text-[11px] text-slate-500">Estimated delivery fee</span>
                   <span v-if="estimatedDeliveryPrice !== null" class="text-[15px] font-extrabold tracking-tight">{{ formatMoney(estimatedDeliveryPrice) }}</span>
-                  <span v-else class="rounded-full bg-amber-50 px-2.5 py-1 text-[9px] font-bold text-amber-700 dark:bg-amber-400/10 dark:text-amber-200">Provider confirms</span>
+                  <span v-else class="rounded-full bg-accent-50 px-2.5 py-1 text-[9px] font-bold text-accent-700 dark:bg-accent-400/10 dark:text-accent-200">Provider confirms</span>
                 </div>
                 <p v-if="estimatedDeliveryPrice !== null" class="mt-1 text-[9.5px] text-slate-500">{{ serviceLabels[form.deliverySpeed] }} · {{ routeSelected?.distance_km }} km × published rate</p>
                 <p class="mt-2 text-[9.5px] leading-4 text-slate-500">The item value below is for protection and is not your delivery charge.</p>
@@ -1521,7 +1521,7 @@ const bookingCode = computed(() => bookingReference.value
                 </div>
               </div>
               <div class="booking-soft flex items-center gap-2 border-t px-4 py-3 text-[9.5px] text-slate-500 sm:px-5">
-                <ShieldCheck :size="13" class="shrink-0 text-emerald-600" /> Your details go straight to {{ displayName }}.
+                <ShieldCheck :size="13" class="shrink-0 text-success-600" /> Your details go straight to {{ displayName }}.
               </div>
             </section>
 
@@ -1538,7 +1538,7 @@ const bookingCode = computed(() => bookingReference.value
         </div>
       </template>
       <footer class="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200/70 pt-5 text-[9.5px] text-slate-400 dark:border-white/10">
-        <span class="inline-flex items-center gap-1.5"><ShieldCheck :size="12" class="text-emerald-500" /> {{ displayName }} · {{ location }}</span>
+        <span class="inline-flex items-center gap-1.5"><ShieldCheck :size="12" class="text-success-500" /> {{ displayName }} · {{ location }}</span>
         <NuxtLink to="/" class="font-semibold text-slate-500 transition hover:text-slate-900 dark:hover:text-white">Powered by based on logistics</NuxtLink>
       </footer>
     </main>

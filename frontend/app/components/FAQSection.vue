@@ -28,14 +28,8 @@ const faqs = [
 <template>
   <section id="faq" class="border-t border-ink-900/10 bg-canvas">
     <div class="mx-auto max-w-[920px] px-5 py-20 sm:px-8 sm:py-24">
-      <div class="mb-9 text-center">
-        <p class="inline-flex items-center gap-1.5 rounded-full border border-cyan-200/70 bg-cyan-50/70 px-2.5 py-1 text-[10px] font-bold tracking-[0.18em] text-cyan-700 uppercase dark:border-cyan-400/20 dark:bg-cyan-400/10 dark:text-cyan-200">
-          <span class="size-1.5 rounded-full bg-cyan-500" />
-          Good to know
-        </p>
-        <h2 class="mt-3 text-[clamp(1.8rem,4vw,2.5rem)] leading-[1.05] font-semibold tracking-[-0.045em]">
-          A few quick answers.
-        </h2>
+      <div class="mb-9">
+        <SectionHeading eyebrow="Good to know" title="A few quick answers." align="center" />
       </div>
 
       <div class="site-panel overflow-hidden rounded-3xl border px-5 sm:px-7">
@@ -46,16 +40,16 @@ const faqs = [
           class="group border-b border-ink-900/8 py-1 last:border-0"
           :open="index === 0"
         >
-          <summary class="flex cursor-pointer list-none items-start justify-between gap-4 py-4 text-[14px] font-semibold text-ink-900 transition marker:hidden hover:text-brand-700 [&::-webkit-details-marker]:hidden">
+          <summary class="flex cursor-pointer list-none items-start justify-between gap-4 py-4 text-[14px] font-semibold text-ink-900 transition marker:hidden hover:text-accent-700 [&::-webkit-details-marker]:hidden dark:hover:text-accent-400">
             {{ faq.q }}
             <ChevronDown :size="16" class="mt-0.5 shrink-0 text-ink-900/40 transition group-open:rotate-180" />
           </summary>
-          <p class="max-w-[740px] pr-8 pb-5 text-[13px] leading-[1.75] text-ink-900/70">
+          <p class="max-w-[740px] pr-8 pb-5 text-[13px] leading-[1.75] text-ink-900/65">
             {{ faq.a }}
             <NuxtLink
               v-if="index === 4"
               to="/for-logistics-businesses"
-              class="ml-1 font-semibold text-brand-600 hover:text-brand-700"
+              class="ml-1 font-semibold text-accent-700 hover:text-accent-600 dark:text-accent-400"
             >
               Explore BOL for businesses →
             </NuxtLink>

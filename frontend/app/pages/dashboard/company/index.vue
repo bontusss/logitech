@@ -34,25 +34,25 @@ const lastMileOnly = computed(() => {
 })
 
 const links = computed(() => [
-  { label: 'Branches', description: 'Locations, managers and staff assignments', to: '/dashboard/company/branches', icon: MapPin, permission: 'branches.view', iconClass: 'bg-sky-100 text-sky-700 dark:bg-sky-400/15 dark:text-sky-200' },
-  { label: 'Staff', description: 'Invite, assign and suspend team members', to: '/dashboard/company/staff', icon: Users, permission: 'staff.view', iconClass: 'bg-violet-100 text-violet-700 dark:bg-violet-400/15 dark:text-violet-200' },
-  { label: 'Roles & permissions', description: 'Granular access for every company function', to: '/dashboard/company/roles', icon: ShieldCheck, permission: 'staff.roles.manage', iconClass: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-400/15 dark:text-emerald-200' },
-  { label: 'Booking page', description: 'A public page where customers can reach you', to: '/dashboard/company/booking', icon: CalendarCheck, permission: 'bookings.manage', iconClass: 'bg-cyan-100 text-cyan-700 dark:bg-cyan-400/15 dark:text-cyan-200' },
-  { label: 'Branding', description: 'Colours, logo and company subdomain', to: '/dashboard/company/branding', icon: Palette, permission: 'branding.manage', iconClass: 'bg-rose-100 text-rose-700 dark:bg-rose-400/15 dark:text-rose-200' },
-  { label: 'Settings', description: 'Timezone, currency and notifications', to: '/dashboard/company/settings', icon: Settings, permission: 'company.settings.manage', iconClass: 'bg-amber-100 text-amber-700 dark:bg-amber-400/15 dark:text-amber-200' },
+  { label: 'Branches', description: 'Locations, managers and staff assignments', to: '/dashboard/company/branches', icon: MapPin, permission: 'branches.view', iconClass: 'bg-brand-100 text-brand-700 dark:bg-brand-400/15 dark:text-brand-200' },
+  { label: 'Staff', description: 'Invite, assign and suspend team members', to: '/dashboard/company/staff', icon: Users, permission: 'staff.view', iconClass: 'bg-brand-100 text-brand-700 dark:bg-brand-400/15 dark:text-brand-200' },
+  { label: 'Roles & permissions', description: 'Granular access for every company function', to: '/dashboard/company/roles', icon: ShieldCheck, permission: 'staff.roles.manage', iconClass: 'bg-success-100 text-success-700 dark:bg-success-500/15 dark:text-success-200' },
+  { label: 'Booking page', description: 'A public page where customers can reach you', to: '/dashboard/company/booking', icon: CalendarCheck, permission: 'bookings.manage', iconClass: 'bg-brand-100 text-brand-700 dark:bg-brand-400/15 dark:text-brand-200' },
+  { label: 'Branding', description: 'Colours, logo and company subdomain', to: '/dashboard/company/branding', icon: Palette, permission: 'branding.manage', iconClass: 'bg-red-100 text-red-700 dark:bg-red-400/15 dark:text-red-200' },
+  { label: 'Settings', description: 'Timezone, currency and notifications', to: '/dashboard/company/settings', icon: Settings, permission: 'company.settings.manage', iconClass: 'bg-accent-100 text-accent-700 dark:bg-accent-400/15 dark:text-accent-200' },
 ].filter((link) => can(link.permission) && !(link.label === 'Branches' && lastMileOnly.value)))
 
 const statusTone = computed(() => {
   switch (detail.value?.company.status) {
     case 'verified':
-      return 'border-emerald-200 bg-emerald-50 text-emerald-700'
+      return 'border-success-200 bg-success-50 text-success-700'
     case 'under_review':
       return 'border-brand-200 bg-brand-50 text-brand-700'
     case 'rejected':
     case 'suspended':
       return 'border-red-200 bg-red-50 text-red-700'
     default:
-      return 'border-amber-200 bg-amber-50 text-amber-700'
+      return 'border-accent-200 bg-accent-50 text-accent-700'
   }
 })
 
@@ -81,8 +81,8 @@ async function submitVerification() {
 <template>
   <div class="dash-page">
     <header class="dash-hero relative overflow-hidden rounded-2xl border p-5 sm:p-6">
-      <div class="pointer-events-none absolute -top-16 right-10 size-44 rounded-full bg-fuchsia-400/15 blur-3xl" />
-      <div class="pointer-events-none absolute -right-8 -bottom-24 size-52 rounded-full bg-cyan-400/15 blur-3xl" />
+      <div class="pointer-events-none absolute -top-16 right-10 size-44 rounded-full bg-accent-400/15 blur-3xl" />
+      <div class="pointer-events-none absolute -right-8 -bottom-24 size-52 rounded-full bg-brand-400/15 blur-3xl" />
       <div class="relative flex flex-wrap items-start justify-between gap-4">
         <div>
           <p class="dash-eyebrow inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-semibold tracking-wide">
@@ -110,10 +110,10 @@ async function submitVerification() {
 
     <template v-else-if="detail">
       <div class="mt-4 grid gap-3 sm:grid-cols-3">
-        <article class="dash-stat dash-stat--violet rounded-xl border p-4">
+        <article class="dash-stat dash-stat--brand rounded-xl border p-4">
           <div class="flex items-center justify-between gap-2">
             <p class="text-[10px] font-semibold tracking-wide text-ink-900/50 uppercase">Status</p>
-            <span class="flex size-6 items-center justify-center rounded-lg bg-white/80 text-violet-700 dark:bg-white/10 dark:text-violet-200">
+            <span class="flex size-6 items-center justify-center rounded-lg bg-white/80 text-brand-700 dark:bg-white/10 dark:text-brand-200">
               <ShieldCheck :size="12" />
             </span>
           </div>
@@ -122,10 +122,10 @@ async function submitVerification() {
             {{ detail.company.status === 'verified' ? 'Public and bookable' : 'Verification required' }}
           </p>
         </article>
-        <article class="dash-stat dash-stat--mint rounded-xl border p-4">
+        <article class="dash-stat dash-stat--success rounded-xl border p-4">
           <div class="flex items-center justify-between gap-2">
             <p class="text-[10px] font-semibold tracking-wide text-ink-900/50 uppercase">Your role</p>
-            <span class="flex size-6 items-center justify-center rounded-lg bg-white/80 text-emerald-700 dark:bg-white/10 dark:text-emerald-200">
+            <span class="flex size-6 items-center justify-center rounded-lg bg-white/80 text-success-700 dark:bg-white/10 dark:text-success-200">
               <Users :size="12" />
             </span>
           </div>
@@ -134,10 +134,10 @@ async function submitVerification() {
           </p>
           <p class="mt-0.5 text-[10px] text-ink-900/45">Company membership</p>
         </article>
-        <article class="dash-stat dash-stat--blue rounded-xl border p-4">
+        <article class="dash-stat dash-stat--brand rounded-xl border p-4">
           <div class="flex items-center justify-between gap-2">
             <p class="text-[10px] font-semibold tracking-wide text-ink-900/50 uppercase">Public address</p>
-            <span class="flex size-6 items-center justify-center rounded-lg bg-white/80 text-sky-700 dark:bg-white/10 dark:text-sky-200">
+            <span class="flex size-6 items-center justify-center rounded-lg bg-white/80 text-brand-700 dark:bg-white/10 dark:text-brand-200">
               <ExternalLink :size="12" />
             </span>
           </div>
@@ -146,7 +146,7 @@ async function submitVerification() {
         </article>
       </div>
 
-      <div class="mt-4 flex flex-wrap items-center gap-2 rounded-xl border border-ink-900/10 bg-gradient-to-r from-emerald-50/70 via-white to-cyan-50/60 px-4 py-3 dark:border-white/10 dark:from-emerald-400/5 dark:via-transparent dark:to-cyan-400/5">
+      <div class="mt-4 flex flex-wrap items-center gap-2 rounded-xl border border-ink-900/10 bg-gradient-to-r from-success-50/70 via-white to-brand-50/60 px-4 py-3 dark:border-white/10 dark:from-success-500/5 dark:via-transparent dark:to-brand-400/5">
         <span class="rounded-full border px-2.5 py-1 text-[10.5px] font-semibold capitalize" :class="statusTone">
           {{ detail.company.status.replace('_', ' ') }}
         </span>
@@ -170,7 +170,7 @@ async function submitVerification() {
         <aside class="space-y-4">
           <div class="dash-panel rounded-2xl border p-5">
             <div class="flex items-center gap-2">
-              <span class="flex size-7 items-center justify-center rounded-lg bg-gradient-to-br from-amber-100 to-orange-50 text-amber-700 dark:from-amber-400/15 dark:to-orange-400/10 dark:text-amber-200">
+              <span class="flex size-7 items-center justify-center rounded-lg bg-gradient-to-br from-accent-100 to-accent-50 text-accent-700 dark:from-accent-400/15 dark:to-accent-400/10 dark:text-accent-200">
                 <ShieldCheck :size="14" />
               </span>
               <h2 class="text-[13px] font-semibold">Verification</h2>
@@ -185,14 +185,14 @@ async function submitVerification() {
               v-if="can('company.update') && !['under_review', 'verified'].includes(detail.company.status)"
               type="button"
               :disabled="submitting"
-              class="mt-3 inline-flex w-full items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-brand-600 to-violet-600 px-3 py-2.5 text-[12px] font-semibold text-white shadow-sm shadow-brand-600/25 transition hover:-translate-y-0.5 disabled:opacity-60"
+              class="mt-3 inline-flex w-full items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-brand-600 to-brand-600 px-3 py-2.5 text-[12px] font-semibold text-white shadow-sm shadow-brand-600/25 transition hover:-translate-y-0.5 disabled:opacity-60"
               @click="submitVerification"
             >
               <Loader2 v-if="submitting" :size="13" class="animate-spin" />
               <Send v-else :size="13" />
               Submit for review
             </button>
-            <div v-else-if="detail.company.status === 'verified'" class="mt-3 flex items-center gap-1.5 rounded-lg bg-emerald-50 px-2.5 py-2 text-[11px] font-medium text-emerald-700 dark:bg-emerald-400/10 dark:text-emerald-200">
+            <div v-else-if="detail.company.status === 'verified'" class="mt-3 flex items-center gap-1.5 rounded-lg bg-success-50 px-2.5 py-2 text-[11px] font-medium text-success-700 dark:bg-success-500/10 dark:text-success-200">
               <CheckCircle2 :size="14" /> Verified
             </div>
             <div v-else class="mt-3 rounded-lg bg-canvas px-2.5 py-2 text-[10.5px] text-ink-900/40">

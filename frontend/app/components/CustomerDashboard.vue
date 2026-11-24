@@ -151,7 +151,7 @@ async function saveProfile() {
     </div>
 
     <div class="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-      <div v-for="stat in stats" :key="stat.label" class="rounded-xl border border-ink-900/10 bg-white p-4">
+      <div v-for="stat in stats" :key="stat.label" class="rounded-xl border border-ink-900/10 bg-surface p-4">
         <div class="flex items-center justify-between gap-2">
           <p class="text-[9.5px] font-semibold tracking-[0.16em] text-ink-900/40 uppercase">{{ stat.label }}</p>
           <component :is="stat.icon" :size="15" class="text-brand-600" />
@@ -168,7 +168,7 @@ async function saveProfile() {
         type="button"
         class="-mb-px inline-flex items-center gap-1.5 border-b-2 px-3 py-2.5 text-[12px] font-medium transition"
         :class="activeTab === tab.key
-          ? 'border-brand-500 text-brand-700'
+          ? 'border-accent-500 text-ink-900'
           : 'border-transparent text-ink-900/50 hover:text-ink-900'"
         @click="activeTab = tab.key"
       >
@@ -176,7 +176,7 @@ async function saveProfile() {
         {{ tab.label }}
         <span
           v-if="tab.key === 'notifications'"
-          class="rounded-full border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-[8.5px] font-semibold tracking-wide text-amber-700 uppercase"
+          class="rounded-full border border-accent-200 bg-accent-50 px-1.5 py-0.5 text-[8.5px] font-semibold tracking-wide text-accent-700 uppercase"
         >
           Soon
         </span>
@@ -196,7 +196,7 @@ async function saveProfile() {
             {{ providers.length }} provider{{ providers.length === 1 ? '' : 's' }}
           </p>
         </div>
-        <div class="flex gap-1 rounded-lg border border-ink-900/10 bg-white p-1">
+        <div class="flex gap-1 rounded-lg border border-ink-900/10 bg-surface p-1">
           <button
             v-for="option in ([
               { key: 'all', label: 'All' },
@@ -206,7 +206,7 @@ async function saveProfile() {
             :key="option.key"
             type="button"
             class="rounded-md px-2.5 py-1.5 text-[10.5px] font-semibold transition"
-            :class="filter === option.key ? 'bg-brand-600 text-white' : 'text-ink-900/50 hover:text-ink-900'"
+            :class="filter === option.key ? 'bg-accent-500 text-ink-950' : 'text-ink-900/50 hover:text-ink-900'"
             @click="filter = option.key"
           >
             {{ option.label }}
@@ -214,14 +214,14 @@ async function saveProfile() {
         </div>
       </div>
 
-      <div v-if="loading && !bookings.length" class="mt-4 flex items-center justify-center gap-2 rounded-xl border border-ink-900/10 bg-white p-12 text-[12px] text-ink-900/45">
+      <div v-if="loading && !bookings.length" class="mt-4 flex items-center justify-center gap-2 rounded-xl border border-ink-900/10 bg-surface p-12 text-[12px] text-ink-900/45">
         <Loader2 :size="15" class="animate-spin" /> Loading your bookings…
       </div>
 
-      <div v-else-if="!filteredBookings.length" class="mt-4 rounded-xl border border-ink-900/10 bg-white p-10 text-center">
-        <span class="mx-auto flex size-11 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-100 to-cyan-50 text-brand-700">
+      <div v-else-if="!filteredBookings.length" class="mt-4 rounded-xl border border-ink-900/10 bg-surface p-10 text-center">
+        <IconTile tone="brand" size="lg" rounded="2xl" class="mx-auto">
           <Truck :size="19" />
-        </span>
+        </IconTile>
         <h3 class="mt-3 text-[13px] font-semibold">
           {{ filter === 'all' ? 'No bookings yet' : `No ${filter} bookings` }}
         </h3>
@@ -235,7 +235,7 @@ async function saveProfile() {
         <li
           v-for="booking in filteredBookings"
           :key="booking.id"
-          class="rounded-xl border border-ink-900/10 bg-white p-4"
+          class="rounded-xl border border-ink-900/10 bg-surface p-4"
         >
           <div class="flex flex-wrap items-start justify-between gap-3">
             <div class="min-w-0">
@@ -270,7 +270,7 @@ async function saveProfile() {
                 :href="booking.tracking_url"
                 target="_blank"
                 rel="noopener"
-                class="inline-flex items-center gap-1.5 rounded-lg border border-brand-200 bg-brand-50/60 px-2.5 py-1.5 text-[10.5px] font-semibold text-brand-700 transition hover:bg-brand-50"
+                class="inline-flex items-center gap-1.5 rounded-lg border border-accent-500/30 bg-accent-50/70 px-2.5 py-1.5 text-[10.5px] font-semibold text-accent-700 transition hover:bg-accent-50 dark:text-accent-300"
               >
                 Track parcel <ExternalLink :size="12" />
               </a>
@@ -294,7 +294,7 @@ async function saveProfile() {
       </ul>
     </section>
 
-    <section v-else-if="activeTab === 'addresses'" class="mt-4 rounded-xl border border-ink-900/10 bg-white p-5">
+    <section v-else-if="activeTab === 'addresses'" class="mt-4 rounded-xl border border-ink-900/10 bg-surface p-5">
       <div class="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 class="text-[14px] font-semibold">Addresses</h2>
@@ -309,7 +309,7 @@ async function saveProfile() {
         <li v-for="address in addresses" :key="`${address.role}-${address.address}`" class="flex items-start gap-3 py-3">
           <span
             class="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-lg"
-            :class="address.role === 'pickup' ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'"
+            :class="address.role === 'pickup' ? 'bg-success-50 text-success-700' : 'bg-accent-50 text-accent-700 dark:text-accent-300'"
           >
             <MapPin :size="13" />
           </span>
@@ -327,7 +327,7 @@ async function saveProfile() {
       </p>
     </section>
 
-    <section v-else-if="activeTab === 'profile'" class="mt-4 rounded-xl border border-ink-900/10 bg-white p-5">
+    <section v-else-if="activeTab === 'profile'" class="mt-4 rounded-xl border border-ink-900/10 bg-surface p-5">
       <h2 class="text-[14px] font-semibold">Personal information</h2>
       <p class="mt-1 text-[11px] text-ink-900/40">
         Providers use these details to coordinate your deliveries.
@@ -336,7 +336,7 @@ async function saveProfile() {
       <p v-if="profileError" role="alert" class="mt-3 flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-[11px] text-red-700">
         <CircleAlert :size="13" class="mt-0.5 shrink-0" />{{ profileError }}
       </p>
-      <p v-if="profileSaved" role="status" class="mt-3 flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-[11px] text-emerald-700">
+      <p v-if="profileSaved" role="status" class="mt-3 flex items-center gap-2 rounded-lg border border-success-200 bg-success-50 px-3 py-2 text-[11px] text-success-700">
         <Check :size="13" /> Profile updated.
       </p>
 
@@ -349,7 +349,7 @@ async function saveProfile() {
             minlength="2"
             maxlength="120"
             autocomplete="name"
-            class="w-full rounded-lg border border-ink-900/15 px-3 py-2.5 text-[12px] outline-none focus:border-brand-500"
+            class="w-full rounded-lg border border-ink-900/15 bg-canvas px-3 py-2.5 text-[12px] text-ink-900 outline-none focus:border-accent-500 focus:bg-surface"
           />
         </label>
         <label class="block">
@@ -360,7 +360,7 @@ async function saveProfile() {
             type="tel"
             autocomplete="tel"
             placeholder="+234 800 000 0000"
-            class="w-full rounded-lg border border-ink-900/15 px-3 py-2.5 text-[12px] outline-none focus:border-brand-500"
+            class="w-full rounded-lg border border-ink-900/15 bg-canvas px-3 py-2.5 text-[12px] text-ink-900 outline-none focus:border-accent-500 focus:bg-surface"
           />
         </label>
         <label class="block sm:col-span-2">
@@ -378,7 +378,7 @@ async function saveProfile() {
           <button
             type="submit"
             :disabled="savingProfile"
-            class="inline-flex min-h-10 items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-[11.5px] font-semibold text-white transition hover:bg-brand-700 disabled:opacity-50"
+            class="inline-flex min-h-10 items-center gap-2 rounded-lg bg-accent-500 px-4 py-2 text-[11.5px] font-semibold text-ink-950 transition hover:bg-accent-400 disabled:opacity-50"
           >
             <Loader2 v-if="savingProfile" :size="14" class="animate-spin" />
             {{ savingProfile ? 'Saving…' : 'Save changes' }}
@@ -387,10 +387,10 @@ async function saveProfile() {
       </form>
     </section>
 
-    <section v-else class="mt-4 rounded-xl border border-ink-900/10 bg-white p-10 text-center">
-      <span class="mx-auto flex size-11 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-100 to-orange-50 text-amber-700">
+    <section v-else class="mt-4 rounded-xl border border-ink-900/10 bg-surface p-10 text-center">
+      <IconTile tone="accent" size="lg" rounded="2xl" class="mx-auto">
         <Bell :size="19" />
-      </span>
+      </IconTile>
       <h2 class="mt-3 text-[13.5px] font-semibold">Notifications are coming soon</h2>
       <p class="mx-auto mt-1 max-w-md text-[11.5px] leading-relaxed text-ink-900/45">
         You’ll be able to choose email and WhatsApp updates for pickup, transit and delivery events.

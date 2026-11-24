@@ -4,9 +4,9 @@ import { CheckCircle2, CircleAlert, Info, X } from 'lucide-vue-next'
 const { toasts, dismissToast } = useWorkspace()
 
 const tone = {
-  success: 'border-emerald-200 bg-emerald-50 text-emerald-800',
+  success: 'border-success-200 bg-success-50 text-success-700',
   error: 'border-red-200 bg-red-50 text-red-800',
-  info: 'border-brand-200 bg-brand-50 text-brand-800',
+  info: 'border-brand-200 bg-brand-50 text-brand-700',
 }
 
 const icon = {

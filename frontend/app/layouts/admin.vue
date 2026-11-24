@@ -28,7 +28,7 @@ const initials = computed(() => {
         <NuxtLink to="/admin" class="rounded-lg" aria-label="BOL platform administration">
           <AppLogo :size="32" />
         </NuxtLink>
-        <span class="hidden items-center gap-1.5 rounded-full bg-gradient-to-r from-brand-600 to-violet-600 px-2.5 py-1 text-[10px] font-semibold tracking-[0.06em] text-white uppercase shadow-sm shadow-brand-600/25 sm:inline-flex">
+        <span class="hidden items-center gap-1.5 rounded-full bg-accent-500 px-2.5 py-1 text-[10px] font-semibold tracking-[0.06em] text-ink-950 uppercase shadow-sm shadow-accent-500/25 sm:inline-flex">
           <ShieldCheck :size="12" />
           Platform admin
         </span>
@@ -40,13 +40,13 @@ const initials = computed(() => {
               {{ user?.platform_role?.replace('_', ' ') }}
             </p>
           </div>
-          <span class="flex size-8 items-center justify-center rounded-xl bg-gradient-to-br from-brand-500 to-violet-500 text-[10px] font-semibold text-white shadow-sm shadow-brand-600/25">
+          <span class="flex size-8 items-center justify-center rounded-xl bg-accent-500 text-[10px] font-semibold text-ink-950 shadow-sm shadow-accent-500/25">
             {{ initials }}
           </span>
           <ThemeToggle />
           <button
             type="button"
-            class="inline-flex items-center gap-1.5 rounded-xl border border-ink-900/10 bg-white px-2.5 py-2 text-[11.5px] font-medium shadow-sm transition hover:border-brand-200 hover:text-brand-700 dark:bg-white/5"
+            class="inline-flex items-center gap-1.5 rounded-xl border border-ink-900/10 bg-surface px-2.5 py-2 text-[11.5px] font-medium shadow-sm transition hover:border-accent-500/40 hover:text-ink-900 dark:bg-white/5"
             @click="handleLogout"
           >
             <LogOut :size="14" />

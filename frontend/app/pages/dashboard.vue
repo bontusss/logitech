@@ -189,6 +189,7 @@ const checklist = computed(() => {
 })
 
 const isVerified = computed(() => detail.value?.company.status === 'verified')
+const canViewFleet = computed(() => detail.value?.membership.permissions.includes('shipments.view') ?? false)
 const completed = computed(() => checklist.value.filter((item) => item.done).length)
 const progress = computed(() => Math.round((completed.value / checklist.value.length) * 100))
 
@@ -221,17 +222,19 @@ const analyticsDays = computed(() =>
 </script>
 
 <template>
+  <PwaInstallBanner v-if="route.path === '/dashboard'" class="mb-4" />
+
   <NuxtPage v-if="route.path !== '/dashboard'" />
 
   <CustomerDashboard v-else-if="isCustomer" />
 
   <div v-else class="dashboard-overview">
     <div class="overview-hero relative overflow-hidden rounded-2xl border p-5 sm:p-6">
-      <div class="pointer-events-none absolute -top-16 right-10 size-44 rounded-full bg-fuchsia-400/15 blur-3xl" />
-      <div class="pointer-events-none absolute -right-8 -bottom-24 size-52 rounded-full bg-cyan-400/15 blur-3xl" />
+      <div class="pointer-events-none absolute -top-16 right-10 size-44 rounded-full bg-accent-400/15 blur-3xl" />
+      <div class="pointer-events-none absolute -right-8 -bottom-24 size-52 rounded-full bg-brand-400/15 blur-3xl" />
       <div class="relative flex flex-wrap items-start justify-between gap-4">
       <div>
-        <p class="inline-flex items-center gap-1.5 rounded-full bg-white/70 px-2.5 py-1 text-[10px] font-semibold tracking-wide text-brand-700 dark:bg-slate-950/30 dark:text-indigo-200">
+        <p class="inline-flex items-center gap-1.5 rounded-full bg-surface/75 px-2.5 py-1 text-[10px] font-semibold tracking-wide text-brand-700 dark:bg-white/5">
           <Sparkles :size="12" /> TODAY AT A GLANCE
         </p>
         <div class="mt-3 flex flex-wrap items-center gap-2.5">
@@ -240,7 +243,7 @@ const analyticsDays = computed(() =>
           </h1>
           <span
             v-if="currentCompany && isVerified"
-            class="inline-flex items-center gap-1 rounded-full border border-emerald-300/60 bg-emerald-100/70 px-2.5 py-1 text-[10px] font-semibold text-emerald-800 dark:border-emerald-400/25 dark:bg-emerald-400/10 dark:text-emerald-200"
+            class="inline-flex items-center gap-1 rounded-full border border-success-200/60 bg-success-100/70 px-2.5 py-1 text-[10px] font-semibold text-success-700 dark:border-success-500/25 dark:bg-success-500/10 dark:text-success-200"
           >
             <ShieldCheck :size="13" /> Verified
           </span>
@@ -275,7 +278,7 @@ const analyticsDays = computed(() =>
           aria-labelledby="first-driver-title"
         >
           <div class="flex items-start gap-3">
-            <span class="flex size-9 shrink-0 items-center justify-center rounded-lg bg-white text-amber-700 dark:text-amber-200">
+            <span class="flex size-9 shrink-0 items-center justify-center rounded-lg bg-surface text-accent-700 dark:bg-white/5 dark:text-accent-300">
               <Users :size="17" />
             </span>
             <div>
@@ -289,7 +292,7 @@ const analyticsDays = computed(() =>
           </div>
           <NuxtLink
             :to="{ path: '/dashboard/company/drivers', query: { create: '1' } }"
-            class="inline-flex min-h-9 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-amber-900 px-3.5 py-2 text-[11px] font-semibold text-white transition hover:bg-amber-950 dark:bg-amber-300 dark:text-amber-950 dark:hover:bg-amber-200"
+            class="inline-flex min-h-9 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-accent-500 px-3.5 py-2 text-[11px] font-semibold text-ink-950 transition hover:bg-accent-400"
           >
             Create first driver <ArrowRight :size="14" />
           </NuxtLink>
@@ -311,12 +314,12 @@ const analyticsDays = computed(() =>
                 </h2>
                 <span
                   v-if="bookingPage?.is_published"
-                  class="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-1 text-[9.5px] font-semibold text-emerald-700"
+                  class="inline-flex items-center gap-1 rounded-full bg-success-50 px-2 py-1 text-[9.5px] font-semibold text-success-700"
                 >
                   <CheckCircle2 :size="12" /> Live
                 </span>
               </div>
-              <h3 id="booking-share-title" class="mt-2 text-[12px] font-semibold text-brand-800 dark:text-indigo-200">
+              <h3 id="booking-share-title" class="mt-2 text-[12px] font-semibold text-brand-700 dark:text-brand-200">
                 Get more bookings: share your page
               </h3>
               <p class="mt-1 max-w-2xl text-[11.5px] leading-relaxed text-ink-900/55">
@@ -339,7 +342,7 @@ const analyticsDays = computed(() =>
                 </p>
               </template>
               <template v-else>
-                <p class="mt-3 text-[11px] text-amber-800 dark:text-amber-200">
+                <p class="mt-3 text-[11px] text-accent-800 dark:text-accent-200">
                   Your page isn’t published. Publish it from the booking page settings before sharing.
                 </p>
               </template>
@@ -349,24 +352,24 @@ const analyticsDays = computed(() =>
               <template v-if="bookingPage?.is_published">
                 <button
                   type="button"
-                  class="inline-flex min-h-10 items-center justify-center gap-1.5 rounded-lg bg-brand-600 px-3 py-2 text-[11.5px] font-semibold text-white transition hover:bg-brand-700"
+                  class="inline-flex min-h-10 items-center justify-center gap-1.5 rounded-lg bg-accent-500 px-3 py-2 text-[11.5px] font-semibold text-ink-950 transition hover:bg-accent-400"
                   @click="shareBookingLink"
                 >
                   <Share2 :size="14" /> Share
                 </button>
                 <button
                   type="button"
-                  class="inline-flex min-h-10 items-center justify-center gap-1.5 rounded-lg border border-ink-900/10 bg-white px-3 py-2 text-[11.5px] font-semibold text-ink-900/70 transition hover:border-ink-900/25"
+                  class="inline-flex min-h-10 items-center justify-center gap-1.5 rounded-lg border border-ink-900/10 bg-surface px-3 py-2 text-[11.5px] font-semibold text-ink-900/70 transition hover:border-accent-500/40"
                   @click="copyBookingLink"
                 >
-                  <Check v-if="copiedBookingLink" :size="14" class="text-emerald-600" />
+                  <Check v-if="copiedBookingLink" :size="14" class="text-success-600" />
                   <Copy v-else :size="14" />
                   {{ copiedBookingLink ? 'Copied' : 'Copy link' }}
                 </button>
                 <button
                   type="button"
                   :disabled="generatingQr"
-                  class="col-span-2 inline-flex min-h-10 items-center justify-center gap-1.5 rounded-lg border border-ink-900/10 bg-white px-3 py-2 text-[11.5px] font-semibold text-ink-900/70 transition hover:border-ink-900/25 disabled:opacity-50 sm:col-span-1"
+                  class="col-span-2 inline-flex min-h-10 items-center justify-center gap-1.5 rounded-lg border border-ink-900/10 bg-surface px-3 py-2 text-[11.5px] font-semibold text-ink-900/70 transition hover:border-accent-500/40 disabled:opacity-50 sm:col-span-1"
                   @click="generateBookingQrCode"
                 >
                   <Loader2 v-if="generatingQr" :size="14" class="animate-spin" />
@@ -377,15 +380,15 @@ const analyticsDays = computed(() =>
             </div>
           </div>
 
-          <div v-if="qrCode && bookingPage?.is_published" class="border-t border-brand-100 bg-white/70 px-5 py-4 sm:px-6 dark:bg-slate-900/40">
+          <div v-if="qrCode && bookingPage?.is_published" class="border-t border-brand-100 bg-surface/70 px-5 py-4 sm:px-6 dark:bg-white/5">
             <div class="flex flex-wrap items-center gap-4">
-              <img :src="qrCode" alt="QR code for your booking page" class="size-32 rounded-lg border border-ink-900/10 bg-white p-2" />
+              <img :src="qrCode" alt="QR code for your booking page" class="size-32 rounded-lg border border-ink-900/10 bg-surface p-2" />
               <div>
                 <p class="text-[12px] font-semibold">Share your page in person</p>
                 <p class="mt-1 text-[11px] text-ink-900/45">Customers can scan this code to open your booking page.</p>
                 <button
                   type="button"
-                  class="mt-3 inline-flex items-center gap-1.5 text-[11px] font-semibold text-brand-700 hover:text-brand-800"
+                  class="mt-3 inline-flex items-center gap-1.5 text-[11px] font-semibold text-brand-700 hover:text-brand-600"
                   @click="downloadBookingQrCode"
                 >
                   <Download :size="13" /> Download QR code
@@ -403,16 +406,16 @@ const analyticsDays = computed(() =>
             </div>
             <span class="text-[10px] text-ink-900/35">No financial records yet</span>
           </div>
-          <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <div class="grid grid-cols-2 gap-3 xl:grid-cols-4">
             <article
               v-for="(metric, index) in financialMetrics"
               :key="metric.label"
-              class="overview-card overview-tile rounded-xl border p-4"
-              :class="`overview-tile--${['violet', 'mint', 'peach', 'blue'][index % 4]}`"
+              class="overview-card overview-tile rounded-xl border p-3.5 sm:p-4"
+              :class="`overview-tile--${['brand', 'accent', 'success', 'neutral'][index % 4]}`"
             >
               <p class="text-[10px] font-medium text-ink-900/45">{{ metric.label }}</p>
-              <p class="mt-2 text-[18px] font-semibold tracking-[-0.035em]">{{ metric.value }}</p>
-              <p class="mt-1 text-[10px] leading-relaxed text-ink-900/35">{{ metric.detail }}</p>
+              <p class="mt-1.5 text-[16px] font-semibold tracking-[-0.035em] sm:mt-2 sm:text-[18px]">{{ metric.value }}</p>
+              <p class="mt-1 text-[9.5px] leading-snug text-ink-900/35 sm:text-[10px]">{{ metric.detail }}</p>
             </article>
           </div>
         </div>
@@ -425,18 +428,20 @@ const analyticsDays = computed(() =>
             </div>
             <span class="text-[10px] text-ink-900/35">No booking records yet</span>
           </div>
-          <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <div class="grid grid-cols-2 gap-3 xl:grid-cols-4">
             <article
               v-for="(metric, index) in bookingMetrics"
               :key="metric.label"
-              class="overview-card overview-tile rounded-xl border p-4"
-              :class="`overview-tile--${['blue', 'peach', 'mint', 'violet'][index % 4]}`"
+              class="overview-card overview-tile rounded-xl border p-3.5 sm:p-4"
+              :class="`overview-tile--${['neutral', 'accent', 'success', 'brand'][index % 4]}`"
             >
               <p class="text-[10px] font-medium text-ink-900/45">{{ metric.label }}</p>
-              <p class="mt-2 text-[19px] font-semibold tracking-[-0.035em]">{{ metric.value }}</p>
+              <p class="mt-1.5 text-[17px] font-semibold tracking-[-0.035em] sm:mt-2 sm:text-[19px]">{{ metric.value }}</p>
             </article>
           </div>
         </div>
+
+        <DriversOnRoad v-if="canViewFleet" />
 
         <section class="overview-card rounded-xl border p-4 sm:p-5" aria-labelledby="analytics-title">
           <div class="flex flex-wrap items-start justify-between gap-3">
@@ -490,14 +495,14 @@ const analyticsDays = computed(() =>
               </span>
             </div>
             <div class="mt-4 h-2 overflow-hidden rounded-full bg-ink-900/8">
-              <div class="h-full rounded-full bg-gradient-to-r from-brand-500 via-violet-500 to-emerald-400 transition-all" :style="{ width: `${progress}%` }" />
+              <div class="h-full rounded-full bg-gradient-to-r from-accent-500 to-accent-400 transition-all" :style="{ width: `${progress}%` }" />
             </div>
 
             <ul class="mt-3 divide-y divide-ink-900/8">
               <li v-for="item in checklist" :key="item.label" class="flex items-start gap-3 py-2.5">
                 <span
                   class="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full border"
-                  :class="item.done ? 'border-emerald-200 bg-emerald-50 text-emerald-600' : 'border-ink-900/15 text-ink-900/25'"
+                  :class="item.done ? 'border-success-200 bg-success-50 text-success-600' : 'border-ink-900/15 text-ink-900/25'"
                 >
                   <Check v-if="item.done" :size="11" :stroke-width="3" />
                   <CircleDot v-else :size="9" />
@@ -523,7 +528,7 @@ const analyticsDays = computed(() =>
 
     <template v-else>
       <div class="mt-8 grid gap-4 sm:grid-cols-2">
-        <div class="rounded-xl border border-ink-900/10 bg-white p-5">
+        <div class="rounded-xl border border-ink-900/10 bg-surface p-5">
           <Sparkles :size="18" class="text-brand-600" />
           <h2 class="mt-3 text-[14px] font-semibold">Marketplace account ready</h2>
           <p class="mt-1.5 text-[12.5px] leading-relaxed text-ink-900/50">
@@ -535,7 +540,7 @@ const analyticsDays = computed(() =>
           </div>
         </div>
 
-        <div class="rounded-xl border border-ink-900/10 bg-white p-5">
+        <div class="rounded-xl border border-ink-900/10 bg-surface p-5">
           <Building2 :size="18" class="text-brand-600" />
           <h2 class="mt-3 text-[14px] font-semibold">Operate a logistics company?</h2>
           <p class="mt-1.5 text-[12.5px] leading-relaxed text-ink-900/50">
@@ -548,7 +553,7 @@ const analyticsDays = computed(() =>
         </div>
       </div>
 
-      <div class="mt-5 rounded-xl border border-ink-900/10 bg-white p-5">
+      <div class="mt-5 rounded-xl border border-ink-900/10 bg-surface p-5">
         <h2 class="text-[13px] font-semibold">Account privacy</h2>
         <p class="mt-1.5 text-[11.5px] leading-relaxed text-ink-900/45">
           Your customer account has no company permissions. Company staff roles are always

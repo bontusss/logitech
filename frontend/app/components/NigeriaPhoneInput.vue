@@ -28,8 +28,8 @@ function updatePhone(event: Event) {
 </script>
 
 <template>
-  <div class="flex w-full overflow-hidden rounded-lg border border-slate-300 bg-white transition hover:border-slate-400 focus-within:border-brand-500">
-    <span class="flex items-center border-r border-slate-300 bg-slate-50 px-3 text-sm font-medium text-ink-900/70">
+  <div class="flex w-full overflow-hidden rounded-xl border border-ink-900/15 bg-surface transition hover:border-ink-900/30 focus-within:border-accent-500">
+    <span class="flex items-center border-r border-ink-900/15 bg-canvas px-3 text-sm font-medium text-ink-900/70">
       +234
     </span>
     <input
@@ -43,7 +43,7 @@ function updatePhone(event: Event) {
       pattern="[789][0-9]{9}"
       :placeholder="placeholder"
       aria-label="Nigerian phone number without country code"
-      class="min-w-0 flex-1 bg-transparent px-3 py-2.5 text-sm text-ink-900 outline-none placeholder:text-ink-900/35 disabled:bg-slate-50 disabled:text-ink-900/45"
+      class="min-w-0 flex-1 bg-transparent px-3 py-2.5 text-sm text-ink-900 outline-none placeholder:text-ink-900/35 disabled:bg-canvas disabled:text-ink-900/45"
       @input="updatePhone"
     />
   </div>

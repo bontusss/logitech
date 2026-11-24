@@ -33,7 +33,7 @@ function managerName(branch: Branch) {
 
 <template>
   <div class="dash-panel overflow-hidden rounded-2xl border">
-    <div class="flex flex-wrap items-center justify-between gap-3 border-b border-ink-900/8 bg-gradient-to-r from-sky-50/60 via-white to-violet-50/50 px-4 py-3.5 sm:px-5 dark:from-sky-400/5 dark:via-transparent dark:to-violet-400/5">
+    <div class="flex flex-wrap items-center justify-between gap-3 border-b border-ink-900/8 bg-gradient-to-r from-brand-50/60 via-white to-brand-50/50 px-4 py-3.5 sm:px-5 dark:from-brand-400/5 dark:via-transparent dark:to-brand-400/5">
       <div>
         <h2 class="text-[14px] font-semibold">Branches</h2>
         <p class="mt-0.5 text-[10.5px] text-ink-900/40">
@@ -43,7 +43,7 @@ function managerName(branch: Branch) {
       <button
         v-if="canCreate"
         type="button"
-        class="inline-flex items-center gap-1.5 rounded-lg bg-brand-600 px-3 py-2 text-[12px] font-semibold text-white shadow-sm shadow-brand-600/20 transition hover:bg-brand-700"
+        class="inline-flex items-center gap-1.5 rounded-lg bg-accent-500 px-3 py-2 text-[12px] font-semibold text-ink-950 shadow-sm shadow-accent-500/20 transition hover:bg-accent-400"
         @click="$emit('create')"
       >
         <Plus :size="14" /> Add branch
@@ -55,7 +55,7 @@ function managerName(branch: Branch) {
     </div>
 
     <div v-else-if="branches.length === 0" class="px-5 py-12 text-center">
-      <span class="mx-auto flex size-11 items-center justify-center rounded-2xl bg-gradient-to-br from-sky-100 to-violet-50 text-sky-700 dark:from-sky-400/15 dark:to-violet-400/10 dark:text-sky-200">
+      <span class="mx-auto flex size-11 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-100 to-brand-50 text-brand-700 dark:from-brand-400/15 dark:to-brand-400/10 dark:text-brand-200">
         <Building2 :size="19" />
       </span>
       <p class="mt-3 text-[13px] font-semibold">No branches yet</p>
@@ -73,8 +73,8 @@ function managerName(branch: Branch) {
     </div>
 
     <ul v-else class="divide-y divide-ink-900/8">
-      <li v-for="branch in branches" :key="branch.id" class="flex flex-wrap items-start gap-3 px-4 py-4 transition hover:bg-sky-50/30 sm:px-5">
-        <span class="flex size-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-sky-100 to-cyan-50 text-sky-700 dark:from-sky-400/15 dark:to-cyan-400/10 dark:text-sky-200">
+      <li v-for="branch in branches" :key="branch.id" class="flex flex-wrap items-start gap-3 px-4 py-4 transition hover:bg-brand-50/30 sm:px-5">
+        <span class="flex size-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-brand-100 to-brand-50 text-brand-700 dark:from-brand-400/15 dark:to-brand-400/10 dark:text-brand-200">
           <MapPin :size="16" />
         </span>
         <div class="min-w-0 flex-1">
@@ -91,7 +91,7 @@ function managerName(branch: Branch) {
             <span
               class="rounded-full border px-2 py-0.5 text-[9.5px] font-medium capitalize"
               :class="branch.status === 'active'
-                ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                ? 'border-success-200 bg-success-50 text-success-700'
                 : 'border-slate-200 bg-slate-50 text-slate-500'"
             >
               {{ branch.status }}

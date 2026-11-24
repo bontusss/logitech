@@ -33,7 +33,7 @@ function submit() {
 <template>
   <div class="marketing-hero relative overflow-hidden">
     <div aria-hidden="true" class="pointer-events-none absolute -top-40 right-[-6rem] size-[420px] rounded-full bg-brand-500/12 blur-[110px]" />
-    <div aria-hidden="true" class="pointer-events-none absolute bottom-[-14rem] left-[-8rem] size-[420px] rounded-full bg-amber-300/20 blur-[110px]" />
+    <div aria-hidden="true" class="pointer-events-none absolute bottom-[-14rem] left-[-8rem] size-[420px] rounded-full bg-accent-300/20 blur-[110px]" />
     <div class="relative mx-auto max-w-[1100px] px-5 py-14 sm:px-8 sm:py-20">
     <NuxtLink
       to="/"
@@ -45,8 +45,8 @@ function submit() {
 
     <div class="mt-8 grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,0.9fr)]">
       <div>
-        <p class="inline-flex items-center gap-1.5 rounded-full border border-white/80 bg-white/70 px-2.5 py-1 text-[10px] font-bold tracking-[0.18em] text-brand-700 uppercase shadow-sm dark:border-white/10 dark:bg-white/5 dark:text-indigo-200">
-          <span class="size-1.5 rounded-full bg-gradient-to-r from-brand-500 to-violet-500" />
+        <p class="inline-flex items-center gap-1.5 rounded-full border border-white/80 bg-white/70 px-2.5 py-1 text-[10px] font-bold tracking-[0.18em] text-brand-700 uppercase shadow-sm dark:border-white/10 dark:bg-white/5 dark:text-brand-200">
+          <span class="size-1.5 rounded-full bg-gradient-to-r from-brand-500 to-brand-500" />
           Book a demo
         </p>
         <h1 class="mt-3 text-[clamp(1.9rem,4.4vw,2.9rem)] leading-[1.05] font-semibold tracking-[-0.04em]">
@@ -67,7 +67,7 @@ function submit() {
             :key="item"
             class="flex items-start gap-2.5 text-[13.5px] text-ink-900/65"
           >
-            <span class="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-lg bg-emerald-100 text-emerald-700 dark:bg-emerald-400/15 dark:text-emerald-200">
+            <span class="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-lg bg-success-100 text-success-700 dark:bg-success-500/15 dark:text-success-200">
               <CheckCircle2 :size="13" />
             </span>
             {{ item }}
@@ -88,7 +88,7 @@ function submit() {
 
       <div class="site-panel rounded-3xl border p-5 sm:p-6">
         <div v-if="sent" role="status" class="py-8 text-center">
-          <div class="mx-auto flex size-12 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-500 text-white shadow-lg">
+          <div class="mx-auto flex size-12 items-center justify-center rounded-2xl bg-gradient-to-br from-success-500 to-success-500 text-white shadow-lg">
             <CheckCircle2 :size="22" />
           </div>
           <h2 class="mt-4 text-[17px] font-semibold">Request captured</h2>
@@ -155,7 +155,7 @@ function submit() {
 
           <button
             type="submit"
-            class="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-brand-600 to-violet-600 px-4 py-3 text-sm font-semibold text-white shadow-[0_12px_26px_-16px_rgba(43,75,255,0.9)] transition hover:-translate-y-0.5"
+            class="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-brand-600 to-brand-600 px-4 py-3 text-sm font-semibold text-white shadow-[0_12px_26px_-16px_rgba(43,75,255,0.9)] transition hover:-translate-y-0.5"
           >
             Request Demo
             <ArrowRight :size="15" />

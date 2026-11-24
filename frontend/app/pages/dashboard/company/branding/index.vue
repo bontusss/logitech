@@ -27,8 +27,8 @@ function updateSubdomain(subdomain: string) {
 <template>
   <div class="dash-page">
     <header class="dash-hero relative overflow-hidden rounded-2xl border p-5 sm:p-6">
-      <div class="pointer-events-none absolute -top-16 right-10 size-44 rounded-full bg-fuchsia-400/15 blur-3xl" />
-      <div class="pointer-events-none absolute -right-8 -bottom-24 size-52 rounded-full bg-cyan-400/15 blur-3xl" />
+      <div class="pointer-events-none absolute -top-16 right-10 size-44 rounded-full bg-accent-400/15 blur-3xl" />
+      <div class="pointer-events-none absolute -right-8 -bottom-24 size-52 rounded-full bg-brand-400/15 blur-3xl" />
       <div class="relative flex flex-wrap items-start justify-between gap-4">
         <div>
           <p class="dash-eyebrow inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-semibold tracking-wide">
@@ -55,9 +55,9 @@ function updateSubdomain(subdomain: string) {
     <template v-else-if="detail">
       <div
         v-if="publicURL"
-        class="mt-4 flex flex-wrap items-center gap-2 rounded-xl border border-ink-900/10 bg-gradient-to-r from-violet-50/80 via-white to-cyan-50/70 px-4 py-3 dark:border-white/10 dark:from-violet-400/8 dark:via-transparent dark:to-cyan-400/8"
+        class="mt-4 flex flex-wrap items-center gap-2 rounded-xl border border-ink-900/10 bg-gradient-to-r from-brand-50/80 via-white to-brand-50/70 px-4 py-3 dark:border-white/10 dark:from-brand-400/8 dark:via-transparent dark:to-brand-400/8"
       >
-        <span class="flex size-7 items-center justify-center rounded-lg bg-white text-violet-700 shadow-sm dark:bg-white/10 dark:text-violet-200">
+        <span class="flex size-7 items-center justify-center rounded-lg bg-white text-brand-700 shadow-sm dark:bg-white/10 dark:text-brand-200">
           <Palette :size="13" />
         </span>
         <p class="text-[11.5px] text-ink-900/45">Public company address</p>

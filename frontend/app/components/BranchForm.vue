@@ -88,7 +88,7 @@ function submit() {
   <form class="dash-panel rounded-2xl border p-5" @submit.prevent="submit">
     <div class="flex items-start justify-between gap-3">
       <div class="flex items-start gap-3">
-        <span class="flex size-9 shrink-0 items-center justify-center rounded-xl bg-sky-100 text-sky-700 dark:bg-sky-400/15 dark:text-sky-200">
+        <span class="flex size-9 shrink-0 items-center justify-center rounded-xl bg-brand-100 text-brand-700 dark:bg-brand-400/15 dark:text-brand-200">
           <Building2 :size="16" />
         </span>
         <div>
@@ -158,7 +158,7 @@ function submit() {
       <button type="button" class="rounded-lg border border-slate-300 px-3.5 py-2 text-[12.5px] font-medium transition hover:bg-slate-50" @click="$emit('cancel')">
         Cancel
       </button>
-      <button type="submit" :disabled="saving" class="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-brand-600 to-violet-600 px-4 py-2.5 text-[12.5px] font-semibold text-white shadow-sm shadow-brand-600/25 transition hover:-translate-y-0.5 disabled:opacity-60">
+      <button type="submit" :disabled="saving" class="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-brand-600 to-brand-600 px-4 py-2.5 text-[12.5px] font-semibold text-white shadow-sm shadow-brand-600/25 transition hover:-translate-y-0.5 disabled:opacity-60">
         <Loader2 v-if="saving" :size="14" class="animate-spin" />
         <Save v-else :size="14" />
         {{ branch ? 'Save branch' : 'Create branch' }}

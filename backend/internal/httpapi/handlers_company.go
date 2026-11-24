@@ -66,6 +66,19 @@ type companyRegistrationRequest struct {
 	Password      string   `json:"password" binding:"required,min=8,max=128"`
 }
 
+type companySetupRequest struct {
+	CompanyName   string   `json:"company_name" binding:"required,min=2,max=160"`
+	BusinessEmail string   `json:"business_email" binding:"required,email,max=254"`
+	Phone         string   `json:"phone" binding:"required,max=30"`
+	BusinessType  string   `json:"business_type" binding:"omitempty,max=80"`
+	BusinessTypes []string `json:"business_types"`
+	Country       string   `json:"country" binding:"omitempty,max=2"`
+	State         string   `json:"state" binding:"required,max=80"`
+	City          string   `json:"city" binding:"required,max=80"`
+	Address       string   `json:"address" binding:"required,max=240"`
+	ContactName   string   `json:"contact_name" binding:"required,min=2,max=120"`
+}
+
 type companyDTO struct {
 	ID               uuid.UUID       `json:"id"`
 	Name             string          `json:"name"`
@@ -161,6 +174,46 @@ func (a *API) registerCompany(c *gin.Context) {
 
 	a.setSessionCookies(c, session)
 	c.JSON(http.StatusCreated, toSessionDTO(session))
+}
+
+// setupCompany completes a provider account created through Google sign-up.
+// The account already exists and is signed in; this only creates its company.
+func (a *API) setupCompany(c *gin.Context) {
+	user, ok := currentUser(c)
+	if !ok {
+		fail(c, http.StatusUnauthorized, "unauthenticated", "Sign in to continue.")
+		return
+	}
+
+	var req companySetupRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		fail(c, http.StatusBadRequest, "invalid_input", "Check the company details you entered.")
+		return
+	}
+
+	businessType, ok := normalizeProviderBusinessTypes(req.BusinessTypes, req.BusinessType)
+	if !ok {
+		fail(c, http.StatusUnprocessableEntity, "invalid_business_type", "Select intercity, last mile, or both.")
+		return
+	}
+
+	companyID, err := a.svc.SetupCompanyForUser(c.Request.Context(), user.ID, service.CompanyRegistration{
+		CompanyName:   req.CompanyName,
+		BusinessEmail: req.BusinessEmail,
+		Phone:         req.Phone,
+		BusinessType:  businessType,
+		Country:       strings.ToUpper(req.Country),
+		State:         req.State,
+		City:          req.City,
+		Address:       req.Address,
+		ContactName:   req.ContactName,
+	}, c.ClientIP(), c.Request.UserAgent())
+	if err != nil {
+		a.handleServiceError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusCreated, gin.H{"company_id": companyID})
 }
 
 func (a *API) getCompany(c *gin.Context) {

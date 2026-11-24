@@ -18,7 +18,7 @@ INSERT INTO users (
 ) VALUES (
   $1, $2, $3, NULLIF($4::text, ''), $5, $6, $7
 )
-RETURNING id, email, password_hash, full_name, phone, account_type, platform_role, email_verified_at, status, last_login_at, created_at, updated_at, deleted_at
+RETURNING id, email, password_hash, full_name, phone, account_type, platform_role, email_verified_at, status, last_login_at, created_at, updated_at, deleted_at, google_subject
 `
 
 type CreateUserParams struct {
@@ -56,12 +56,13 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.GoogleSubject,
 	)
 	return i, err
 }
 
 const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT id, email, password_hash, full_name, phone, account_type, platform_role, email_verified_at, status, last_login_at, created_at, updated_at, deleted_at FROM users
+SELECT id, email, password_hash, full_name, phone, account_type, platform_role, email_verified_at, status, last_login_at, created_at, updated_at, deleted_at, google_subject FROM users
 WHERE email = $1 AND deleted_at IS NULL
 `
 
@@ -82,12 +83,13 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.GoogleSubject,
 	)
 	return i, err
 }
 
 const getUserByID = `-- name: GetUserByID :one
-SELECT id, email, password_hash, full_name, phone, account_type, platform_role, email_verified_at, status, last_login_at, created_at, updated_at, deleted_at FROM users
+SELECT id, email, password_hash, full_name, phone, account_type, platform_role, email_verified_at, status, last_login_at, created_at, updated_at, deleted_at, google_subject FROM users
 WHERE id = $1 AND deleted_at IS NULL
 `
 
@@ -108,6 +110,7 @@ func (q *Queries) GetUserByID(ctx context.Context, id uuid.UUID) (User, error) {
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.GoogleSubject,
 	)
 	return i, err
 }
@@ -154,7 +157,7 @@ const updateUserProfile = `-- name: UpdateUserProfile :one
 UPDATE users
 SET full_name = $2, phone = NULLIF($3::text, ''), updated_at = now()
 WHERE id = $1 AND deleted_at IS NULL
-RETURNING id, email, password_hash, full_name, phone, account_type, platform_role, email_verified_at, status, last_login_at, created_at, updated_at, deleted_at
+RETURNING id, email, password_hash, full_name, phone, account_type, platform_role, email_verified_at, status, last_login_at, created_at, updated_at, deleted_at, google_subject
 `
 
 type UpdateUserProfileParams struct {
@@ -180,6 +183,7 @@ func (q *Queries) UpdateUserProfile(ctx context.Context, arg UpdateUserProfilePa
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
+		&i.GoogleSubject,
 	)
 	return i, err
 }

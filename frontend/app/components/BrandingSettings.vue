@@ -110,7 +110,7 @@ async function upload(kind: 'logo' | 'cover' | 'favicon', event: Event) {
     <form class="dash-panel rounded-2xl border p-5 sm:p-6" @submit.prevent="save">
       <div class="flex flex-wrap items-start justify-between gap-3">
         <div class="flex items-start gap-3">
-          <span class="flex size-9 shrink-0 items-center justify-center rounded-xl bg-rose-100 text-rose-700 dark:bg-rose-400/15 dark:text-rose-200">
+          <span class="flex size-9 shrink-0 items-center justify-center rounded-xl bg-red-100 text-red-700 dark:bg-red-400/15 dark:text-red-200">
             <Palette :size="16" />
           </span>
           <div>
@@ -218,7 +218,7 @@ async function upload(kind: 'logo' | 'cover' | 'favicon', event: Event) {
       </p>
 
       <div v-if="canManage" class="mt-5 flex justify-end">
-        <button type="submit" :disabled="saving" class="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-brand-600 to-violet-600 px-4 py-2.5 text-[12.5px] font-semibold text-white shadow-sm shadow-brand-600/25 transition hover:-translate-y-0.5 disabled:opacity-60">
+        <button type="submit" :disabled="saving" class="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-brand-600 to-brand-600 px-4 py-2.5 text-[12.5px] font-semibold text-white shadow-sm shadow-brand-600/25 transition hover:-translate-y-0.5 disabled:opacity-60">
           <Loader2 v-if="saving" :size="14" class="animate-spin" />
           <Save v-else :size="14" />
           Save branding

@@ -6,9 +6,9 @@ const props = withDefaults(
     state: string
     city: string
     label: string
-    tone?: 'violet' | 'sky'
+    tone?: 'brand' | 'accent'
   }>(),
-  { tone: 'violet' },
+  { tone: 'brand' },
 )
 
 const emit = defineEmits<{
@@ -26,15 +26,15 @@ watch(
 )
 
 const selectClass =
-  'w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-[13px] font-medium text-ink-900 transition hover:border-slate-300 focus:border-brand-500 disabled:opacity-50 dark:border-white/10 dark:bg-slate-900'
+  'w-full rounded-xl border border-ink-900/12 bg-canvas px-3 py-2.5 text-[13px] font-medium text-ink-900 transition hover:border-ink-900/25 focus:border-accent-500 focus:bg-surface focus:outline-none disabled:opacity-50'
 </script>
 
 <template>
-  <div class="rounded-2xl border border-ink-900/8 bg-white/70 p-3.5 dark:border-white/10 dark:bg-white/5">
+  <div class="rounded-2xl border border-ink-900/8 bg-surface/70 p-3.5">
     <p class="mb-2.5 flex items-center gap-1.5 text-[10px] font-bold tracking-[0.14em] uppercase">
       <span
         class="size-2 rounded-full"
-        :class="tone === 'violet' ? 'bg-violet-500' : 'bg-sky-500'"
+        :class="tone === 'accent' ? 'bg-accent-500' : 'bg-brand-600'"
       />
       <span class="text-ink-900/60">{{ label }}</span>
     </p>

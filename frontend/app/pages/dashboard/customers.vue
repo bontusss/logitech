@@ -135,9 +135,9 @@ function shipmentLabel(shipment: CustomerShipment) {
 }
 
 function shipmentTone(shipment: CustomerShipment) {
-  if (shipment.request_status === 'pending') return 'bg-amber-50 text-amber-700'
-  if (shipment.request_status === 'declined' || shipment.status === 'cancelled') return 'bg-rose-50 text-rose-700'
-  if (shipment.status === 'delivered') return 'bg-emerald-50 text-emerald-700'
+  if (shipment.request_status === 'pending') return 'bg-accent-50 text-accent-700'
+  if (shipment.request_status === 'declined' || shipment.status === 'cancelled') return 'bg-red-50 text-red-700'
+  if (shipment.status === 'delivered') return 'bg-success-50 text-success-700'
   return 'bg-brand-50 text-brand-700'
 }
 
@@ -166,8 +166,8 @@ async function toggleCustomer(customer: ProviderCustomer) {
 <template>
   <div class="dash-page">
     <header class="dash-hero relative overflow-hidden rounded-2xl border p-5 sm:p-6">
-      <div class="pointer-events-none absolute -top-16 right-10 size-44 rounded-full bg-rose-400/15 blur-3xl" />
-      <div class="pointer-events-none absolute -right-8 -bottom-24 size-52 rounded-full bg-cyan-400/15 blur-3xl" />
+      <div class="pointer-events-none absolute -top-16 right-10 size-44 rounded-full bg-red-400/15 blur-3xl" />
+      <div class="pointer-events-none absolute -right-8 -bottom-24 size-52 rounded-full bg-brand-400/15 blur-3xl" />
       <div class="relative flex flex-wrap items-start justify-between gap-4">
         <div>
           <p class="dash-eyebrow inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-semibold tracking-wide">
@@ -190,7 +190,7 @@ async function toggleCustomer(customer: ProviderCustomer) {
     </p>
 
     <div class="mt-4 grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-4">
-      <div v-for="stat in stats" :key="stat.label" class="dash-stat dash-stat--violet rounded-xl border p-3.5 sm:p-4">
+      <div v-for="stat in stats" :key="stat.label" class="dash-stat dash-stat--brand rounded-xl border p-3.5 sm:p-4">
         <span class="flex items-center justify-between gap-2">
           <span class="text-[10px] font-semibold tracking-wide text-ink-900/50 uppercase">{{ stat.label }}</span>
           <span class="flex size-6 items-center justify-center rounded-lg bg-white/80 text-ink-900/45 dark:bg-white/10">
@@ -223,7 +223,7 @@ async function toggleCustomer(customer: ProviderCustomer) {
         <Loader2 :size="15" class="animate-spin" /> Loading customers…
       </div>
       <div v-else-if="!filtered.length" class="p-10 text-center">
-        <span class="mx-auto flex size-11 items-center justify-center rounded-2xl bg-gradient-to-br from-rose-100 to-cyan-50 text-brand-700 dark:from-rose-400/15 dark:to-cyan-400/10 dark:text-indigo-200">
+        <span class="mx-auto flex size-11 items-center justify-center rounded-2xl bg-gradient-to-br from-red-100 to-brand-50 text-brand-700 dark:from-red-400/15 dark:to-brand-400/10 dark:text-brand-200">
           <Users :size="19" />
         </span>
         <h3 class="mt-3 text-[13px] font-semibold">
@@ -245,7 +245,7 @@ async function toggleCustomer(customer: ProviderCustomer) {
             @click="toggleCustomer(customer)"
           >
             <div class="flex min-w-0 items-start gap-3">
-              <span class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-brand-500 to-violet-500 text-[12px] font-semibold text-white shadow-sm shadow-brand-600/25">
+              <span class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-brand-500 to-brand-500 text-[12px] font-semibold text-white shadow-sm shadow-brand-600/25">
                 {{ customer.full_name.slice(0, 1).toUpperCase() }}
               </span>
               <div class="min-w-0">
@@ -306,7 +306,7 @@ async function toggleCustomer(customer: ProviderCustomer) {
                     :href="shipment.tracking_url"
                     target="_blank"
                     rel="noopener"
-                    class="ml-auto inline-flex items-center gap-1 font-semibold text-brand-700 hover:text-brand-800"
+                    class="ml-auto inline-flex items-center gap-1 font-semibold text-brand-700 hover:text-brand-600"
                   >
                     Track <ExternalLink :size="11" />
                   </a>

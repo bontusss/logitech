@@ -217,7 +217,7 @@ async function setDriverStatus(driver: Driver, nextStatus: Driver['status']) {
   <div class="driver-workspace dash-page">
     <div class="driver-page-hero flex flex-wrap items-center justify-between gap-4 rounded-2xl border p-5 sm:p-6">
       <div>
-        <p class="inline-flex items-center gap-1.5 rounded-full bg-white/70 px-2.5 py-1 text-[10px] font-semibold tracking-wide text-brand-700 dark:bg-slate-950/30 dark:text-indigo-200">YOUR PEOPLE, ON THE MOVE</p>
+        <p class="inline-flex items-center gap-1.5 rounded-full bg-white/70 px-2.5 py-1 text-[10px] font-semibold tracking-wide text-brand-700 dark:bg-slate-950/30 dark:text-brand-200">YOUR PEOPLE, ON THE MOVE</p>
         <h1 class="mt-2 text-[clamp(1.45rem,2.5vw,1.8rem)] leading-tight font-semibold tracking-[-0.04em]">Drivers</h1>
         <p class="mt-1.5 max-w-2xl text-[12px] leading-relaxed text-ink-900/60">
           Keep your driver roster organized and ready for the next delivery.
@@ -226,7 +226,7 @@ async function setDriverStatus(driver: Driver, nextStatus: Driver['status']) {
       <button
         v-if="can('staff.invite')"
         type="button"
-        class="inline-flex min-h-10 items-center gap-1.5 rounded-xl bg-brand-600 px-4 py-2.5 text-[12px] font-semibold text-white shadow-sm shadow-brand-600/20 transition hover:-translate-y-0.5 hover:bg-brand-700"
+        class="inline-flex min-h-10 items-center gap-1.5 rounded-xl bg-accent-500 px-4 py-2.5 text-[12px] font-semibold text-ink-950 shadow-sm shadow-accent-500/20 transition hover:-translate-y-0.5 hover:bg-accent-400"
         @click="openCreateForm"
       >
         <Plus :size="14" />
@@ -234,7 +234,7 @@ async function setDriverStatus(driver: Driver, nextStatus: Driver['status']) {
       </button>
     </div>
 
-    <p v-if="!workspaceLoading && !can('staff.invite')" class="mt-4 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3.5 py-2.5 text-[11.5px] text-amber-900">
+    <p v-if="!workspaceLoading && !can('staff.invite')" class="mt-4 flex items-start gap-2 rounded-lg border border-accent-200 bg-accent-50 px-3.5 py-2.5 text-[11.5px] text-accent-800">
       <AlertCircle :size="14" class="mt-0.5 shrink-0" />
       Your account can view drivers but doesn’t have permission to create or manage them. Ask a company administrator to update your role.
     </p>
@@ -244,21 +244,21 @@ async function setDriverStatus(driver: Driver, nextStatus: Driver['status']) {
     </p>
 
     <section class="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4" aria-label="Driver summary">
-      <article class="driver-stat driver-stat--violet rounded-xl border p-4">
+      <article class="driver-stat driver-stat--brand rounded-xl border p-4">
         <p class="text-[10px] font-semibold tracking-wide text-ink-900/50 uppercase">Total drivers</p>
         <p class="mt-2 text-[22px] font-semibold tracking-tight">{{ counts.total }}</p>
       </article>
-      <article class="driver-stat driver-stat--mint rounded-xl border p-4">
+      <article class="driver-stat driver-stat--success rounded-xl border p-4">
         <p class="text-[10px] font-semibold tracking-wide text-ink-900/50 uppercase">Available</p>
         <p class="mt-2 text-[22px] font-semibold tracking-tight">{{ counts.available }}</p>
         <p class="mt-1 text-[10px] text-ink-900/40">Active driver portals</p>
       </article>
-      <article class="driver-stat driver-stat--blue rounded-xl border p-4">
+      <article class="driver-stat driver-stat--brand rounded-xl border p-4">
         <p class="text-[10px] font-semibold tracking-wide text-ink-900/50 uppercase">Assigned</p>
         <p class="mt-2 text-[22px] font-semibold tracking-tight">{{ counts.assigned }}</p>
         <p class="mt-1 text-[10px] text-ink-900/40">Assignments aren’t available yet</p>
       </article>
-      <article class="driver-stat driver-stat--peach rounded-xl border p-4">
+      <article class="driver-stat driver-stat--accent rounded-xl border p-4">
         <p class="text-[10px] font-semibold tracking-wide text-ink-900/50 uppercase">Needs attention</p>
         <p class="mt-2 text-[22px] font-semibold tracking-tight">{{ counts.attention }}</p>
         <p class="mt-1 text-[10px] text-ink-900/40">Suspended or deactivated portals</p>
@@ -266,18 +266,18 @@ async function setDriverStatus(driver: Driver, nextStatus: Driver['status']) {
     </section>
 
     <section v-if="newPortalURL" class="driver-portal-notice mt-4 rounded-xl border p-4">
-      <h2 class="text-[13px] font-semibold text-emerald-900">Driver portal created</h2>
-      <p class="mt-1 text-[11.5px] text-emerald-900/70">
+      <h2 class="text-[13px] font-semibold text-success-700">Driver portal created</h2>
+      <p class="mt-1 text-[11.5px] text-success-700/70">
         {{ emailSent ? 'A welcome email with this private link was sent.' : 'Email delivery failed. Share this private link with the driver securely.' }}
         Anyone with the link can open this driver portal; keep it private.
       </p>
       <div class="mt-3 flex flex-wrap items-center gap-2">
-        <code class="min-w-0 max-w-full break-all rounded-lg border border-emerald-200 bg-white px-3 py-2 text-[11px] text-ink-900/70">
+        <code class="min-w-0 max-w-full break-all rounded-lg border border-success-200 bg-white px-3 py-2 text-[11px] text-ink-900/70">
           {{ newPortalURL }}
         </code>
         <button
           type="button"
-          class="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-emerald-300 bg-white px-3 py-2 text-[11px] font-semibold text-emerald-800"
+          class="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-success-200 bg-white px-3 py-2 text-[11px] font-semibold text-success-700"
           @click="copyPortalLink(newPortalURL, 'new')"
         >
           <Check v-if="copiedPortalId === 'new'" :size="13" />
@@ -285,7 +285,7 @@ async function setDriverStatus(driver: Driver, nextStatus: Driver['status']) {
           {{ copiedPortalId === 'new' ? 'Copied' : 'Copy link' }}
         </button>
       </div>
-      <button type="button" class="mt-2 text-[10.5px] text-emerald-900/60 underline" @click="newPortalURL = ''">
+      <button type="button" class="mt-2 text-[10.5px] text-success-700/60 underline" @click="newPortalURL = ''">
         Dismiss this link
       </button>
     </section>
@@ -304,9 +304,9 @@ async function setDriverStatus(driver: Driver, nextStatus: Driver['status']) {
       >
         <div class="driver-modal-heading flex items-start justify-between gap-4 p-5 sm:p-6">
           <div class="flex items-start gap-3">
-            <span class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-violet-100 text-violet-700 dark:bg-violet-400/15 dark:text-violet-200"><UserRound :size="18" /></span>
+            <span class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-brand-100 text-brand-700 dark:bg-brand-400/15 dark:text-brand-200"><UserRound :size="18" /></span>
             <div>
-              <p class="text-[9.5px] font-semibold tracking-[0.16em] text-brand-700 uppercase dark:text-indigo-200">{{ editingDriverId ? 'DRIVER DETAILS' : 'NEW TEAM MEMBER' }}</p>
+              <p class="text-[9.5px] font-semibold tracking-[0.16em] text-brand-700 uppercase dark:text-brand-200">{{ editingDriverId ? 'DRIVER DETAILS' : 'NEW TEAM MEMBER' }}</p>
               <h2 :id="editingDriverId ? 'edit-driver-title' : 'create-driver-title'" class="mt-1 text-[15px] font-semibold">{{ editingDriverId ? 'Edit driver' : 'Add a driver' }}</h2>
               <p class="mt-1 text-[11px] text-ink-900/50">{{ editingDriverId ? 'Update their contact and vehicle details. Their portal link stays the same.' : 'Their private portal is ready as soon as you add them.' }}</p>
             </div>
@@ -342,7 +342,7 @@ async function setDriverStatus(driver: Driver, nextStatus: Driver['status']) {
             <input v-model="form.email" required type="email" maxlength="254" autocomplete="email" class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm focus:border-brand-500" />
           </label>
         </div>
-        <p class="mx-5 rounded-lg bg-violet-50 px-3 py-2.5 text-[10.5px] leading-relaxed text-violet-900/75 dark:mx-6 dark:bg-violet-400/10 dark:text-violet-100">
+        <p class="mx-5 rounded-lg bg-brand-50 px-3 py-2.5 text-[10.5px] leading-relaxed text-brand-700/75 dark:mx-6 dark:bg-brand-400/10 dark:text-brand-100">
           The driver won’t need to sign up. We’ll create a private portal link and email it to them.
         </p>
         <div class="flex justify-end gap-2 p-5 sm:px-6 sm:pb-6">
@@ -352,7 +352,7 @@ async function setDriverStatus(driver: Driver, nextStatus: Driver['status']) {
           <button
             type="submit"
             :disabled="saving"
-            class="inline-flex items-center gap-1.5 rounded-lg bg-brand-600 px-4 py-2.5 text-[11px] font-semibold text-white shadow-sm transition hover:bg-brand-700 disabled:opacity-50"
+            class="inline-flex items-center gap-1.5 rounded-lg bg-accent-500 px-4 py-2.5 text-[11px] font-semibold text-ink-950 shadow-sm transition hover:bg-accent-400 disabled:opacity-50"
           >
             <Loader2 v-if="saving" :size="14" class="animate-spin" />
             <UserRound v-else :size="14" />
@@ -405,9 +405,9 @@ async function setDriverStatus(driver: Driver, nextStatus: Driver['status']) {
             <span
               class="rounded-full border px-2 py-0.5 text-[9.5px] font-medium capitalize"
               :class="driver.status === 'active'
-                ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                ? 'border-success-200 bg-success-50 text-success-700'
                 : driver.status === 'suspended'
-                  ? 'border-amber-200 bg-amber-50 text-amber-700'
+                  ? 'border-accent-200 bg-accent-50 text-accent-700'
                   : 'border-slate-200 bg-slate-50 text-slate-500'"
             >
               {{ driver.status === 'inactive' ? 'deactivated' : driver.status }}
@@ -426,7 +426,7 @@ async function setDriverStatus(driver: Driver, nextStatus: Driver['status']) {
                 :href="driver.portal_url"
                 target="_blank"
                 rel="noopener noreferrer"
-                class="inline-flex items-center gap-0.5 text-[9.5px] font-semibold text-brand-700 hover:text-brand-800"
+                class="inline-flex items-center gap-0.5 text-[9.5px] font-semibold text-brand-700 hover:text-brand-600"
               >
                 Open <ExternalLink :size="10" />
               </a>
@@ -454,7 +454,7 @@ async function setDriverStatus(driver: Driver, nextStatus: Driver['status']) {
                 <Share2 :size="11" /> Share
               </button>
             </div>
-            <p v-if="driver.status !== 'active'" class="mt-1.5 text-[9px] text-amber-700">
+            <p v-if="driver.status !== 'active'" class="mt-1.5 text-[9px] text-accent-700">
               {{ driver.status === 'suspended' ? 'Suspended' : 'Deactivated' }} links stay private and inactive until you reactivate this driver.
             </p>
           </div>
@@ -471,7 +471,7 @@ async function setDriverStatus(driver: Driver, nextStatus: Driver['status']) {
             <button
               v-if="canManageStatus && driver.status === 'active'"
               type="button"
-              class="rounded-md border border-amber-200 px-2 py-1.5 text-[10px] font-semibold text-amber-700 hover:bg-amber-50"
+              class="rounded-md border border-accent-200 px-2 py-1.5 text-[10px] font-semibold text-accent-700 hover:bg-accent-50"
               @click="setDriverStatus(driver, 'suspended')"
             >
               Suspend
@@ -479,7 +479,7 @@ async function setDriverStatus(driver: Driver, nextStatus: Driver['status']) {
             <button
               v-if="canManageStatus && driver.status !== 'inactive'"
               type="button"
-              class="rounded-md border border-rose-200 px-2 py-1.5 text-[10px] font-semibold text-rose-700 hover:bg-rose-50"
+              class="rounded-md border border-red-200 px-2 py-1.5 text-[10px] font-semibold text-red-700 hover:bg-red-50"
               @click="setDriverStatus(driver, 'inactive')"
             >
               Deactivate
@@ -487,7 +487,7 @@ async function setDriverStatus(driver: Driver, nextStatus: Driver['status']) {
             <button
               v-if="canManageStatus && driver.status !== 'active'"
               type="button"
-              class="rounded-md border border-emerald-200 px-2 py-1.5 text-[10px] font-semibold text-emerald-700 hover:bg-emerald-50"
+              class="rounded-md border border-success-200 px-2 py-1.5 text-[10px] font-semibold text-success-700 hover:bg-success-50"
               @click="setDriverStatus(driver, 'active')"
             >
               Reactivate

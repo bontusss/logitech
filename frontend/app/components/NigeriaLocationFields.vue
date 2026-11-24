@@ -31,12 +31,12 @@ function updateState(event: Event) {
 <template>
   <div class="grid gap-3 sm:grid-cols-2">
     <label class="block">
-      <span class="mb-1.5 block text-[11px] font-medium text-ink-900/55">State</span>
+      <span class="mb-1.5 block text-[11.5px] font-semibold text-ink-900/75">State</span>
       <select
         :value="state"
         :required="required"
         :disabled="disabled"
-        class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm transition hover:border-slate-400 focus:border-brand-500 disabled:bg-slate-50 disabled:text-ink-900/45"
+        class="w-full rounded-xl border border-ink-900/15 bg-canvas px-3.5 py-2.5 text-sm text-ink-900 transition hover:border-ink-900/30 focus:border-accent-500 focus:bg-surface focus:outline-none disabled:bg-canvas/60 disabled:text-ink-900/45"
         @change="updateState"
       >
         <option value="">Select a state</option>
@@ -44,12 +44,12 @@ function updateState(event: Event) {
       </select>
     </label>
     <label class="block">
-      <span class="mb-1.5 block text-[11px] font-medium text-ink-900/55">City / LGA</span>
+      <span class="mb-1.5 block text-[11.5px] font-semibold text-ink-900/75">City / LGA</span>
       <select
         :value="city"
         :required="required"
         :disabled="disabled || !state"
-        class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm transition hover:border-slate-400 focus:border-brand-500 disabled:bg-slate-50 disabled:text-ink-900/45"
+        class="w-full rounded-xl border border-ink-900/15 bg-canvas px-3.5 py-2.5 text-sm text-ink-900 transition hover:border-ink-900/30 focus:border-accent-500 focus:bg-surface focus:outline-none disabled:bg-canvas/60 disabled:text-ink-900/45"
         @change="emit('update:city', ($event.target as HTMLSelectElement).value)"
       >
         <option value="">Select a city or LGA</option>

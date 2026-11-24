@@ -35,6 +35,9 @@ type Config struct {
 	WhatsAppGraphAPIVersion  string
 	WhatsAppOTPTemplate      string
 	WhatsAppTemplateLanguage string
+	GoogleClientID           string
+	GoogleClientSecret       string
+	GoogleRedirectURI        string
 }
 
 const devJWTSecret = "dev-only-jwt-secret-change-before-production"
@@ -64,6 +67,13 @@ func Load() (*Config, error) {
 		WhatsAppGraphAPIVersion:  getenv("WHATSAPP_GRAPH_API_VERSION", "v23.0"),
 		WhatsAppOTPTemplate:      getenv("WHATSAPP_OTP_TEMPLATE", "bol_phone_verification"),
 		WhatsAppTemplateLanguage: getenv("WHATSAPP_TEMPLATE_LANGUAGE", "en_US"),
+		GoogleClientID:           strings.TrimSpace(os.Getenv("GOOGLE_CLIENT_ID")),
+		GoogleClientSecret:       strings.TrimSpace(os.Getenv("GOOGLE_CLIENT_SECRET")),
+		GoogleRedirectURI:        strings.TrimSpace(os.Getenv("GOOGLE_REDIRECT_URI")),
+	}
+
+	if cfg.GoogleRedirectURI == "" {
+		cfg.GoogleRedirectURI = strings.TrimRight(cfg.APIPublicURL, "/") + "/api/v1/auth/google/callback"
 	}
 
 	if cfg.JWTSecret == "" {

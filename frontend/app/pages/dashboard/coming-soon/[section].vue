@@ -22,37 +22,37 @@ const sections: Record<
     title: 'Deliveries',
     description: 'Manage delivery assignments, driver progress and proof of delivery from one place.',
     icon: Truck,
-    iconClass: 'bg-sky-100 text-sky-700 dark:bg-sky-400/15 dark:text-sky-200',
+    iconClass: 'bg-brand-100 text-brand-700 dark:bg-brand-400/15 dark:text-brand-200',
   },
   requests: {
     title: 'Booking requests',
     description: 'Review and respond to new booking requests from your public booking page.',
     icon: ClipboardList,
-    iconClass: 'bg-amber-100 text-amber-700 dark:bg-amber-400/15 dark:text-amber-200',
+    iconClass: 'bg-accent-100 text-accent-700 dark:bg-accent-400/15 dark:text-accent-200',
   },
   analytics: {
     title: 'Analytics',
     description: 'Understand booking activity, delivery performance and trends across your business.',
     icon: ChartNoAxesColumnIncreasing,
-    iconClass: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-400/15 dark:text-emerald-200',
+    iconClass: 'bg-success-100 text-success-700 dark:bg-success-500/15 dark:text-success-200',
   },
   finance: {
     title: 'Finance',
     description: 'Track collections, outstanding balances and cash currently held by drivers.',
     icon: CreditCard,
-    iconClass: 'bg-cyan-100 text-cyan-700 dark:bg-cyan-400/15 dark:text-cyan-200',
+    iconClass: 'bg-brand-100 text-brand-700 dark:bg-brand-400/15 dark:text-brand-200',
   },
   rates: {
     title: 'Rates',
     description: 'Create and publish the delivery rates customers can use to plan their shipments.',
     icon: ClipboardList,
-    iconClass: 'bg-violet-100 text-violet-700 dark:bg-violet-400/15 dark:text-violet-200',
+    iconClass: 'bg-brand-100 text-brand-700 dark:bg-brand-400/15 dark:text-brand-200',
   },
   billing: {
     title: 'Billing',
     description: 'Manage your plan, invoices and payment methods.',
     icon: Settings,
-    iconClass: 'bg-amber-100 text-amber-700 dark:bg-amber-400/15 dark:text-amber-200',
+    iconClass: 'bg-accent-100 text-accent-700 dark:bg-accent-400/15 dark:text-accent-200',
   },
 }
 
@@ -63,10 +63,10 @@ useSeoMeta({ title: () => section.value ? `${section.value.title} · BOL` : 'Das
 <template>
   <div class="dash-page mx-auto max-w-3xl">
     <div class="dash-hero relative overflow-hidden rounded-2xl border p-6 sm:p-8">
-      <div class="pointer-events-none absolute -top-20 right-6 size-48 rounded-full bg-fuchsia-400/15 blur-3xl" />
-      <div class="pointer-events-none absolute -right-10 -bottom-24 size-56 rounded-full bg-cyan-400/15 blur-3xl" />
+      <div class="pointer-events-none absolute -top-20 right-6 size-48 rounded-full bg-accent-400/15 blur-3xl" />
+      <div class="pointer-events-none absolute -right-10 -bottom-24 size-56 rounded-full bg-brand-400/15 blur-3xl" />
       <div class="relative">
-        <span class="inline-flex items-center gap-1.5 rounded-full border border-white/70 bg-white/75 px-2.5 py-1 text-[9.5px] font-semibold tracking-wide text-brand-700 uppercase dark:border-white/10 dark:bg-slate-950/30 dark:text-indigo-200">
+        <span class="inline-flex items-center gap-1.5 rounded-full border border-white/70 bg-white/75 px-2.5 py-1 text-[9.5px] font-semibold tracking-wide text-brand-700 uppercase dark:border-white/10 dark:bg-slate-950/30 dark:text-brand-200">
           <CircleCheck :size="12" /> Coming soon
         </span>
         <template v-if="section">
@@ -95,7 +95,7 @@ useSeoMeta({ title: () => section.value ? `${section.value.title} · BOL` : 'Das
         </template>
         <NuxtLink
           to="/dashboard"
-          class="mt-5 inline-flex items-center gap-1.5 rounded-full bg-brand-600 px-3.5 py-2 text-[11.5px] font-semibold text-white shadow-sm shadow-brand-600/25 transition hover:-translate-x-0.5 hover:bg-brand-700"
+          class="mt-5 inline-flex items-center gap-1.5 rounded-full bg-accent-500 px-3.5 py-2 text-[11.5px] font-semibold text-ink-950 shadow-sm shadow-accent-500/25 transition hover:-translate-x-0.5 hover:bg-accent-400"
         >
           <ArrowLeft :size="14" /> Back to overview
         </NuxtLink>

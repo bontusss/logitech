@@ -19,18 +19,18 @@ export function serviceTone(key: string) {
   switch (key) {
     case 'express':
       return {
-        pill: 'bg-sky-100 text-sky-800 dark:bg-sky-400/15 dark:text-sky-200',
-        tile: 'bg-sky-100 text-sky-800 dark:bg-sky-400/15 dark:text-sky-200',
+        pill: 'bg-accent-100 text-accent-800 dark:bg-accent-500/15 dark:text-accent-300',
+        tile: 'bg-accent-100 text-accent-800 dark:bg-accent-500/15 dark:text-accent-300',
       }
     case 'same_day':
       return {
-        pill: 'bg-amber-100 text-amber-800 dark:bg-amber-400/15 dark:text-amber-200',
-        tile: 'bg-amber-100 text-amber-800 dark:bg-amber-400/15 dark:text-amber-200',
+        pill: 'bg-brand-100 text-ink-900 dark:bg-white/10 dark:text-brand-200',
+        tile: 'bg-brand-100 text-ink-900 dark:bg-white/10 dark:text-brand-200',
       }
     default:
       return {
-        pill: 'bg-violet-100 text-violet-800 dark:bg-violet-400/15 dark:text-violet-200',
-        tile: 'bg-violet-100 text-violet-800 dark:bg-violet-400/15 dark:text-violet-200',
+        pill: 'bg-brand-50 text-ink-900/70 dark:bg-white/8 dark:text-ink-900/70',
+        tile: 'bg-brand-50 text-ink-900/70 dark:bg-white/8 dark:text-ink-900/70',
       }
   }
 }

@@ -214,8 +214,8 @@ async function revoke(invitation: CompanyInvitation) {
 <template>
   <div class="dash-page">
     <header class="dash-hero relative overflow-hidden rounded-2xl border p-5 sm:p-6">
-      <div class="pointer-events-none absolute -top-16 right-10 size-44 rounded-full bg-fuchsia-400/15 blur-3xl" />
-      <div class="pointer-events-none absolute -right-8 -bottom-24 size-52 rounded-full bg-cyan-400/15 blur-3xl" />
+      <div class="pointer-events-none absolute -top-16 right-10 size-44 rounded-full bg-accent-400/15 blur-3xl" />
+      <div class="pointer-events-none absolute -right-8 -bottom-24 size-52 rounded-full bg-brand-400/15 blur-3xl" />
       <div class="relative flex flex-wrap items-start justify-between gap-4">
         <div>
           <p class="dash-eyebrow inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-semibold tracking-wide">
@@ -232,7 +232,7 @@ async function revoke(invitation: CompanyInvitation) {
           <button
             v-if="can('staff.invite')"
             type="button"
-            class="inline-flex min-h-10 items-center gap-1.5 rounded-xl bg-brand-600 px-4 py-2.5 text-[12px] font-semibold text-white shadow-sm shadow-brand-600/20 transition hover:-translate-y-0.5 hover:bg-brand-700"
+            class="inline-flex min-h-10 items-center gap-1.5 rounded-xl bg-accent-500 px-4 py-2.5 text-[12px] font-semibold text-ink-950 shadow-sm shadow-accent-500/20 transition hover:-translate-y-0.5 hover:bg-accent-400"
             @click="inviteOpen = true"
           >
             <UserPlus :size="14" /> Invite staff
@@ -246,35 +246,35 @@ async function revoke(invitation: CompanyInvitation) {
     </p>
 
     <section class="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4" aria-label="Staff summary">
-      <article class="dash-stat dash-stat--violet rounded-xl border p-4">
+      <article class="dash-stat dash-stat--brand rounded-xl border p-4">
         <div class="flex items-center justify-between gap-2">
           <p class="text-[10px] font-semibold tracking-wide text-ink-900/50 uppercase">Team members</p>
-          <span class="flex size-6 items-center justify-center rounded-lg bg-white/80 text-violet-700 dark:bg-white/10 dark:text-violet-200"><Users :size="12" /></span>
+          <span class="flex size-6 items-center justify-center rounded-lg bg-white/80 text-brand-700 dark:bg-white/10 dark:text-brand-200"><Users :size="12" /></span>
         </div>
         <p class="mt-2 text-[22px] leading-none font-semibold tracking-tight">{{ members.length }}</p>
       </article>
-      <article class="dash-stat dash-stat--mint rounded-xl border p-4">
+      <article class="dash-stat dash-stat--success rounded-xl border p-4">
         <div class="flex items-center justify-between gap-2">
           <p class="text-[10px] font-semibold tracking-wide text-ink-900/50 uppercase">Active</p>
-          <span class="flex size-6 items-center justify-center rounded-lg bg-white/80 text-emerald-700 dark:bg-white/10 dark:text-emerald-200"><CheckCircle2 :size="12" /></span>
+          <span class="flex size-6 items-center justify-center rounded-lg bg-white/80 text-success-700 dark:bg-white/10 dark:text-success-200"><CheckCircle2 :size="12" /></span>
         </div>
         <p class="mt-2 text-[22px] leading-none font-semibold tracking-tight">
           {{ members.filter((member) => member.status === 'active').length }}
         </p>
       </article>
-      <article class="dash-stat dash-stat--rose rounded-xl border p-4">
+      <article class="dash-stat dash-stat--accent rounded-xl border p-4">
         <div class="flex items-center justify-between gap-2">
           <p class="text-[10px] font-semibold tracking-wide text-ink-900/50 uppercase">Suspended</p>
-          <span class="flex size-6 items-center justify-center rounded-lg bg-white/80 text-rose-700 dark:bg-white/10 dark:text-rose-200"><UserX :size="12" /></span>
+          <span class="flex size-6 items-center justify-center rounded-lg bg-white/80 text-red-700 dark:bg-white/10 dark:text-red-200"><UserX :size="12" /></span>
         </div>
         <p class="mt-2 text-[22px] leading-none font-semibold tracking-tight">
           {{ members.filter((member) => member.status === 'suspended').length }}
         </p>
       </article>
-      <article class="dash-stat dash-stat--amber rounded-xl border p-4">
+      <article class="dash-stat dash-stat--accent rounded-xl border p-4">
         <div class="flex items-center justify-between gap-2">
           <p class="text-[10px] font-semibold tracking-wide text-ink-900/50 uppercase">Invitations</p>
-          <span class="flex size-6 items-center justify-center rounded-lg bg-white/80 text-amber-700 dark:bg-white/10 dark:text-amber-200"><Mail :size="12" /></span>
+          <span class="flex size-6 items-center justify-center rounded-lg bg-white/80 text-accent-700 dark:bg-white/10 dark:text-accent-200"><Mail :size="12" /></span>
         </div>
         <p class="mt-2 text-[22px] leading-none font-semibold tracking-tight">{{ invitations.length }}</p>
         <p class="mt-1 text-[10px] text-ink-900/45">Waiting to be accepted</p>
@@ -321,12 +321,12 @@ async function revoke(invitation: CompanyInvitation) {
       @remove="removeMember"
     />
 
-    <div v-if="devInviteToken" class="mt-4 rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50/60 p-4 dark:border-amber-400/20 dark:from-amber-400/10 dark:to-orange-400/5">
-      <p class="text-[11.5px] font-semibold text-amber-900 dark:text-amber-200">Development invitation link</p>
-      <p class="mt-1 text-[10.5px] leading-relaxed text-amber-800/80 dark:text-amber-200/70">
+    <div v-if="devInviteToken" class="mt-4 rounded-2xl border border-accent-200 bg-gradient-to-br from-accent-50 to-accent-50/60 p-4 dark:border-accent-400/20 dark:from-accent-400/10 dark:to-accent-400/5">
+      <p class="text-[11.5px] font-semibold text-accent-800 dark:text-accent-200">Development invitation link</p>
+      <p class="mt-1 text-[10.5px] leading-relaxed text-accent-800/80 dark:text-accent-200/70">
         Email delivery is logged in development. Share this one-time link with the invited staff member.
       </p>
-      <NuxtLink :to="`/invitations/${devInviteToken}`" class="mt-2 inline-block break-all text-[11px] font-semibold text-amber-900 underline underline-offset-2 dark:text-amber-200">
+      <NuxtLink :to="`/invitations/${devInviteToken}`" class="mt-2 inline-block break-all text-[11px] font-semibold text-accent-800 underline underline-offset-2 dark:text-accent-200">
         /invitations/{{ devInviteToken }}
       </NuxtLink>
     </div>
@@ -337,7 +337,7 @@ async function revoke(invitation: CompanyInvitation) {
           <h2 class="text-[13.5px] font-semibold">Pending invitations</h2>
           <p class="mt-0.5 text-[10.5px] text-ink-900/40">Unaccepted links expire automatically.</p>
         </div>
-        <span class="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700 dark:bg-amber-400/10 dark:text-amber-200">{{ invitations.length }}</span>
+        <span class="rounded-full bg-accent-50 px-2 py-0.5 text-[10px] font-semibold text-accent-700 dark:bg-accent-400/10 dark:text-accent-200">{{ invitations.length }}</span>
       </div>
 
       <div v-if="invitations.length === 0" class="px-4 py-8 text-center text-[11.5px] text-ink-900/40">
@@ -384,11 +384,11 @@ async function revoke(invitation: CompanyInvitation) {
         <form class="dash-modal max-h-full w-full max-w-lg overflow-y-auto rounded-2xl border p-5 shadow-2xl" @submit.prevent="saveMember">
           <div class="flex items-start justify-between gap-3">
             <div class="flex items-start gap-3">
-              <span class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-violet-100 text-violet-700 dark:bg-violet-400/15 dark:text-violet-200">
+              <span class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-brand-100 text-brand-700 dark:bg-brand-400/15 dark:text-brand-200">
                 <Users :size="18" />
               </span>
               <div>
-                <p class="text-[9.5px] font-semibold tracking-[0.16em] text-brand-700 uppercase dark:text-indigo-200">TEAM MEMBER</p>
+                <p class="text-[9.5px] font-semibold tracking-[0.16em] text-brand-700 uppercase dark:text-brand-200">TEAM MEMBER</p>
                 <h2 class="mt-1 text-[16px] font-semibold">Edit staff member</h2>
                 <p class="mt-1 text-[11.5px] text-ink-900/45">{{ editing.full_name }} · {{ editing.email }}</p>
               </div>
@@ -443,7 +443,7 @@ async function revoke(invitation: CompanyInvitation) {
 
           <div class="mt-5 flex justify-end gap-2">
             <button type="button" class="rounded-lg border border-slate-300 px-3.5 py-2 text-[12.5px] font-medium transition hover:bg-slate-50" @click="editing = null">Cancel</button>
-            <button type="submit" :disabled="editingSaving" class="inline-flex items-center gap-1.5 rounded-lg bg-brand-600 px-4 py-2.5 text-[12.5px] font-semibold text-white transition hover:bg-brand-700 disabled:opacity-60">
+            <button type="submit" :disabled="editingSaving" class="inline-flex items-center gap-1.5 rounded-lg bg-accent-500 px-4 py-2.5 text-[12.5px] font-semibold text-ink-950 transition hover:bg-accent-400 disabled:opacity-60">
               <Loader2 v-if="editingSaving" :size="14" class="animate-spin" />
               <Send v-else :size="14" />
               Save changes

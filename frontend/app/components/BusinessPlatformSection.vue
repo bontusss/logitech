@@ -52,7 +52,7 @@ const groups = [
 </script>
 
 <template>
-  <section id="business" class="overflow-hidden border-t border-ink-900/10 bg-white">
+  <section id="business" class="overflow-hidden border-t border-ink-900/10 bg-surface">
     <div class="mx-auto max-w-[1200px] px-5 py-20 sm:px-8 sm:py-24">
       <div class="grid gap-8 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
         <SectionHeading

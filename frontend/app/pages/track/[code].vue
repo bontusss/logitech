@@ -68,10 +68,10 @@ const tone = computed(() => {
         <div
           class="mt-5 flex items-center gap-2 rounded-xl border px-3.5 py-3"
           :class="tone === 'amber'
-            ? 'border-amber-200 bg-amber-50 text-amber-800'
+            ? 'border-accent-200 bg-accent-50 text-accent-800'
             : tone === 'rose'
-              ? 'border-rose-200 bg-rose-50 text-rose-800'
-              : 'border-emerald-200 bg-emerald-50 text-emerald-800'"
+              ? 'border-red-200 bg-red-50 text-red-800'
+              : 'border-success-200 bg-success-50 text-success-700'"
         >
           <CheckCircle2 :size="16" />
           <div>
@@ -87,7 +87,7 @@ const tone = computed(() => {
             <p class="mt-1 text-[11.5px] font-medium">{{ tracking.pickup_address }}</p>
           </div>
           <div class="rounded-xl border border-ink-900/10 p-3">
-            <Package :size="14" class="text-rose-600" />
+            <Package :size="14" class="text-red-600" />
             <p class="mt-2 text-[9.5px] text-ink-900/40">Destination</p>
             <p class="mt-1 text-[11.5px] font-medium">{{ tracking.dropoff_address }}</p>
           </div>

@@ -1,6 +1,7 @@
 package httpapi
 
 import (
+	"errors"
 	"net/http"
 	"net/mail"
 	"strings"
@@ -255,37 +256,39 @@ func (a *API) updateDriver(c *gin.Context) {
 }
 
 func (a *API) driverPortal(c *gin.Context) {
-	token := strings.TrimSpace(c.Param("token"))
-	if token == "" {
-		fail(c, http.StatusNotFound, "driver_portal_not_found", "This driver portal link is invalid or inactive.")
+	identity, err := a.resolveDriverPortalIdentity(c.Request.Context(), c.Param("token"))
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			fail(c, http.StatusNotFound, "driver_portal_not_found", "This driver portal link is invalid or inactive.")
+			return
+		}
+		a.handleServiceError(c, err)
 		return
 	}
 
-	var fullName, vehiclePlate, companyName string
-	if driverID, err := a.auth.ParseDriverPortalToken(token); err == nil {
-		driver, queryErr := a.svc.Q.GetDriverProfileForPortalByID(c.Request.Context(), driverID)
-		if queryErr != nil {
-			if queryErr == pgx.ErrNoRows {
-				fail(c, http.StatusNotFound, "driver_portal_not_found", "This driver portal link is invalid or inactive.")
-				return
-			}
-			a.handleServiceError(c, queryErr)
-			return
+	var activeAssignment gin.H
+	assignment, err := a.svc.Q.GetDriverActiveAssignment(c.Request.Context(), db.GetDriverActiveAssignmentParams{
+		CompanyID:        identity.CompanyID,
+		AssignedDriverID: &identity.DriverID,
+	})
+	switch {
+	case err == nil:
+		activeAssignment = gin.H{
+			"id":              assignment.ID,
+			"status":          assignment.Status,
+			"tracking_code":   assignment.TrackingCode,
+			"pickup_address":  assignment.PickupAddress,
+			"dropoff_address": assignment.DropoffAddress,
+			"updated_at":      assignment.UpdatedAt,
 		}
-		fullName, vehiclePlate, companyName = driver.FullName, driver.VehiclePlate, driver.CompanyName
-	} else {
-		// Links issued before signed portal links were introduced still work
-		// until they are replaced by a generated signed link.
-		driver, queryErr := a.svc.Q.GetDriverProfileForPortal(c.Request.Context(), auth.HashToken(token))
-		if queryErr != nil {
-			if queryErr == pgx.ErrNoRows {
-				fail(c, http.StatusNotFound, "driver_portal_not_found", "This driver portal link is invalid or inactive.")
-				return
-			}
-			a.handleServiceError(c, queryErr)
-			return
-		}
-		fullName, vehiclePlate, companyName = driver.FullName, driver.VehiclePlate, driver.CompanyName
+	case !errors.Is(err, pgx.ErrNoRows):
+		a.handleServiceError(c, err)
+		return
+	}
+
+	locationTracking := "Location sharing is requested only during an active assigned delivery."
+	if activeAssignment != nil {
+		locationTracking = "Share live location while this delivery is active. Your company sees your position only on this dashboard."
 	}
 
 	c.Header("Cache-Control", "no-store")
@@ -293,11 +296,11 @@ func (a *API) driverPortal(c *gin.Context) {
 	c.Header("X-Robots-Tag", "noindex, nofollow, noarchive")
 	c.JSON(http.StatusOK, gin.H{
 		"driver": gin.H{
-			"full_name":     fullName,
-			"vehicle_plate": vehiclePlate,
-			"company_name":  companyName,
+			"full_name":     identity.FullName,
+			"vehicle_plate": identity.VehiclePlate,
+			"company_name":  identity.CompanyName,
 		},
-		"active_assignment": nil,
-		"location_tracking": "Location sharing is requested only during an active assigned delivery.",
+		"active_assignment": activeAssignment,
+		"location_tracking": locationTracking,
 	})
 }

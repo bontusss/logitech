@@ -32,8 +32,8 @@ const uid = useId()
           y2="40"
           gradientUnits="userSpaceOnUse"
         >
-          <stop stop-color="#22346b" />
-          <stop offset="1" stop-color="#0a1220" />
+          <stop stop-color="#17335c" />
+          <stop offset="1" stop-color="#0b1f44" />
         </linearGradient>
       </defs>
 
@@ -54,8 +54,8 @@ const uid = useId()
         <path d="M12.2 18.2h7.1a4.5 4.5 0 0 1 0 9h-7.1" />
       </g>
 
-      <circle cx="29.4" cy="11.6" r="2.6" fill="#7d9bff" />
-      <path d="M18.6 33.4h8.2" stroke="#7d9bff" stroke-width="2" stroke-linecap="round" />
+      <circle cx="29.4" cy="11.6" r="2.6" fill="#ff7a00" />
+      <path d="M18.6 33.4h8.2" stroke="#ffae5c" stroke-width="2" stroke-linecap="round" />
     </svg>
 
     <span v-if="wordmark" class="flex flex-col leading-none">
@@ -67,7 +67,7 @@ const uid = useId()
       </span>
       <span
         class="mt-1.5 text-[9px] font-semibold tracking-[0.32em] uppercase"
-        :class="tone === 'light' ? 'text-white/40' : 'text-ink-900/40'"
+        :class="tone === 'light' ? 'text-accent-300' : 'text-accent-600 dark:text-accent-400'"
       >
         BOL
       </span>

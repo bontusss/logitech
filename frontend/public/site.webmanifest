@@ -1,11 +1,15 @@
 {
+  "id": "/",
   "name": "based on logistics (BOL)",
   "short_name": "BOL",
+  "lang": "en",
+  "scope": "/",
   "description": "A logistics marketplace and operations platform for African intercity logistics.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#fbfbf9",
-  "theme_color": "#0a1220",
+  "display_override": ["standalone", "minimal-ui"],
+  "background_color": "#f5f7fa",
+  "theme_color": "#0b1f44",
   "icons": [
     {
       "src": "/icon-192.png",

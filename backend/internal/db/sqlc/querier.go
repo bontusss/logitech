@@ -42,6 +42,7 @@ type Querier interface {
 	CreateDelivery(ctx context.Context, arg CreateDeliveryParams) (Delivery, error)
 	CreateDriverProfile(ctx context.Context, arg CreateDriverProfileParams) (DriverProfile, error)
 	CreateEmailVerification(ctx context.Context, arg CreateEmailVerificationParams) (EmailVerification, error)
+	CreateGoogleUser(ctx context.Context, arg CreateGoogleUserParams) (User, error)
 	CreateInvitation(ctx context.Context, arg CreateInvitationParams) (CompanyInvitation, error)
 	CreateLastMileArea(ctx context.Context, arg CreateLastMileAreaParams) (LastMileServiceArea, error)
 	CreateMarketplaceSearchLog(ctx context.Context, arg CreateMarketplaceSearchLogParams) (MarketplaceSearchLog, error)
@@ -78,6 +79,7 @@ type Querier interface {
 	GetCompanyRole(ctx context.Context, arg GetCompanyRoleParams) (Role, error)
 	GetCompanySettings(ctx context.Context, companyID uuid.UUID) (CompanySetting, error)
 	GetCustomerSavedQuoteByReference(ctx context.Context, arg GetCustomerSavedQuoteByReferenceParams) (GetCustomerSavedQuoteByReferenceRow, error)
+	GetDriverActiveAssignment(ctx context.Context, arg GetDriverActiveAssignmentParams) (GetDriverActiveAssignmentRow, error)
 	GetDriverProfileForPortal(ctx context.Context, portalTokenHash string) (GetDriverProfileForPortalRow, error)
 	GetDriverProfileForPortalByID(ctx context.Context, id uuid.UUID) (GetDriverProfileForPortalByIDRow, error)
 	GetEmailVerificationByHash(ctx context.Context, tokenHash string) (EmailVerification, error)
@@ -99,9 +101,11 @@ type Querier interface {
 	GetSubdomainByCompany(ctx context.Context, companyID uuid.UUID) (CompanySubdomain, error)
 	GetSystemRoleByKey(ctx context.Context, key string) (Role, error)
 	GetUserByEmail(ctx context.Context, email string) (User, error)
+	GetUserByGoogleSubject(ctx context.Context, googleSubject *string) (User, error)
 	GetUserByID(ctx context.Context, id uuid.UUID) (User, error)
 	InsertMarketplaceQuote(ctx context.Context, arg InsertMarketplaceQuoteParams) (MarketplaceQuote, error)
 	InsertSavedQuote(ctx context.Context, arg InsertSavedQuoteParams) (CustomerSavedQuote, error)
+	LinkGoogleSubject(ctx context.Context, arg LinkGoogleSubjectParams) (User, error)
 	ListBranchStaff(ctx context.Context, arg ListBranchStaffParams) ([]ListBranchStaffRow, error)
 	ListBranches(ctx context.Context, arg ListBranchesParams) ([]Branch, error)
 	ListBranchesForMember(ctx context.Context, arg ListBranchesForMemberParams) ([]Branch, error)
@@ -118,6 +122,7 @@ type Querier interface {
 	ListCustomerSavedQuotes(ctx context.Context, customerID *uuid.UUID) ([]ListCustomerSavedQuotesRow, error)
 	ListDeliveryTimeline(ctx context.Context, arg ListDeliveryTimelineParams) ([]DeliveryTimelineEvent, error)
 	ListDriverProfiles(ctx context.Context, companyID uuid.UUID) ([]ListDriverProfilesRow, error)
+	ListDriversOnRoad(ctx context.Context, companyID uuid.UUID) ([]ListDriversOnRoadRow, error)
 	ListInvitationBranchIDs(ctx context.Context, invitationID uuid.UUID) ([]uuid.UUID, error)
 	ListLastMileAreas(ctx context.Context, companyID uuid.UUID) ([]LastMileServiceArea, error)
 	ListMarketplaceLastMileAreas(ctx context.Context, arg ListMarketplaceLastMileAreasParams) ([]ListMarketplaceLastMileAreasRow, error)
@@ -156,6 +161,7 @@ type Querier interface {
 	SetDriverPortalTokenHash(ctx context.Context, arg SetDriverPortalTokenHashParams) error
 	SetDriverProfileStatus(ctx context.Context, arg SetDriverProfileStatusParams) (SetDriverProfileStatusRow, error)
 	SoftDeleteMember(ctx context.Context, arg SoftDeleteMemberParams) error
+	StopDriverLocation(ctx context.Context, arg StopDriverLocationParams) error
 	SubdomainExists(ctx context.Context, subdomain string) (bool, error)
 	TouchLastLogin(ctx context.Context, id uuid.UUID) error
 	UpdateBranch(ctx context.Context, arg UpdateBranchParams) (Branch, error)
@@ -177,6 +183,7 @@ type Querier interface {
 	UpdateUserPassword(ctx context.Context, arg UpdateUserPasswordParams) error
 	UpdateUserProfile(ctx context.Context, arg UpdateUserProfileParams) (User, error)
 	UpsertBookingPage(ctx context.Context, arg UpsertBookingPageParams) (BookingPage, error)
+	UpsertDriverLocation(ctx context.Context, arg UpsertDriverLocationParams) (DriverLocation, error)
 	UpsertMarketplaceSettings(ctx context.Context, arg UpsertMarketplaceSettingsParams) (MarketplaceSetting, error)
 	UpsertSubdomain(ctx context.Context, arg UpsertSubdomainParams) (CompanySubdomain, error)
 	UserHasPermission(ctx context.Context, arg UserHasPermissionParams) (bool, error)

@@ -283,6 +283,18 @@ type DeliveryTimelineEvent struct {
 	CreatedAt  time.Time  `json:"created_at"`
 }
 
+type DriverLocation struct {
+	DriverID       uuid.UUID     `json:"driver_id"`
+	CompanyID      uuid.UUID     `json:"company_id"`
+	Latitude       float64       `json:"latitude"`
+	Longitude      float64       `json:"longitude"`
+	AccuracyM      pgtype.Float8 `json:"accuracy_m"`
+	Heading        pgtype.Float8 `json:"heading"`
+	SpeedKph       pgtype.Float8 `json:"speed_kph"`
+	IsBroadcasting bool          `json:"is_broadcasting"`
+	UpdatedAt      time.Time     `json:"updated_at"`
+}
+
 type DriverProfile struct {
 	ID              uuid.UUID `json:"id"`
 	CompanyID       uuid.UUID `json:"company_id"`
@@ -524,6 +536,7 @@ type User struct {
 	CreatedAt       time.Time  `json:"created_at"`
 	UpdatedAt       time.Time  `json:"updated_at"`
 	DeletedAt       *time.Time `json:"deleted_at"`
+	GoogleSubject   *string    `json:"google_subject"`
 }
 
 type UserPhoneVerification struct {

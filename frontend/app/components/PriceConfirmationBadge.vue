@@ -16,8 +16,8 @@ withDefaults(
     class="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 font-semibold"
     :class="[
       type === 'confirmed'
-        ? 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-400/25 dark:bg-emerald-400/10 dark:text-emerald-200'
-        : 'border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-400/25 dark:bg-amber-400/10 dark:text-amber-200',
+        ? 'border-success-200 bg-success-50 text-success-700 dark:border-success-500/25 dark:bg-success-500/10 dark:text-success-200'
+        : 'border-accent-200 bg-accent-50 text-accent-800 dark:border-accent-400/25 dark:bg-accent-400/10 dark:text-accent-200',
       size === 'md' ? 'px-2.5 py-1 text-[11px]' : 'text-[10px]',
     ]"
     :title="note || (type === 'confirmed' ? 'Confirmed by the provider' : 'Estimated by the provider, subject to final confirmation')"

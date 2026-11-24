@@ -20,7 +20,7 @@ export function useTheme() {
     document.documentElement.classList.toggle('dark', isDark.value)
     document.querySelector<HTMLMetaElement>('#theme-color')?.setAttribute(
       'content',
-      isDark.value ? '#0b1120' : '#fbfbf9',
+      isDark.value ? '#060e1e' : '#f5f7fa',
     )
   }
 

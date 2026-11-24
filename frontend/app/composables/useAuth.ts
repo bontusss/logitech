@@ -21,6 +21,8 @@ export interface CustomerRegistrationPayload {
   password: string
 }
 
+export type CompanySetupPayload = Omit<CompanyRegistrationPayload, 'password'>
+
 const DEV_VERIFY_KEY = 'bol_dev_verify_token'
 
 export function useAuth() {
@@ -88,6 +90,15 @@ export function useAuth() {
     return session
   }
 
+  async function setupCompany(payload: CompanySetupPayload) {
+    const result = await api<{ company_id: string }>('/companies/setup', {
+      method: 'POST',
+      body: payload,
+    })
+    await fetchMe()
+    return result
+  }
+
   async function logout() {
     try {
       await api('/auth/logout', { method: 'POST', body: {} })
@@ -110,6 +121,7 @@ export function useAuth() {
     login,
     registerCustomer,
     registerCompany,
+    setupCompany,
     logout,
   }
 }

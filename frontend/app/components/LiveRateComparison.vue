@@ -63,20 +63,20 @@ function providerInitial(quote: MarketplaceQuote) {
         class="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[9px] font-bold tracking-[0.12em] uppercase"
         :class="
           loading
-            ? 'border-amber-200/80 bg-amber-50 text-amber-800 dark:border-amber-400/20 dark:bg-amber-400/10 dark:text-amber-200'
-            : 'border-emerald-200/80 bg-emerald-50 text-emerald-700 dark:border-emerald-400/20 dark:bg-emerald-400/10 dark:text-emerald-200'
+            ? 'border-accent-200 bg-accent-50 text-accent-800 dark:border-accent-500/25 dark:bg-accent-500/10 dark:text-accent-300'
+            : 'border-success-200 bg-success-50 text-success-700 dark:border-success-500/25 dark:bg-success-500/10 dark:text-success-700'
         "
       >
         <span
           class="size-1.5 rounded-full"
-          :class="loading ? 'animate-pulse bg-amber-500' : 'bg-emerald-500'"
+          :class="loading ? 'animate-pulse bg-accent-500' : 'bg-success-500'"
         />
         {{ loading ? 'Checking' : 'Live' }}
       </span>
     </div>
 
     <div v-if="loading" class="flex flex-col items-center gap-3 py-12 text-center">
-      <Loader2 :size="26" class="animate-spin text-brand-600" />
+      <Loader2 :size="26" class="animate-spin text-accent-600 dark:text-accent-400" />
       <p class="text-[13px] font-semibold">Checking available providers…</p>
       <p v-if="search" class="max-w-[280px] text-[11.5px] leading-relaxed text-ink-900/50">
         Contacting {{ isLastMile ? 'last-mile providers covering' : 'providers serving' }}
@@ -99,7 +99,7 @@ function providerInitial(quote: MarketplaceQuote) {
           <p class="text-[9px] font-semibold tracking-[0.12em] text-ink-900/60 uppercase">{{ isLastMile ? 'Local route' : 'Route' }}</p>
           <p class="mt-0.5 truncate text-[13px] font-semibold">
             {{ search.origin_city }}
-            <span class="bg-gradient-to-r from-brand-500 to-violet-500 bg-clip-text px-1 text-transparent">→</span>
+            <span class="px-1 text-accent-600 dark:text-accent-400">→</span>
             {{ search.destination_city }}
           </p>
           <p v-if="isLastMile && search.distance_km" class="mt-0.5 text-[10px] text-ink-900/45">
@@ -115,9 +115,9 @@ function providerInitial(quote: MarketplaceQuote) {
       </div>
 
       <div v-if="totalQuotes === 0" class="flex flex-col items-center gap-2.5 py-10 text-center">
-        <span class="flex size-10 items-center justify-center rounded-2xl bg-gradient-to-br from-slate-50 to-white text-ink-900/35 dark:from-white/10 dark:to-transparent">
+        <IconTile tone="neutral" rounded="2xl">
           <Truck :size="18" />
-        </span>
+        </IconTile>
         <p class="text-[13px] font-semibold">
           {{ isLastMile ? 'No last-mile providers cover this route yet' : 'No providers found for this route yet' }}
         </p>
@@ -142,16 +142,16 @@ function providerInitial(quote: MarketplaceQuote) {
                   ? `Book ${quote.provider_name} in a new tab`
                   : undefined
               "
-              class="block rounded-xl border border-ink-900/8 bg-gradient-to-br from-white to-slate-50/60 p-3.5 transition dark:border-white/10 dark:from-white/5 dark:to-transparent"
+              class="block rounded-xl border border-ink-900/8 bg-canvas/60 p-3.5 transition"
               :class="
                 quote.booking_slug
-                  ? 'cursor-pointer hover:-translate-y-0.5 hover:border-brand-300 hover:shadow-[0_12px_26px_-20px_rgba(43,75,255,0.7)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500'
+                  ? 'cursor-pointer hover:-translate-y-0.5 hover:border-accent-500/50 hover:bg-accent-50/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-500 dark:hover:bg-white/5'
                   : ''
               "
             >
               <div class="flex items-start justify-between gap-3">
                 <div class="flex min-w-0 items-start gap-2.5">
-                  <span class="flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white text-[12px] font-bold text-brand-700 shadow-sm ring-1 ring-ink-900/8 dark:bg-white/10 dark:text-indigo-200 dark:ring-white/10">
+                  <span class="flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-surface text-[12px] font-bold text-ink-900 shadow-sm ring-1 ring-ink-900/8">
                     <img
                       v-if="quote.provider_logo"
                       :src="quote.provider_logo"
@@ -172,7 +172,7 @@ function providerInitial(quote: MarketplaceQuote) {
                       </span>
                       <span
                         v-if="quote.price_confirmation_type === 'estimated'"
-                        class="rounded-full border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-[9.5px] font-semibold text-amber-800 dark:border-amber-400/25 dark:bg-amber-400/10 dark:text-amber-200"
+                        class="rounded-full border border-accent-200 bg-accent-50 px-1.5 py-0.5 text-[9.5px] font-semibold text-accent-800 dark:border-accent-500/25 dark:bg-accent-500/10 dark:text-accent-300"
                       >
                         Estimate
                       </span>
@@ -193,7 +193,7 @@ function providerInitial(quote: MarketplaceQuote) {
                 </span>
                 <span
                   v-if="quote.booking_slug"
-                  class="ml-auto inline-flex items-center gap-1 font-semibold text-brand-700 dark:text-indigo-200"
+                  class="ml-auto inline-flex items-center gap-1 font-semibold text-accent-700 dark:text-accent-400"
                 >
                   Book
                   <ArrowUpRight :size="11" />
@@ -216,9 +216,9 @@ function providerInitial(quote: MarketplaceQuote) {
     </template>
 
     <div v-else class="flex flex-col items-center gap-2.5 py-10 text-center">
-      <span class="flex size-10 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-50 to-violet-50 text-brand-700 dark:from-brand-400/15 dark:to-violet-400/10 dark:text-indigo-200">
+      <IconTile tone="neutral" rounded="2xl">
         <Search :size="18" />
-      </span>
+      </IconTile>
       <p class="text-[13px] font-semibold">Search a route to see live prices</p>
       <p class="max-w-[280px] text-[11.5px] leading-relaxed text-ink-900/50">
         We'll check the rates published by logistics providers serving your route. No sample
@@ -227,7 +227,7 @@ function providerInitial(quote: MarketplaceQuote) {
     </div>
 
     <p class="mt-4 flex items-start gap-2 border-t border-ink-900/8 pt-3 text-[10px] leading-relaxed text-ink-900/50 dark:border-white/10">
-      <ShieldCheck :size="13" class="mt-0.5 shrink-0 text-emerald-700 dark:text-emerald-300" />
+      <ShieldCheck :size="13" class="mt-0.5 shrink-0 text-success-600" />
       <span v-if="response && totalQuotes > 0">
         {{ isLastMile ? 'Local prices use the Mapbox road distance and each provider’s active coverage.' : 'Prices come from each provider’s published rates.' }}
         Selecting a provider opens their booking page in a new tab.

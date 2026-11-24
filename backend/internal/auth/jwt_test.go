@@ -44,6 +44,38 @@ func TestParseRejectsExpiredToken(t *testing.T) {
 	}
 }
 
+func TestOAuthStateRoundTrip(t *testing.T) {
+	manager := NewManager(testSecret, 15*time.Minute)
+
+	state, err := manager.SignOAuthState("provider", "/register?google=provider")
+	if err != nil {
+		t.Fatalf("sign state: %v", err)
+	}
+
+	claims, err := manager.ParseOAuthState(state)
+	if err != nil {
+		t.Fatalf("parse state: %v", err)
+	}
+	if claims.Intent != "provider" {
+		t.Fatalf("intent = %q, want provider", claims.Intent)
+	}
+	if claims.Next != "/register?google=provider" {
+		t.Fatalf("next = %q", claims.Next)
+	}
+}
+
+func TestOAuthStateRejectsAccessToken(t *testing.T) {
+	manager := NewManager(testSecret, 15*time.Minute)
+
+	access, _, _, err := manager.Issue(uuid.New())
+	if err != nil {
+		t.Fatalf("issue: %v", err)
+	}
+	if _, err := manager.ParseOAuthState(access); err == nil {
+		t.Fatal("access token was accepted as oauth state")
+	}
+}
+
 func TestParseRejectsWrongSecret(t *testing.T) {
 	issuer := NewManager(testSecret, 15*time.Minute)
 	token, _, _, err := issuer.Issue(uuid.New())

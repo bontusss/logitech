@@ -55,6 +55,8 @@ func New(cfg *config.Config, svc *service.Service, authManager *auth.Manager, li
 	authRoutes := v1.Group("/auth")
 	authRoutes.POST("/register", api.rateLimit("register", 10), api.registerCustomer)
 	authRoutes.POST("/login", api.rateLimit("login", 10), api.login)
+	authRoutes.GET("/google/start", api.rateLimit("google-start", 20), api.googleAuthStart)
+	authRoutes.GET("/google/callback", api.rateLimit("google-callback", 30), api.googleAuthCallback)
 	authRoutes.POST("/refresh", api.rateLimit("refresh", 30), api.refresh)
 	authRoutes.POST("/logout", api.rateLimit("logout", 30), api.logout)
 	authRoutes.POST("/forgot-password", api.rateLimit("forgot-password", 5), api.forgotPassword)
@@ -84,6 +86,8 @@ func New(cfg *config.Config, svc *service.Service, authManager *auth.Manager, li
 	v1.POST("/public/book/:slug/bookings", api.rateLimit("public-booking-create", 10), api.optionalAuth(), api.createPublicBooking)
 	v1.POST("/public/bookings/:reference/claim", api.rateLimit("public-booking-claim", 10), api.optionalAuth(), api.claimPublicBooking)
 	v1.GET("/public/riders/:token", api.rateLimit("driver-portal", 60), api.driverPortal)
+	v1.POST("/public/riders/:token/location", api.rateLimit("driver-location", 120), api.updateDriverLocation)
+	v1.DELETE("/public/riders/:token/location", api.rateLimit("driver-location-stop", 30), api.stopDriverLocation)
 	v1.GET("/public/tracking/:code", api.rateLimit("public-tracking", 60), api.publicTracking)
 	v1.GET("/invitations/:token", api.rateLimit("invitation-preview", 30), api.previewInvitation)
 	v1.POST("/invitations/:token/accept", api.rateLimit("invitation-accept", 10), api.acceptInvitation)
@@ -94,6 +98,7 @@ func New(cfg *config.Config, svc *service.Service, authManager *auth.Manager, li
 	authed.POST("/auth/email/resend-verification", api.rateLimit("resend-verification", 3), api.resendEmailVerification)
 	authed.POST("/auth/whatsapp/send-code", api.rateLimit("whatsapp-send-code", 5), api.sendWhatsAppCode)
 	authed.POST("/auth/whatsapp/verify-code", api.rateLimit("whatsapp-verify-code", 10), api.verifyWhatsAppCode)
+	authed.POST("/companies/setup", api.rateLimit("company-setup", 5), api.setupCompany)
 
 	customer := authed.Group("/customer")
 	customer.GET("/bookings", api.listCustomerBookings)
@@ -155,6 +160,7 @@ func New(cfg *config.Config, svc *service.Service, authManager *auth.Manager, li
 
 	company.GET("/members", api.requirePermission("staff.view"), api.listMembers)
 	company.GET("/drivers", api.requirePermission("staff.view"), api.listDrivers)
+	company.GET("/drivers/live", api.requirePermission("shipments.view"), api.listLiveDrivers)
 	company.POST("/drivers", api.requirePermission("staff.invite"), api.createDriver)
 	company.PATCH("/drivers/:id", api.requirePermission("staff.update"), api.updateDriver)
 	company.PATCH("/drivers/:id/status", api.requirePermission("staff.deactivate"), api.setDriverStatus)
@@ -335,6 +341,16 @@ func (a *API) handleServiceError(c *gin.Context, err error) {
 		fail(c, http.StatusConflict, "email_taken", "An account with this email already exists.")
 	case errors.Is(err, service.ErrInvalidCredentials):
 		fail(c, http.StatusUnauthorized, "invalid_credentials", "Email or password is incorrect.")
+	case errors.Is(err, service.ErrGoogleAccountRestricted):
+		fail(c, http.StatusForbidden, "google_admin_blocked", "Administrator accounts must sign in with email and password.")
+	case errors.Is(err, service.ErrGoogleAccountNotFound):
+		fail(c, http.StatusNotFound, "google_account_not_found", "No BOL account is linked to that Google email.")
+	case errors.Is(err, service.ErrGoogleAccountConflict):
+		fail(c, http.StatusConflict, "google_account_conflict", "That Google account is already linked to another BOL account.")
+	case errors.Is(err, service.ErrCompanySetupNotAllowed):
+		fail(c, http.StatusForbidden, "company_setup_not_allowed", "Only provider accounts can set up a company.")
+	case errors.Is(err, service.ErrCompanyAlreadyExists):
+		fail(c, http.StatusConflict, "company_already_exists", "This account already belongs to a company.")
 	case errors.Is(err, service.ErrInvalidRefresh):
 		a.clearSessionCookies(c)
 		fail(c, http.StatusUnauthorized, "invalid_refresh", "Your session has expired. Please sign in again.")

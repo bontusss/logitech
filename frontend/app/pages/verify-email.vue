@@ -55,20 +55,18 @@ async function resendVerification() {
     resending.value = false
   }
 }
-
-const inputClass =
-  'w-full rounded-xl border border-slate-200 bg-canvas px-3.5 py-2.5 text-sm transition placeholder:text-ink-900/35 hover:border-slate-300 focus:border-brand-500 dark:border-white/10 dark:bg-white/5'
 </script>
 
 <template>
   <div>
-    <div
-      class="flex size-12 items-center justify-center rounded-2xl shadow-sm"
-      :class="state === 'success' ? 'bg-gradient-to-br from-emerald-100 to-teal-50 text-emerald-700 dark:from-emerald-400/20 dark:to-teal-400/10 dark:text-emerald-200' : 'bg-gradient-to-br from-violet-100 to-cyan-50 text-violet-700 dark:from-violet-400/15 dark:to-cyan-400/10 dark:text-violet-200'"
+    <IconTile
+      :tone="state === 'success' ? 'success' : 'accent-solid'"
+      size="lg"
+      rounded="2xl"
     >
       <CheckCircle2 v-if="state === 'success'" :size="21" />
       <MailCheck v-else :size="21" />
-    </div>
+    </IconTile>
 
     <h1 class="mt-4 text-[1.7rem] leading-[1.15] font-semibold tracking-[-0.035em]">
       {{ state === 'success' ? 'Email verified' : 'Verify your email' }}
@@ -95,34 +93,35 @@ const inputClass =
       </p>
 
       <form class="mt-6 space-y-4" @submit.prevent="verify">
-        <label class="block">
-          <span class="mb-1.5 block text-[11.5px] font-semibold text-ink-900/75">Verification token</span>
-          <input v-model="tokenInput" type="text" required :class="inputClass" placeholder="Paste the token from your email" />
-        </label>
+        <FormTextField
+          v-model="tokenInput"
+          label="Verification token"
+          placeholder="Paste the token from your email"
+          required
+        />
 
         <p
           v-if="state === 'error'"
           role="alert"
-          class="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2.5 text-[12px] text-red-700"
+          class="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2.5 text-[12px] text-red-700 dark:border-red-400/25 dark:bg-red-400/10 dark:text-red-200"
         >
           <TriangleAlert :size="14" class="mt-0.5 shrink-0" />
           {{ message }}
         </p>
 
-        <button
-          type="submit"
-          :disabled="state === 'pending'"
-          class="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-brand-600 to-violet-600 px-4 py-3 text-sm font-semibold text-white shadow-[0_12px_26px_-16px_rgba(43,75,255,0.9)] transition hover:-translate-y-0.5 disabled:translate-y-0 disabled:opacity-60"
-        >
-          {{ state === 'pending' ? 'Verifying…' : 'Verify email' }}
-        </button>
+        <SubmitButton
+          :pending="state === 'pending'"
+          label="Verify email"
+          pending-label="Verifying…"
+          :icon="false"
+        />
       </form>
 
       <div v-if="user && !user.email_verified" class="mt-4">
         <button
           type="button"
           :disabled="resending"
-          class="text-[11.5px] font-semibold text-brand-600 underline underline-offset-2 disabled:opacity-50"
+          class="text-[11.5px] font-semibold text-accent-700 underline underline-offset-2 disabled:opacity-50 dark:text-accent-400"
           @click="resendVerification"
         >
           {{ resending ? 'Sending…' : 'Resend verification email' }}

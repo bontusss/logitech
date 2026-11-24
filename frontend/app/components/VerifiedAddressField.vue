@@ -210,7 +210,7 @@ function useCurrentLocation() {
       <span class="text-[10.5px] font-semibold text-ink-900/60">{{ label }}</span>
       <button
         type="button"
-        class="inline-flex items-center gap-0.5 text-[9.5px] font-semibold text-brand-700 disabled:opacity-50 dark:text-indigo-200"
+        class="inline-flex items-center gap-0.5 text-[9.5px] font-semibold text-brand-700 disabled:opacity-50 dark:text-brand-200"
         :disabled="locating"
         @click="useCurrentLocation"
       >
@@ -233,12 +233,12 @@ function useCurrentLocation() {
         @keydown.esc="open = false"
       />
       <Loader2 v-if="searching" :size="13" class="absolute top-3 right-3 animate-spin text-ink-900/35" />
-      <Check v-else-if="modelValue" :size="13" class="absolute top-3 right-3 text-emerald-600" />
+      <Check v-else-if="modelValue" :size="13" class="absolute top-3 right-3 text-success-600" />
     </div>
-    <p v-if="modelValue" class="mt-1 text-[9.5px] font-medium text-emerald-700 dark:text-emerald-300">
+    <p v-if="modelValue" class="mt-1 text-[9.5px] font-medium text-success-700 dark:text-success-200">
       Mapbox verified<template v-if="modelValue.city"> · {{ modelValue.city }}<template v-if="modelValue.state">, {{ modelValue.state }}</template></template>
     </p>
-    <p v-else-if="tokenError" class="mt-1 text-[9.5px] leading-4 text-amber-700">{{ tokenError }}</p>
+    <p v-else-if="tokenError" class="mt-1 text-[9.5px] leading-4 text-accent-700">{{ tokenError }}</p>
     <div v-if="token && modelValue" class="mt-2 space-y-1.5">
       <MapPinAdjuster
         :latitude="modelValue.latitude"
@@ -273,6 +273,6 @@ function useCurrentLocation() {
         </button>
       </li>
     </ul>
-    <p v-if="error" role="status" class="mt-1 text-[9.5px] text-rose-600">{{ error }}</p>
+    <p v-if="error" role="status" class="mt-1 text-[9.5px] text-red-600">{{ error }}</p>
   </div>
 </template>

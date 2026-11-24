@@ -35,7 +35,7 @@ async function submit() {
 <template>
   <div>
     <div class="flex items-center gap-3">
-      <span class="flex size-11 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-600 to-violet-600 text-white shadow-md shadow-brand-600/25">
+      <span class="flex size-11 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-600 to-brand-600 text-white shadow-md shadow-brand-600/25">
         <ShieldCheck :size="19" />
       </span>
       <p class="text-[10px] font-bold tracking-[0.2em] text-brand-600 uppercase">
@@ -75,7 +75,7 @@ async function submit() {
       <button
         type="submit"
         :disabled="pending"
-        class="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-brand-600 to-violet-600 px-4 py-3 text-sm font-semibold text-white shadow-[0_12px_26px_-16px_rgba(43,75,255,0.9)] transition hover:-translate-y-0.5 disabled:translate-y-0 disabled:opacity-60"
+        class="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-brand-600 to-brand-600 px-4 py-3 text-sm font-semibold text-white shadow-[0_12px_26px_-16px_rgba(43,75,255,0.9)] transition hover:-translate-y-0.5 disabled:translate-y-0 disabled:opacity-60"
       >
         <Loader2 v-if="pending" :size="15" class="animate-spin" />
         {{ pending ? 'Signing in…' : 'Sign in to admin' }}
@@ -90,8 +90,8 @@ async function submit() {
       </NuxtLink>
     </p>
 
-    <p class="mt-4 flex items-start gap-2 rounded-xl border border-violet-200/60 bg-gradient-to-br from-violet-50/80 to-cyan-50/60 px-3 py-2.5 text-[11px] leading-relaxed text-ink-900/50 dark:border-white/10 dark:from-violet-400/10 dark:to-cyan-400/5">
-      <UserPlus :size="14" class="mt-0.5 shrink-0 text-violet-500 dark:text-violet-300" />
+    <p class="mt-4 flex items-start gap-2 rounded-xl border border-brand-200/60 bg-gradient-to-br from-brand-50/80 to-brand-50/60 px-3 py-2.5 text-[11px] leading-relaxed text-ink-900/50 dark:border-white/10 dark:from-brand-400/10 dark:to-brand-400/5">
+      <UserPlus :size="14" class="mt-0.5 shrink-0 text-brand-500 dark:text-brand-300" />
       Admin accounts are created by the super administrator inside the admin dashboard.
     </p>
   </div>

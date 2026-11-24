@@ -10,15 +10,15 @@ const props = withDefaults(
 )
 
 const base =
-  'inline-flex items-center justify-center gap-2 rounded-lg font-medium transition duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500'
+  'inline-flex items-center justify-center gap-2 rounded-lg font-semibold transition duration-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent-500'
 
 const variants: Record<string, string> = {
   primary:
-    'bg-brand-500 text-white shadow-[0_10px_28px_-14px_rgba(43,75,255,0.8)] hover:bg-brand-600',
+    'bg-accent-500 text-ink-950 shadow-[0_10px_24px_-14px_rgba(255,122,0,0.75)] hover:-translate-y-0.5 hover:bg-accent-400 hover:shadow-[0_14px_28px_-14px_rgba(255,122,0,0.85)]',
   secondary:
-    'border border-slate-300 bg-white text-ink-900 hover:border-slate-400 hover:bg-slate-50',
+    'border border-ink-900/15 bg-surface text-ink-900 hover:border-ink-900/30 hover:bg-brand-50 dark:bg-white/5 dark:hover:bg-white/10',
   ghost: 'text-ink-900/70 hover:bg-ink-900/5 hover:text-ink-900',
-  light: 'bg-white text-ink-900 hover:bg-slate-100',
+  light: 'bg-white text-ink-950 hover:bg-canvas',
   'outline-light': 'border border-white/25 text-white hover:bg-white/10',
 }
 

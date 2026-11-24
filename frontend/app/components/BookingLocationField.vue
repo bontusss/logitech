@@ -202,10 +202,10 @@ function useCurrentLocation() {
         @keydown.esc="open = false"
       />
       <Loader2 v-if="searching" :size="15" class="absolute top-3.5 right-3 animate-spin text-slate-400" />
-      <Check v-else-if="modelValue" :size="15" class="absolute top-3.5 right-3 text-emerald-600" />
+      <Check v-else-if="modelValue" :size="15" class="absolute top-3.5 right-3 text-success-600" />
     </div>
     <div class="mt-1.5 flex items-center justify-between gap-2">
-      <p v-if="modelValue" class="text-[10px] font-medium text-emerald-700">Mapbox verified · pin selected</p>
+      <p v-if="modelValue" class="text-[10px] font-medium text-success-700">Mapbox verified · pin selected</p>
       <p v-else class="text-[10px] text-slate-400">Choose a suggested place to set the map pin.</p>
       <button
         type="button"
@@ -230,7 +230,7 @@ function useCurrentLocation() {
         {{ adjusting ? 'Updating the address from the pin…' : 'Device location can be approximate. Drag the pin to the exact spot, or search again if you are in the wrong area.' }}
       </p>
     </div>
-    <p v-if="!token" class="mt-2 text-[10px] leading-4 text-amber-700">
+    <p v-if="!token" class="mt-2 text-[10px] leading-4 text-accent-700">
       {{ mapboxConfigError || 'Mapbox is not configured for this page yet. Add its public access token to enable verified location search.' }}
     </p>
     <ul
@@ -250,6 +250,6 @@ function useCurrentLocation() {
         </button>
       </li>
     </ul>
-    <p v-if="error" role="status" class="mt-1.5 text-[10px] text-rose-600">{{ error }}</p>
+    <p v-if="error" role="status" class="mt-1.5 text-[10px] text-red-600">{{ error }}</p>
   </div>
 </template>

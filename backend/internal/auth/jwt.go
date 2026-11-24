@@ -70,6 +70,55 @@ func (m *Manager) Parse(raw string) (*Claims, error) {
 	return claims, nil
 }
 
+// OAuthStateClaims is the signed state passed through the Google OAuth
+// redirect. It carries the sign-up intent and the post-login destination, and
+// is also stored in an HttpOnly cookie so the callback can detect CSRF.
+type OAuthStateClaims struct {
+	jwt.RegisteredClaims
+	Type   string `json:"typ"`
+	Intent string `json:"intent"`
+	Next   string `json:"next"`
+}
+
+func (m *Manager) SignOAuthState(intent, next string) (string, error) {
+	now := time.Now()
+	claims := OAuthStateClaims{
+		RegisteredClaims: jwt.RegisteredClaims{
+			Subject:   "google-oauth",
+			Issuer:    tokenIssuer,
+			ID:        uuid.NewString(),
+			IssuedAt:  jwt.NewNumericDate(now),
+			ExpiresAt: jwt.NewNumericDate(now.Add(10 * time.Minute)),
+		},
+		Type:   "oauth_state",
+		Intent: intent,
+		Next:   next,
+	}
+
+	signed, err := jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString(m.secret)
+	if err != nil {
+		return "", fmt.Errorf("auth: sign oauth state: %w", err)
+	}
+	return signed, nil
+}
+
+func (m *Manager) ParseOAuthState(raw string) (*OAuthStateClaims, error) {
+	claims := &OAuthStateClaims{}
+	parsed, err := jwt.ParseWithClaims(raw, claims, func(token *jwt.Token) (any, error) {
+		if token.Method != jwt.SigningMethodHS256 {
+			return nil, ErrInvalidToken
+		}
+		return m.secret, nil
+	}, jwt.WithIssuer(tokenIssuer), jwt.WithExpirationRequired())
+	if err != nil || !parsed.Valid {
+		return nil, ErrInvalidToken
+	}
+	if claims.Type != "oauth_state" || claims.Subject != "google-oauth" {
+		return nil, ErrInvalidToken
+	}
+	return claims, nil
+}
+
 func (m *Manager) TTL() time.Duration {
 	return m.ttl
 }

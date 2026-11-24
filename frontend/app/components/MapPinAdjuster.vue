@@ -83,7 +83,7 @@ onBeforeUnmount(() => {
         Drag the pin to fine-tune the exact spot
       </span>
     </span>
-    <p v-if="message" class="absolute inset-x-2 top-2 rounded-lg bg-white/95 px-2.5 py-1.5 text-[9.5px] leading-4 text-rose-600 shadow-sm">
+    <p v-if="message" class="absolute inset-x-2 top-2 rounded-lg bg-white/95 px-2.5 py-1.5 text-[9.5px] leading-4 text-red-600 shadow-sm">
       {{ message }}
     </p>
   </div>

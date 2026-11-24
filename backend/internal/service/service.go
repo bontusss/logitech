@@ -35,6 +35,11 @@ var (
 	ErrInvitationEmailMismatch = errors.New("service: signed-in account does not match the invitation")
 	ErrInvalidInvitationBranch = errors.New("service: invitation contains a branch outside the company")
 	ErrInvalidPlatformRole     = errors.New("service: platform role must be admin or support")
+	ErrGoogleAccountRestricted = errors.New("service: platform administrator accounts cannot use google sign-in")
+	ErrGoogleAccountNotFound   = errors.New("service: no account is linked to this google identity")
+	ErrGoogleAccountConflict   = errors.New("service: this google identity is linked to another account")
+	ErrCompanySetupNotAllowed  = errors.New("service: only provider accounts can set up a company")
+	ErrCompanyAlreadyExists    = errors.New("service: this account already belongs to a company")
 )
 
 type Service struct {
@@ -216,63 +221,8 @@ func (s *Service) RegisterCompany(ctx context.Context, input CompanyRegistration
 			return txErr
 		}
 
-		company, txErr = q.CreateCompany(ctx, db.CreateCompanyParams{
-			Name:          strings.TrimSpace(input.CompanyName),
-			Slug:          newSlug(input.CompanyName),
-			BusinessEmail: email,
-			Phone:         strings.TrimSpace(input.Phone),
-			BusinessType:  strings.TrimSpace(input.BusinessType),
-			Country:       defaultString(strings.TrimSpace(input.Country), "NG"),
-			Column7:       strings.TrimSpace(input.State),
-			Column8:       strings.TrimSpace(input.City),
-			Column9:       strings.TrimSpace(input.Address),
-			OwnerUserID:   user.ID,
-		})
-		if txErr != nil {
-			return txErr
-		}
-
-		now := time.Now()
-		member, txErr := q.CreateCompanyMember(ctx, db.CreateCompanyMemberParams{
-			CompanyID: company.ID,
-			UserID:    user.ID,
-			Status:    "active",
-			Column4:   "Owner",
-			JoinedAt:  &now,
-		})
-		if txErr != nil {
-			return txErr
-		}
-
-		ownerRole, txErr := q.GetSystemRoleByKey(ctx, "owner")
-		if txErr != nil {
-			return fmt.Errorf("owner role: %w", txErr)
-		}
-		if txErr = q.AddMemberRole(ctx, db.AddMemberRoleParams{
-			MemberID: member.ID,
-			RoleID:   ownerRole.ID,
-		}); txErr != nil {
-			return txErr
-		}
-
-		if _, txErr = q.CreateCompanySettings(ctx, company.ID); txErr != nil {
-			return txErr
-		}
-		if _, txErr = q.CreateCompanyBranding(ctx, company.ID); txErr != nil {
-			return txErr
-		}
-		_, txErr = tx.Exec(ctx, `
-			INSERT INTO email_jobs (user_id, company_id, kind, sequence, scheduled_at)
-			VALUES
-				($1, $2, 'welcome_provider', 0, now() + interval '30 minutes'),
-				($1, $2, 'provider_onboarding', 1, now() + interval '24 hours'),
-				($1, $2, 'provider_onboarding', 2, now() + interval '72 hours')`,
-			user.ID, company.ID)
-		if txErr != nil {
-			return txErr
-		}
-
-		return nil
+		company, txErr = s.createCompanyForUser(ctx, tx, user, input)
+		return txErr
 	})
 	if err != nil {
 		if isUniqueViolation(err) {
@@ -308,6 +258,273 @@ func (s *Service) RegisterCompany(ctx context.Context, input CompanyRegistration
 		session.DevVerificationToken = token
 	}
 	return session, nil
+}
+
+// SetupCompanyForUser attaches a company to a provider account that was
+// created through Google sign-up and therefore has no company yet.
+func (s *Service) SetupCompanyForUser(ctx context.Context, userID uuid.UUID, input CompanyRegistration, ip, ua string) (uuid.UUID, error) {
+	user, err := s.Q.GetUserByID(ctx, userID)
+	if err != nil {
+		return uuid.Nil, err
+	}
+	if user.AccountType != "company" {
+		return uuid.Nil, ErrCompanySetupNotAllowed
+	}
+	memberships, err := s.Q.ListUserMemberships(ctx, userID)
+	if err != nil {
+		return uuid.Nil, fmt.Errorf("check company membership: %w", err)
+	}
+	if len(memberships) > 0 {
+		return uuid.Nil, ErrCompanyAlreadyExists
+	}
+
+	var company db.Company
+	err = pgx.BeginFunc(ctx, s.DB, func(tx pgx.Tx) error {
+		var txErr error
+		company, txErr = s.createCompanyForUser(ctx, tx, user, input)
+		return txErr
+	})
+	if err != nil {
+		if isUniqueViolation(err) {
+			return uuid.Nil, ErrEmailTaken
+		}
+		return uuid.Nil, fmt.Errorf("set up company: %w", err)
+	}
+
+	s.Audit(ctx, AuditEntry{
+		ActorID:    &user.ID,
+		CompanyID:  &company.ID,
+		Action:     "company.registered",
+		EntityType: "company",
+		EntityID:   &company.ID,
+		Metadata:   map[string]any{"status": company.Status, "onboarding_status": company.OnboardingStatus, "method": "google"},
+		IP:         ip,
+		UserAgent:  ua,
+	})
+
+	return company.ID, nil
+}
+
+func (s *Service) createCompanyForUser(ctx context.Context, tx pgx.Tx, user db.User, input CompanyRegistration) (db.Company, error) {
+	q := s.Q.WithTx(tx)
+	email := normalizeEmail(input.BusinessEmail)
+
+	company, err := q.CreateCompany(ctx, db.CreateCompanyParams{
+		Name:          strings.TrimSpace(input.CompanyName),
+		Slug:          newSlug(input.CompanyName),
+		BusinessEmail: email,
+		Phone:         strings.TrimSpace(input.Phone),
+		BusinessType:  strings.TrimSpace(input.BusinessType),
+		Country:       defaultString(strings.TrimSpace(input.Country), "NG"),
+		Column7:       strings.TrimSpace(input.State),
+		Column8:       strings.TrimSpace(input.City),
+		Column9:       strings.TrimSpace(input.Address),
+		OwnerUserID:   user.ID,
+	})
+	if err != nil {
+		return db.Company{}, err
+	}
+
+	now := time.Now()
+	member, err := q.CreateCompanyMember(ctx, db.CreateCompanyMemberParams{
+		CompanyID: company.ID,
+		UserID:    user.ID,
+		Status:    "active",
+		Column4:   "Owner",
+		JoinedAt:  &now,
+	})
+	if err != nil {
+		return db.Company{}, err
+	}
+
+	ownerRole, err := q.GetSystemRoleByKey(ctx, "owner")
+	if err != nil {
+		return db.Company{}, fmt.Errorf("owner role: %w", err)
+	}
+	if err = q.AddMemberRole(ctx, db.AddMemberRoleParams{
+		MemberID: member.ID,
+		RoleID:   ownerRole.ID,
+	}); err != nil {
+		return db.Company{}, err
+	}
+
+	if _, err = q.CreateCompanySettings(ctx, company.ID); err != nil {
+		return db.Company{}, err
+	}
+	if _, err = q.CreateCompanyBranding(ctx, company.ID); err != nil {
+		return db.Company{}, err
+	}
+	if _, err = tx.Exec(ctx, `
+		INSERT INTO email_jobs (user_id, company_id, kind, sequence, scheduled_at)
+		VALUES
+			($1, $2, 'welcome_provider', 0, now() + interval '30 minutes'),
+			($1, $2, 'provider_onboarding', 1, now() + interval '24 hours'),
+			($1, $2, 'provider_onboarding', 2, now() + interval '72 hours')`,
+		user.ID, company.ID); err != nil {
+		return db.Company{}, err
+	}
+
+	return company, nil
+}
+
+// ---------------------------------------------------------------------------
+// Google sign-in
+// ---------------------------------------------------------------------------
+
+type GoogleProfile struct {
+	Subject       string
+	Email         string
+	EmailVerified bool
+	FullName      string
+}
+
+type GoogleAuthResult struct {
+	Session           Session
+	NewAccount        bool
+	AccountType       string
+	NeedsCompanySetup bool
+}
+
+func (s *Service) GoogleSignIn(ctx context.Context, profile GoogleProfile, intent, ip, ua string) (GoogleAuthResult, error) {
+	email := normalizeEmail(profile.Email)
+	if strings.TrimSpace(profile.Subject) == "" || email == "" || !profile.EmailVerified {
+		return GoogleAuthResult{}, ErrGoogleAccountNotFound
+	}
+
+	subject := profile.Subject
+	user, err := s.Q.GetUserByGoogleSubject(ctx, &subject)
+	if err == nil {
+		return s.finishGoogleSignIn(ctx, user, ip, ua)
+	}
+	if !errors.Is(err, pgx.ErrNoRows) {
+		return GoogleAuthResult{}, fmt.Errorf("google subject lookup: %w", err)
+	}
+
+	// Link by verified email when the account already exists.
+	user, err = s.Q.GetUserByEmail(ctx, email)
+	if err == nil {
+		if user.AccountType == "platform" || user.PlatformRole != nil {
+			return GoogleAuthResult{}, ErrGoogleAccountRestricted
+		}
+		if user.Status != "active" || user.DeletedAt != nil {
+			return GoogleAuthResult{}, ErrUserSuspended
+		}
+
+		subject := profile.Subject
+		linked, linkErr := s.Q.LinkGoogleSubject(ctx, db.LinkGoogleSubjectParams{
+			GoogleSubject: &subject,
+			ID:            user.ID,
+		})
+		if linkErr != nil {
+			if errors.Is(linkErr, pgx.ErrNoRows) {
+				return GoogleAuthResult{}, ErrGoogleAccountConflict
+			}
+			return GoogleAuthResult{}, fmt.Errorf("link google subject: %w", linkErr)
+		}
+		return s.finishGoogleSignIn(ctx, linked, ip, ua)
+	}
+	if !errors.Is(err, pgx.ErrNoRows) {
+		return GoogleAuthResult{}, fmt.Errorf("google email lookup: %w", err)
+	}
+
+	// Only an explicit sign-up intent may create a new account.
+	if intent != "customer" && intent != "provider" {
+		return GoogleAuthResult{}, ErrGoogleAccountNotFound
+	}
+
+	accountType := "customer"
+	if intent == "provider" {
+		accountType = "company"
+	}
+
+	opaque, _, err := auth.GenerateOpaqueToken()
+	if err != nil {
+		return GoogleAuthResult{}, err
+	}
+	// Google accounts receive an unguessable local password so they can later
+	// set one through the normal password-reset flow.
+	hash, err := auth.HashPassword(opaque)
+	if err != nil {
+		return GoogleAuthResult{}, err
+	}
+
+	fullName := strings.TrimSpace(profile.FullName)
+	if fullName == "" {
+		fullName = strings.Split(email, "@")[0]
+	}
+	user, err = s.Q.CreateGoogleUser(ctx, db.CreateGoogleUserParams{
+		Email:         email,
+		PasswordHash:  hash,
+		FullName:      fullName,
+		AccountType:   accountType,
+		GoogleSubject: &subject,
+	})
+	if err != nil {
+		if isUniqueViolation(err) {
+			return GoogleAuthResult{}, ErrEmailTaken
+		}
+		return GoogleAuthResult{}, fmt.Errorf("create google user: %w", err)
+	}
+
+	if accountType == "customer" {
+		if _, err = s.DB.Exec(ctx, `
+			INSERT INTO email_jobs (user_id, kind, scheduled_at)
+			VALUES ($1, 'welcome_customer', now() + interval '30 minutes')`, user.ID); err != nil {
+			s.Log.Warn("could not queue customer welcome email", "error", err, "user_id", user.ID)
+		}
+	}
+
+	s.Audit(ctx, AuditEntry{
+		ActorID:    &user.ID,
+		Action:     "auth.google_registered",
+		EntityType: "user",
+		EntityID:   &user.ID,
+		Metadata:   map[string]any{"account_type": accountType},
+		IP:         ip,
+		UserAgent:  ua,
+	})
+
+	session, err := s.startSession(ctx, user, uuid.Nil, ip, ua)
+	if err != nil {
+		return GoogleAuthResult{}, err
+	}
+
+	return GoogleAuthResult{
+		Session:           session,
+		NewAccount:        true,
+		AccountType:       accountType,
+		NeedsCompanySetup: accountType == "company",
+	}, nil
+}
+
+func (s *Service) finishGoogleSignIn(ctx context.Context, user db.User, ip, ua string) (GoogleAuthResult, error) {
+	if user.AccountType == "platform" || user.PlatformRole != nil {
+		return GoogleAuthResult{}, ErrGoogleAccountRestricted
+	}
+	if user.Status != "active" || user.DeletedAt != nil {
+		return GoogleAuthResult{}, ErrUserSuspended
+	}
+
+	_ = s.Q.TouchLastLogin(ctx, user.ID)
+	s.Audit(ctx, AuditEntry{
+		ActorID:    &user.ID,
+		Action:     "auth.google_login",
+		EntityType: "user",
+		EntityID:   &user.ID,
+		IP:         ip,
+		UserAgent:  ua,
+	})
+
+	session, err := s.startSession(ctx, user, uuid.Nil, ip, ua)
+	if err != nil {
+		return GoogleAuthResult{}, err
+	}
+
+	return GoogleAuthResult{
+		Session:           session,
+		AccountType:       user.AccountType,
+		NeedsCompanySetup: user.AccountType == "company" && len(session.Companies) == 0,
+	}, nil
 }
 
 // ---------------------------------------------------------------------------

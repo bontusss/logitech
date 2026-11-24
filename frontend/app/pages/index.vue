@@ -1,14 +1,4 @@
 <script setup lang="ts">
-const route = useRoute()
-const router = useRouter()
-
-onMounted(async () => {
-  if (route.hash) return
-  await router.replace({ path: '/', hash: '#rate-search' })
-  await nextTick()
-  document.getElementById('rate-search')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-})
-
 useSeoMeta({
   title: 'Compare intercity shipping options in Nigeria',
   description:

@@ -6,7 +6,7 @@ const SITE_URL = process.env.NUXT_PUBLIC_SITE_URL ?? 'https://basedonlogistics.c
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   devtools: { enabled: false },
-  css: ['@fontsource-variable/urbanist/index.css', '~/assets/css/main.css'],
+  css: ['~/assets/css/fonts.css', '~/assets/css/main.css'],
   vite: {
     plugins: [tailwindcss()],
   },
@@ -22,7 +22,7 @@ export default defineNuxtConfig({
       title: 'based on logistics (BOL)',
       meta: [
         { name: 'viewport', content: 'width=device-width, initial-scale=1' },
-        { name: 'theme-color', content: '#fbfbf9', id: 'theme-color' },
+        { name: 'theme-color', content: '#f5f7fa', id: 'theme-color' },
         { name: 'mobile-web-app-capable', content: 'yes' },
         { name: 'apple-mobile-web-app-capable', content: 'yes' },
         { name: 'apple-mobile-web-app-status-bar-style', content: 'black-translucent' },

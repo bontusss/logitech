@@ -12,7 +12,7 @@ const props = withDefaults(
   }>(),
   {
     inputClass:
-      'w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm transition hover:border-slate-400 focus:border-brand-500',
+      'w-full rounded-xl border border-ink-900/15 bg-canvas px-3.5 py-2.5 text-sm text-ink-900 transition placeholder:text-ink-900/35 hover:border-ink-900/30 focus:border-accent-500 focus:bg-surface focus:outline-none',
   },
 )
 

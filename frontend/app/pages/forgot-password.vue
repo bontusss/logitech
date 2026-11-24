@@ -62,7 +62,7 @@ const inputClass =
     </NuxtLink>
 
     <template v-if="done">
-      <div class="mt-6 flex size-12 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-500 text-white shadow-lg">
+      <div class="mt-6 flex size-12 items-center justify-center rounded-2xl bg-gradient-to-br from-success-500 to-success-500 text-white shadow-lg">
         <CheckCircle2 :size="22" />
       </div>
       <h1 class="mt-4 text-[1.7rem] font-semibold tracking-[-0.03em]">Password updated</h1>
@@ -76,7 +76,7 @@ const inputClass =
     </template>
 
     <template v-else-if="token">
-      <div class="mt-6 flex size-11 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-100 to-cyan-50 text-violet-700 shadow-sm dark:from-violet-400/15 dark:to-cyan-400/10 dark:text-violet-200">
+      <div class="mt-6 flex size-11 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-100 to-brand-50 text-brand-700 shadow-sm dark:from-brand-400/15 dark:to-brand-400/10 dark:text-brand-200">
         <KeyRound :size="19" />
       </div>
       <h1 class="mt-4 text-[1.7rem] font-semibold tracking-[-0.03em]">Choose a new password</h1>
@@ -97,7 +97,7 @@ const inputClass =
         <button
           type="submit"
           :disabled="pending"
-          class="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-brand-600 to-violet-600 px-4 py-3 text-sm font-semibold text-white shadow-[0_12px_26px_-16px_rgba(43,75,255,0.9)] transition hover:-translate-y-0.5 disabled:translate-y-0 disabled:opacity-60"
+          class="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-brand-600 to-brand-600 px-4 py-3 text-sm font-semibold text-white shadow-[0_12px_26px_-16px_rgba(43,75,255,0.9)] transition hover:-translate-y-0.5 disabled:translate-y-0 disabled:opacity-60"
         >
           {{ pending ? 'Saving…' : 'Set new password' }}
         </button>
@@ -105,7 +105,7 @@ const inputClass =
     </template>
 
     <template v-else>
-      <div class="mt-6 flex size-11 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-100 to-cyan-50 text-violet-700 shadow-sm dark:from-violet-400/15 dark:to-cyan-400/10 dark:text-violet-200">
+      <div class="mt-6 flex size-11 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-100 to-brand-50 text-brand-700 shadow-sm dark:from-brand-400/15 dark:to-brand-400/10 dark:text-brand-200">
         <KeyRound :size="19" />
       </div>
       <h1 class="mt-4 text-[1.7rem] font-semibold tracking-[-0.03em]">Reset your password</h1>
@@ -136,7 +136,7 @@ const inputClass =
         <button
           type="submit"
           :disabled="pending"
-          class="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-brand-600 to-violet-600 px-4 py-3 text-sm font-semibold text-white shadow-[0_12px_26px_-16px_rgba(43,75,255,0.9)] transition hover:-translate-y-0.5 disabled:translate-y-0 disabled:opacity-60"
+          class="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-brand-600 to-brand-600 px-4 py-3 text-sm font-semibold text-white shadow-[0_12px_26px_-16px_rgba(43,75,255,0.9)] transition hover:-translate-y-0.5 disabled:translate-y-0 disabled:opacity-60"
         >
           {{ pending ? 'Sending…' : 'Send reset link' }}
           <ArrowRight v-if="!pending" :size="15" />

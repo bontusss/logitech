@@ -123,7 +123,7 @@ async function save() {
   <form class="dash-panel rounded-2xl border p-5 sm:p-6" @submit.prevent="save">
     <div class="flex flex-wrap items-start justify-between gap-3">
       <div class="flex items-start gap-3">
-        <span class="flex size-9 shrink-0 items-center justify-center rounded-xl bg-violet-100 text-violet-700 dark:bg-violet-400/15 dark:text-violet-200">
+        <span class="flex size-9 shrink-0 items-center justify-center rounded-xl bg-brand-100 text-brand-700 dark:bg-brand-400/15 dark:text-brand-200">
           <Building2 :size="16" />
         </span>
         <div>
@@ -310,7 +310,7 @@ async function save() {
       <button
         type="submit"
         :disabled="saving"
-        class="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-brand-600 to-violet-600 px-4 py-2.5 text-[12.5px] font-semibold text-white shadow-sm shadow-brand-600/25 transition hover:-translate-y-0.5 disabled:opacity-60"
+        class="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-brand-600 to-brand-600 px-4 py-2.5 text-[12.5px] font-semibold text-white shadow-sm shadow-brand-600/25 transition hover:-translate-y-0.5 disabled:opacity-60"
       >
         <Loader2 v-if="saving" :size="14" class="animate-spin" />
         <Save v-else :size="14" />

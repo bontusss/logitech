@@ -87,8 +87,8 @@ function openDelivery(id:string){navigateTo(`/dashboard/deliveries?id=${encodeUR
 <template>
   <div class="dash-page">
     <header class="dash-hero relative overflow-hidden rounded-2xl border p-5 sm:p-6">
-      <div class="pointer-events-none absolute -top-16 right-10 size-44 rounded-full bg-fuchsia-400/15 blur-3xl" />
-      <div class="pointer-events-none absolute -right-8 -bottom-24 size-52 rounded-full bg-cyan-400/15 blur-3xl" />
+      <div class="pointer-events-none absolute -top-16 right-10 size-44 rounded-full bg-accent-400/15 blur-3xl" />
+      <div class="pointer-events-none absolute -right-8 -bottom-24 size-52 rounded-full bg-brand-400/15 blur-3xl" />
       <div class="relative flex flex-wrap items-start justify-between gap-4">
         <div>
           <p class="dash-eyebrow inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-semibold tracking-wide">
@@ -112,9 +112,9 @@ function openDelivery(id:string){navigateTo(`/dashboard/deliveries?id=${encodeUR
     <div class="mt-4 grid grid-cols-3 gap-2 sm:gap-3">
       <button
         v-for="tab in ([
-          { key: 'pending', label: 'Pending', icon: Clock3, tone: 'amber' },
-          { key: 'accepted', label: 'Accepted', icon: CheckCircle2, tone: 'mint' },
-          { key: 'declined', label: 'Declined', icon: XCircle, tone: 'rose' },
+          { key: 'pending', label: 'Pending', icon: Clock3, tone: 'accent' },
+          { key: 'accepted', label: 'Accepted', icon: CheckCircle2, tone: 'success' },
+          { key: 'declined', label: 'Declined', icon: XCircle, tone: 'accent' },
         ] as const)"
         :key="tab.key"
         type="button"
@@ -152,7 +152,7 @@ function openDelivery(id:string){navigateTo(`/dashboard/deliveries?id=${encodeUR
         <Loader2 :size="15" class="animate-spin" /> Loading requests…
       </div>
       <div v-else-if="!filtered.length" class="p-10 text-center">
-        <span class="mx-auto flex size-11 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-100 to-cyan-50 text-brand-700 dark:from-violet-400/15 dark:to-cyan-400/10 dark:text-indigo-200">
+        <span class="mx-auto flex size-11 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-100 to-brand-50 text-brand-700 dark:from-brand-400/15 dark:to-brand-400/10 dark:text-brand-200">
           <Truck :size="19" />
         </span>
         <h3 class="mt-3 text-[13px] font-semibold">No {{ filter }} requests</h3>
@@ -164,7 +164,7 @@ function openDelivery(id:string){navigateTo(`/dashboard/deliveries?id=${encodeUR
         <article v-for="request in filtered" :key="request.id" class="p-4 transition hover:bg-brand-50/20 sm:p-5">
           <div class="flex flex-wrap items-start justify-between gap-3">
             <div class="flex min-w-0 items-center gap-2.5">
-              <span class="flex size-9 shrink-0 items-center justify-center rounded-xl bg-violet-50 text-violet-700 dark:bg-violet-400/15 dark:text-violet-200">
+              <span class="flex size-9 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-700 dark:bg-brand-400/15 dark:text-brand-200">
                 <Truck :size="16" />
               </span>
               <div class="min-w-0">
@@ -177,24 +177,24 @@ function openDelivery(id:string){navigateTo(`/dashboard/deliveries?id=${encodeUR
             <span
               class="rounded-full px-2.5 py-1 text-[9px] font-semibold capitalize"
               :class="request.request_status === 'pending'
-                ? 'bg-amber-50 text-amber-700 dark:bg-amber-400/10 dark:text-amber-200'
+                ? 'bg-accent-50 text-accent-700 dark:bg-accent-400/10 dark:text-accent-200'
                 : request.request_status === 'accepted'
-                  ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-400/10 dark:text-emerald-200'
+                  ? 'bg-success-50 text-success-700 dark:bg-success-500/10 dark:text-success-200'
                   : 'bg-slate-100 text-slate-600 dark:bg-white/10 dark:text-slate-300'"
             >
               {{ request.request_status }}
             </span>
           </div>
           <div class="mt-4 grid gap-3 text-[11px] sm:grid-cols-2">
-            <div class="flex gap-2 rounded-xl bg-cyan-50/50 p-2.5 dark:bg-cyan-400/5">
-              <ArrowUpRight :size="14" class="mt-0.5 shrink-0 text-cyan-700 dark:text-cyan-200" />
+            <div class="flex gap-2 rounded-xl bg-brand-50/50 p-2.5 dark:bg-brand-400/5">
+              <ArrowUpRight :size="14" class="mt-0.5 shrink-0 text-brand-700 dark:text-brand-200" />
               <div class="min-w-0">
                 <p class="font-medium">{{ request.sender_name }} · {{ request.sender_phone }}</p>
                 <p class="mt-0.5 break-words text-ink-900/45">{{ request.pickup_address }}</p>
               </div>
             </div>
-            <div class="flex gap-2 rounded-xl bg-rose-50/50 p-2.5 dark:bg-rose-400/5">
-              <ArrowDownLeft :size="14" class="mt-0.5 shrink-0 text-rose-600" />
+            <div class="flex gap-2 rounded-xl bg-red-50/50 p-2.5 dark:bg-red-400/5">
+              <ArrowDownLeft :size="14" class="mt-0.5 shrink-0 text-red-600" />
               <div class="min-w-0">
                 <p class="font-medium">{{ request.receiver_name }} · {{ request.receiver_phone }}</p>
                 <p class="mt-0.5 break-words text-ink-900/45">{{ request.dropoff_address }}</p>
@@ -214,7 +214,7 @@ function openDelivery(id:string){navigateTo(`/dashboard/deliveries?id=${encodeUR
             <div v-if="request.request_status === 'pending'" class="flex gap-2">
               <button
                 type="button"
-                class="rounded-lg border border-rose-200 px-3 py-2 text-[10.5px] font-semibold text-rose-700 transition hover:bg-rose-50"
+                class="rounded-lg border border-red-200 px-3 py-2 text-[10.5px] font-semibold text-red-700 transition hover:bg-red-50"
                 @click="declineRequest(request)"
               >
                 Decline
@@ -222,7 +222,7 @@ function openDelivery(id:string){navigateTo(`/dashboard/deliveries?id=${encodeUR
               <button
                 v-if="can('bookings.manage')"
                 type="button"
-                class="inline-flex items-center gap-1 rounded-lg bg-brand-600 px-3 py-2 text-[10.5px] font-semibold text-white transition hover:bg-brand-700"
+                class="inline-flex items-center gap-1 rounded-lg bg-accent-500 px-3 py-2 text-[10.5px] font-semibold text-ink-950 transition hover:bg-accent-400"
                 @click="openAccept(request)"
               >
                 <Check :size="12" /> Accept
@@ -251,11 +251,11 @@ function openDelivery(id:string){navigateTo(`/dashboard/deliveries?id=${encodeUR
       <form class="dash-modal w-full max-w-md overflow-hidden rounded-2xl border shadow-2xl" @submit.prevent="acceptRequest">
         <div class="flex items-start justify-between gap-3 border-b border-ink-900/8 bg-white p-5 dark:bg-white/5">
           <div class="flex items-start gap-3">
-            <span class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-violet-100 text-violet-700 dark:bg-violet-400/15 dark:text-violet-200">
+            <span class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-brand-100 text-brand-700 dark:bg-brand-400/15 dark:text-brand-200">
               <CheckCircle2 :size="18" />
             </span>
             <div>
-              <p class="text-[9.5px] font-semibold tracking-[0.16em] text-brand-700 uppercase dark:text-indigo-200">ACCEPT REQUEST</p>
+              <p class="text-[9.5px] font-semibold tracking-[0.16em] text-brand-700 uppercase dark:text-brand-200">ACCEPT REQUEST</p>
               <h2 class="mt-1 text-[15px] font-semibold">Assign a driver</h2>
               <p class="mt-1 text-[11px] text-ink-900/50">A delivery is created as soon as you assign it.</p>
             </div>
@@ -274,7 +274,7 @@ function openDelivery(id:string){navigateTo(`/dashboard/deliveries?id=${encodeUR
               </option>
             </select>
           </label>
-          <p v-if="!drivers.filter((d) => d.status === 'active').length" class="mt-2 text-[10.5px] text-amber-700">
+          <p v-if="!drivers.filter((d) => d.status === 'active').length" class="mt-2 text-[10.5px] text-accent-700">
             Create an active driver before accepting the request.
           </p>
         </div>
@@ -283,7 +283,7 @@ function openDelivery(id:string){navigateTo(`/dashboard/deliveries?id=${encodeUR
           <button
             type="submit"
             :disabled="saving || !selectedDriver"
-            class="rounded-lg bg-brand-600 px-4 py-2 text-[11px] font-semibold text-white transition hover:bg-brand-700 disabled:opacity-50"
+            class="rounded-lg bg-accent-500 px-4 py-2 text-[11px] font-semibold text-ink-950 transition hover:bg-accent-400 disabled:opacity-50"
           >
             {{ saving ? 'Accepting…' : 'Accept & assign' }}
           </button>

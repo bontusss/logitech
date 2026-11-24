@@ -155,9 +155,9 @@ function formatDate(value: string | null) {
 }
 
 function statusClass(status: string) {
-  if (status === 'verified' || status === 'active') return 'bg-emerald-50 text-emerald-700 border-emerald-200'
-  if (status === 'under_review') return 'bg-blue-50 text-blue-700 border-blue-200'
-  if (status === 'pending' || status === 'pending_review') return 'bg-amber-50 text-amber-700 border-amber-200'
+  if (status === 'verified' || status === 'active') return 'bg-success-50 text-success-700 border-success-200'
+  if (status === 'under_review') return 'bg-brand-50 text-brand-700 border-brand-200'
+  if (status === 'pending' || status === 'pending_review') return 'bg-accent-50 text-accent-700 border-accent-200'
   if (status === 'rejected' || status === 'suspended') return 'bg-red-50 text-red-700 border-red-200'
   return 'bg-slate-50 text-slate-600 border-slate-200'
 }
@@ -203,40 +203,40 @@ onMounted(load)
 
     <template v-else-if="overview">
       <div class="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <div class="dash-stat dash-stat--violet rounded-2xl border p-4">
+        <div class="dash-stat dash-stat--brand rounded-2xl border p-4">
           <div class="flex items-center justify-between">
             <p class="text-[11px] font-semibold text-ink-900/55">Providers</p>
-            <span class="flex size-8 items-center justify-center rounded-xl bg-white/70 text-violet-600 shadow-sm dark:bg-white/10 dark:text-violet-200">
+            <span class="flex size-8 items-center justify-center rounded-xl bg-white/70 text-brand-600 shadow-sm dark:bg-white/10 dark:text-brand-200">
               <Building2 :size="15" />
             </span>
           </div>
           <p class="mt-3 text-[1.7rem] leading-none font-semibold tracking-[-0.03em]">{{ overview.providers.length }}</p>
           <p class="mt-2 text-[10.5px] text-ink-900/40">Companies on the platform</p>
         </div>
-        <div class="dash-stat dash-stat--peach rounded-2xl border p-4">
+        <div class="dash-stat dash-stat--accent rounded-2xl border p-4">
           <div class="flex items-center justify-between">
             <p class="text-[11px] font-semibold text-ink-900/55">Awaiting approval</p>
-            <span class="flex size-8 items-center justify-center rounded-xl bg-white/70 text-amber-600 shadow-sm dark:bg-white/10 dark:text-amber-200">
+            <span class="flex size-8 items-center justify-center rounded-xl bg-white/70 text-accent-600 shadow-sm dark:bg-white/10 dark:text-accent-200">
               <CircleAlert :size="15" />
             </span>
           </div>
           <p class="mt-3 text-[1.7rem] leading-none font-semibold tracking-[-0.03em]">{{ pendingProviders.length }}</p>
           <p class="mt-2 text-[10.5px] text-ink-900/40">Needs a review decision</p>
         </div>
-        <div class="dash-stat dash-stat--blue rounded-2xl border p-4">
+        <div class="dash-stat dash-stat--brand rounded-2xl border p-4">
           <div class="flex items-center justify-between">
             <p class="text-[11px] font-semibold text-ink-900/55">Customers</p>
-            <span class="flex size-8 items-center justify-center rounded-xl bg-white/70 text-sky-600 shadow-sm dark:bg-white/10 dark:text-sky-200">
+            <span class="flex size-8 items-center justify-center rounded-xl bg-white/70 text-brand-600 shadow-sm dark:bg-white/10 dark:text-brand-200">
               <Users :size="15" />
             </span>
           </div>
           <p class="mt-3 text-[1.7rem] leading-none font-semibold tracking-[-0.03em]">{{ overview.customers.length }}</p>
           <p class="mt-2 text-[10.5px] text-ink-900/40">Marketplace shippers</p>
         </div>
-        <div class="dash-stat dash-stat--mint rounded-2xl border p-4">
+        <div class="dash-stat dash-stat--success rounded-2xl border p-4">
           <div class="flex items-center justify-between">
             <p class="text-[11px] font-semibold text-ink-900/55">Admin accounts</p>
-            <span class="flex size-8 items-center justify-center rounded-xl bg-white/70 text-emerald-600 shadow-sm dark:bg-white/10 dark:text-emerald-200">
+            <span class="flex size-8 items-center justify-center rounded-xl bg-white/70 text-success-600 shadow-sm dark:bg-white/10 dark:text-success-200">
               <ShieldCheck :size="15" />
             </span>
           </div>
@@ -251,7 +251,7 @@ onMounted(load)
           :key="item.key"
           type="button"
           class="inline-flex shrink-0 items-center gap-1.5 rounded-xl px-3 py-2 text-[12px] font-semibold transition"
-          :class="tab === item.key ? 'bg-gradient-to-r from-brand-600 to-violet-600 text-white shadow-sm shadow-brand-600/25' : 'text-ink-900/55 hover:bg-canvas dark:hover:bg-white/5'"
+          :class="tab === item.key ? 'bg-gradient-to-r from-brand-600 to-brand-600 text-white shadow-sm shadow-brand-600/25' : 'text-ink-900/55 hover:bg-canvas dark:hover:bg-white/5'"
           @click="tab = item.key"
         >
           <component :is="item.icon" :size="14" />
@@ -259,7 +259,7 @@ onMounted(load)
           <span
             v-if="item.key === 'providers' && pendingProviders.length"
             class="rounded-full px-1.5 text-[10px] font-semibold"
-            :class="tab === 'providers' ? 'bg-white/25' : 'bg-amber-100 text-amber-700 dark:bg-amber-400/15 dark:text-amber-200'"
+            :class="tab === 'providers' ? 'bg-white/25' : 'bg-accent-100 text-accent-700 dark:bg-accent-400/15 dark:text-accent-200'"
           >
             {{ pendingProviders.length }}
           </span>
@@ -270,7 +270,7 @@ onMounted(load)
       <section v-if="tab === 'providers'" class="dash-panel mt-3 overflow-hidden rounded-2xl border">
         <div class="flex flex-wrap items-center justify-between gap-2 border-b border-ink-900/8 px-4 py-3.5 dark:border-white/10">
           <div class="flex items-center gap-2.5">
-            <span class="flex size-8 items-center justify-center rounded-xl bg-violet-100 text-violet-700 dark:bg-violet-400/15 dark:text-violet-200">
+            <span class="flex size-8 items-center justify-center rounded-xl bg-brand-100 text-brand-700 dark:bg-brand-400/15 dark:text-brand-200">
               <Store :size="15" />
             </span>
             <div>
@@ -308,7 +308,7 @@ onMounted(load)
                 </td>
                 <td class="px-4 py-3 text-[12px]">
                   <span v-if="provider.cac_business_name">{{ provider.cac_business_name }}</span>
-                  <span v-else class="text-amber-600">Not provided</span>
+                  <span v-else class="text-accent-600">Not provided</span>
                 </td>
                 <td class="px-4 py-3 text-[12px]">
                   <p>{{ provider.owner_name || '—' }}</p>
@@ -327,14 +327,14 @@ onMounted(load)
                   <button
                     v-if="provider.status !== 'verified'"
                     type="button"
-                    class="inline-flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-brand-600 to-violet-600 px-3 py-1.5 text-[11.5px] font-semibold text-white shadow-sm shadow-brand-600/20 transition hover:-translate-y-0.5 disabled:translate-y-0 disabled:opacity-50"
+                    class="inline-flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-brand-600 to-brand-600 px-3 py-1.5 text-[11.5px] font-semibold text-white shadow-sm shadow-brand-600/20 transition hover:-translate-y-0.5 disabled:translate-y-0 disabled:opacity-50"
                     :disabled="!canApprove || approvingId === provider.id"
                     @click="approve(provider)"
                   >
                     <Loader2 v-if="approvingId === provider.id" :size="12" class="animate-spin" />
                     Approve
                   </button>
-                  <span v-else class="text-[11px] font-medium text-emerald-600">
+                  <span v-else class="text-[11px] font-medium text-success-600">
                     Verified {{ formatDate(provider.verified_at) }}
                   </span>
                 </td>
@@ -347,7 +347,7 @@ onMounted(load)
       <!-- Customers -->
       <section v-else-if="tab === 'customers'" class="dash-panel mt-3 overflow-hidden rounded-2xl border">
         <div class="flex items-center gap-2.5 border-b border-ink-900/8 px-4 py-3.5 dark:border-white/10">
-          <span class="flex size-8 items-center justify-center rounded-xl bg-sky-100 text-sky-700 dark:bg-sky-400/15 dark:text-sky-200">
+          <span class="flex size-8 items-center justify-center rounded-xl bg-brand-100 text-brand-700 dark:bg-brand-400/15 dark:text-brand-200">
             <Users :size="15" />
           </span>
           <div>
@@ -398,7 +398,7 @@ onMounted(load)
       <section v-else class="mt-3 grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,360px)]">
         <div class="dash-panel overflow-hidden rounded-2xl border">
           <div class="flex items-center gap-2.5 border-b border-ink-900/8 px-4 py-3.5 dark:border-white/10">
-            <span class="flex size-8 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700 dark:bg-emerald-400/15 dark:text-emerald-200">
+            <span class="flex size-8 items-center justify-center rounded-xl bg-success-100 text-success-700 dark:bg-success-500/15 dark:text-success-200">
               <ShieldCheck :size="15" />
             </span>
             <div>
@@ -408,7 +408,7 @@ onMounted(load)
           </div>
           <ul class="divide-y divide-ink-900/6">
             <li v-for="admin in overview.admins" :key="admin.id" class="flex items-center gap-3 px-4 py-3">
-              <div class="grid size-8 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-violet-100 to-cyan-50 text-violet-700 dark:from-violet-400/15 dark:to-cyan-400/10 dark:text-violet-200">
+              <div class="grid size-8 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-brand-100 to-brand-50 text-brand-700 dark:from-brand-400/15 dark:to-brand-400/10 dark:text-brand-200">
                 <ShieldCheck :size="14" />
               </div>
               <div class="min-w-0 flex-1">
@@ -424,7 +424,7 @@ onMounted(load)
 
         <div class="dash-soft rounded-2xl border p-4">
           <h2 class="flex items-center gap-2 text-[13.5px] font-semibold">
-            <span class="flex size-8 items-center justify-center rounded-xl bg-gradient-to-br from-brand-600 to-violet-600 text-white shadow-sm shadow-brand-600/25">
+            <span class="flex size-8 items-center justify-center rounded-xl bg-gradient-to-br from-brand-600 to-brand-600 text-white shadow-sm shadow-brand-600/25">
               <UserPlus :size="15" />
             </span>
             Add an admin
@@ -467,7 +467,7 @@ onMounted(load)
             <button
               type="submit"
               :disabled="creatingAdmin"
-              class="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-brand-600 to-violet-600 px-3 py-2.5 text-[12px] font-semibold text-white shadow-[0_10px_24px_-16px_rgba(43,75,255,0.9)] transition hover:-translate-y-0.5 disabled:translate-y-0 disabled:opacity-60"
+              class="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-brand-600 to-brand-600 px-3 py-2.5 text-[12px] font-semibold text-white shadow-[0_10px_24px_-16px_rgba(43,75,255,0.9)] transition hover:-translate-y-0.5 disabled:translate-y-0 disabled:opacity-60"
             >
               <Loader2 v-if="creatingAdmin" :size="14" class="animate-spin" />
               Create admin account

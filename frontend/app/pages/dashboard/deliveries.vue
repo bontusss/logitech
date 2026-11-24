@@ -341,8 +341,8 @@ function paymentLabel(delivery: Delivery) {
 <template>
   <div class="delivery-workspace dash-page">
     <header class="delivery-page-hero relative overflow-hidden rounded-2xl border p-5 sm:p-6">
-      <div class="pointer-events-none absolute -top-20 right-12 size-48 rounded-full bg-fuchsia-400/15 blur-3xl" />
-      <div class="pointer-events-none absolute -right-10 -bottom-28 size-56 rounded-full bg-cyan-400/15 blur-3xl" />
+      <div class="pointer-events-none absolute -top-20 right-12 size-48 rounded-full bg-accent-400/15 blur-3xl" />
+      <div class="pointer-events-none absolute -right-10 -bottom-28 size-56 rounded-full bg-brand-400/15 blur-3xl" />
       <div class="relative flex flex-wrap items-center justify-between gap-4">
         <div>
           <p class="dash-eyebrow inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-semibold tracking-wide">
@@ -356,7 +356,7 @@ function paymentLabel(delivery: Delivery) {
         <button
           v-if="can('shipments.create')"
           type="button"
-          class="inline-flex min-h-10 items-center gap-1.5 rounded-xl bg-brand-600 px-4 py-2.5 text-[12px] font-semibold text-white shadow-sm shadow-brand-600/20 transition hover:-translate-y-0.5 hover:bg-brand-700"
+          class="inline-flex min-h-10 items-center gap-1.5 rounded-xl bg-accent-500 px-4 py-2.5 text-[12px] font-semibold text-ink-950 shadow-sm shadow-accent-500/20 transition hover:-translate-y-0.5 hover:bg-accent-400"
           @click="formOpen = true"
         >
           <Plus :size="14" /> Create delivery
@@ -374,7 +374,7 @@ function paymentLabel(delivery: Delivery) {
         role="tab"
         :aria-selected="activeTab === 'dispatch'"
         class="inline-flex items-center gap-2 rounded-lg px-3.5 py-2 text-[12px] font-semibold transition"
-        :class="activeTab === 'dispatch' ? 'bg-brand-600 text-white shadow-sm shadow-brand-600/25' : 'text-ink-900/55 hover:text-ink-900'"
+        :class="activeTab === 'dispatch' ? 'bg-accent-500 text-ink-950 shadow-sm shadow-accent-500/25' : 'text-ink-900/55 hover:text-ink-900'"
         @click="activeTab = 'dispatch'"
       >
         <Truck :size="14" /> Dispatch board
@@ -384,7 +384,7 @@ function paymentLabel(delivery: Delivery) {
         role="tab"
         :aria-selected="activeTab === 'all'"
         class="inline-flex items-center gap-2 rounded-lg px-3.5 py-2 text-[12px] font-semibold transition"
-        :class="activeTab === 'all' ? 'bg-brand-600 text-white shadow-sm shadow-brand-600/25' : 'text-ink-900/55 hover:text-ink-900'"
+        :class="activeTab === 'all' ? 'bg-accent-500 text-ink-950 shadow-sm shadow-accent-500/25' : 'text-ink-900/55 hover:text-ink-900'"
         @click="activeTab = 'all'"
       >
         <ClipboardList :size="14" /> All deliveries
@@ -395,9 +395,9 @@ function paymentLabel(delivery: Delivery) {
       <div class="grid grid-cols-3 gap-2 sm:gap-3" role="tablist" aria-label="Dispatch stages">
         <button
           v-for="stage in ([
-            { id: 'inbox', label: 'Inbox', count: pendingRequests.length, icon: ClipboardList, tone: 'amber' },
-            { id: 'active', label: 'Active', count: activeDeliveries.length, icon: Truck, tone: 'blue' },
-            { id: 'done', label: 'Done today', count: doneTodayDeliveries.length, icon: Check, tone: 'mint' },
+            { id: 'inbox', label: 'Inbox', count: pendingRequests.length, icon: ClipboardList, tone: 'accent' },
+            { id: 'active', label: 'Active', count: activeDeliveries.length, icon: Truck, tone: 'brand' },
+            { id: 'done', label: 'Done today', count: doneTodayDeliveries.length, icon: Check, tone: 'success' },
           ] as const)"
           :key="stage.id"
           type="button"
@@ -452,7 +452,7 @@ function paymentLabel(delivery: Delivery) {
           v-else-if="dispatchStage === 'inbox' && pendingRequests.length === 0"
           class="p-8 text-center"
         >
-          <span class="mx-auto flex size-11 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-100 to-orange-50 text-amber-700 dark:from-amber-400/15 dark:to-orange-400/10 dark:text-amber-200">
+          <span class="mx-auto flex size-11 items-center justify-center rounded-2xl bg-gradient-to-br from-accent-100 to-accent-50 text-accent-700 dark:from-accent-400/15 dark:to-accent-400/10 dark:text-accent-200">
             <ClipboardList :size="19" />
           </span>
           <h3 class="mt-3 text-[13px] font-semibold">Inbox is clear</h3>
@@ -465,7 +465,7 @@ function paymentLabel(delivery: Delivery) {
                 <p class="text-[9.5px] text-ink-900/40">{{ new Date(request.created_at).toLocaleString() }}</p>
                 <h3 class="mt-1 text-[12px] font-semibold">{{ request.sender_name }} → {{ request.receiver_name }}</h3>
               </div>
-              <span class="rounded-full bg-amber-50 px-2.5 py-1 text-[9px] font-semibold text-amber-700">New request</span>
+              <span class="rounded-full bg-accent-50 px-2.5 py-1 text-[9px] font-semibold text-accent-700">New request</span>
             </div>
             <div class="mt-3 grid gap-2 text-[10.5px] sm:grid-cols-2">
               <p class="break-words text-ink-900/55"><span class="font-semibold text-ink-900/75">From:</span> {{ request.pickup_address }}</p>
@@ -476,7 +476,7 @@ function paymentLabel(delivery: Delivery) {
                 <p class="text-[10.5px] text-ink-900/55">{{ request.item_description }}</p>
                 <p class="mt-1 text-[11.5px] font-semibold">{{ request.delivery_price_minor ? formatMoney(request.delivery_price_minor) : 'Price to confirm' }}</p>
               </div>
-              <button type="button" class="rounded-lg bg-brand-600 px-3 py-2 text-[10.5px] font-semibold text-white" @click="navigateTo('/dashboard/requests')">Review request</button>
+              <button type="button" class="rounded-lg bg-accent-500 px-3 py-2 text-[10.5px] font-semibold text-ink-950" @click="navigateTo('/dashboard/requests')">Review request</button>
             </div>
           </article>
         </div>
@@ -498,7 +498,7 @@ function paymentLabel(delivery: Delivery) {
             </div>
             <div class="flex shrink-0 flex-wrap items-center gap-1.5">
               <div v-if="delivery.tracking_url" class="flex items-center gap-1 rounded-lg border border-brand-200 bg-brand-50/50 p-1">
-                <span class="px-1 text-[9px] font-semibold text-brand-800 dark:text-indigo-200">{{ delivery.tracking_code || 'Tracking' }}</span>
+                <span class="px-1 text-[9px] font-semibold text-brand-700 dark:text-brand-200">{{ delivery.tracking_code || 'Tracking' }}</span>
                 <button type="button" class="inline-flex items-center gap-1 rounded-md bg-white px-1.5 py-1 text-[9px] font-semibold text-brand-700" @click="copyTrackingLink(delivery)">
                   <Check v-if="copiedTrackingId === delivery.id" :size="10" />
                   <Copy v-else :size="10" />
@@ -529,7 +529,7 @@ function paymentLabel(delivery: Delivery) {
               <h3 class="mt-1 truncate text-[12px] font-semibold">{{ delivery.sender_name }} → {{ delivery.receiver_name }}</h3>
               <p class="mt-1 truncate text-[10.5px] text-ink-900/45">{{ delivery.pickup_address }} → {{ delivery.dropoff_address }}</p>
             </div>
-            <span class="rounded-full bg-emerald-50 px-2.5 py-1 text-[9px] font-semibold text-emerald-700">Delivered · {{ formatMoney(delivery.delivery_price_minor) }}</span>
+            <span class="rounded-full bg-success-50 px-2.5 py-1 text-[9px] font-semibold text-success-700">Delivered · {{ formatMoney(delivery.delivery_price_minor) }}</span>
           </article>
         </div>
       </div>
@@ -566,13 +566,13 @@ function paymentLabel(delivery: Delivery) {
         <article v-for="delivery in filteredDeliveries" :key="delivery.id" class="p-4 transition hover:bg-brand-50/20 sm:p-5">
           <div class="flex flex-wrap items-start justify-between gap-3">
             <div class="flex items-center gap-2.5">
-              <span class="flex size-9 items-center justify-center rounded-xl bg-gradient-to-br from-sky-100 to-cyan-50 text-sky-700 dark:from-sky-400/15 dark:to-cyan-400/10 dark:text-sky-200"><Truck :size="16" /></span>
+              <span class="flex size-9 items-center justify-center rounded-xl bg-gradient-to-br from-brand-100 to-brand-50 text-brand-700 dark:from-brand-400/15 dark:to-brand-400/10 dark:text-brand-200"><Truck :size="16" /></span>
               <div>
                 <h3 class="text-[12px] font-semibold">{{ deliveryReference(delivery.id) }}</h3>
                 <p class="mt-0.5 text-[10px] capitalize text-ink-900/40">{{ statusLabel(delivery.status) }} · {{ new Date(delivery.created_at).toLocaleString() }}</p>
               </div>
             </div>
-            <p v-if="delivery.price_is_estimate && !delivery.delivery_price_minor" class="rounded-full bg-amber-50 px-2.5 py-1 text-[9px] font-semibold text-amber-800">Price to confirm</p>
+            <p v-if="delivery.price_is_estimate && !delivery.delivery_price_minor" class="rounded-full bg-accent-50 px-2.5 py-1 text-[9px] font-semibold text-accent-800">Price to confirm</p>
             <p v-else class="text-[14px] font-semibold tracking-tight">{{ formatMoney(delivery.delivery_price_minor) }}</p>
           </div>
           <div class="mt-4 grid gap-3 text-[11px] sm:grid-cols-2">
@@ -584,7 +584,7 @@ function paymentLabel(delivery: Delivery) {
               </div>
             </div>
             <div class="flex gap-2">
-              <ArrowDownLeft :size="14" class="mt-0.5 shrink-0 text-rose-600" />
+              <ArrowDownLeft :size="14" class="mt-0.5 shrink-0 text-red-600" />
               <div class="min-w-0">
                 <p class="font-medium">{{ delivery.receiver_name }} · {{ delivery.receiver_phone }}</p>
                 <p class="mt-0.5 break-words text-ink-900/45">{{ delivery.dropoff_address }}</p>
@@ -593,8 +593,8 @@ function paymentLabel(delivery: Delivery) {
           </div>
           <div class="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-ink-900/8 pt-3 text-[10.5px] text-ink-900/50">
             <span class="capitalize">{{ delivery.package_category || delivery.item_description }}<template v-if="delivery.weight_kg"> · {{ delivery.weight_kg }} kg</template><template v-if="delivery.distance_km"> · {{ delivery.distance_km }} km</template></span>
-            <span v-if="delivery.delivery_speed" class="rounded-full bg-cyan-50 px-2 py-0.5 font-semibold capitalize text-cyan-700">{{ delivery.delivery_speed.replace('_', ' ') }}</span>
-            <span v-if="delivery.booking_source === 'booking_page'" class="rounded-full bg-violet-50 px-2 py-0.5 font-semibold text-violet-700">Online request</span>
+            <span v-if="delivery.delivery_speed" class="rounded-full bg-brand-50 px-2 py-0.5 font-semibold capitalize text-brand-700">{{ delivery.delivery_speed.replace('_', ' ') }}</span>
+            <span v-if="delivery.booking_source === 'booking_page'" class="rounded-full bg-brand-50 px-2 py-0.5 font-semibold text-brand-700">Online request</span>
             <span>{{ paymentLabel(delivery) }}</span>
             <span class="inline-flex items-center gap-1">
               <UserRound :size="12" />
@@ -610,16 +610,16 @@ function paymentLabel(delivery: Delivery) {
             <select :value="delivery.status" :disabled="!can('shipments.update')" class="rounded-lg border border-ink-900/10 bg-white px-2.5 py-2 text-[10.5px]" @change="updateDeliveryStatus(delivery, ($event.target as HTMLSelectElement).value as Delivery['status'])">
               <option value="created">Created</option><option value="assigned">Assigned</option><option value="picked_up">Picked up</option><option value="in_transit">In transit</option><option value="delivered">Delivered</option><option value="cancelled">Cancelled</option>
             </select>
-            <a :href="whatsappHref(delivery.sender_phone, `Hello ${delivery.sender_name}, here is an update for your delivery ${deliveryReference(delivery.id)}.`)" target="_blank" rel="noopener" class="inline-flex items-center gap-1 rounded-lg border border-emerald-200 px-2.5 py-2 text-[10.5px] font-semibold text-emerald-700"><MessageCircle :size="12" />Sender</a>
-            <a :href="whatsappHref(delivery.receiver_phone, `Hello ${delivery.receiver_name}, here is an update for your delivery ${deliveryReference(delivery.id)}.`)" target="_blank" rel="noopener" class="inline-flex items-center gap-1 rounded-lg border border-emerald-200 px-2.5 py-2 text-[10.5px] font-semibold text-emerald-700"><MessageCircle :size="12" />Receiver</a>
+            <a :href="whatsappHref(delivery.sender_phone, `Hello ${delivery.sender_name}, here is an update for your delivery ${deliveryReference(delivery.id)}.`)" target="_blank" rel="noopener" class="inline-flex items-center gap-1 rounded-lg border border-success-200 px-2.5 py-2 text-[10.5px] font-semibold text-success-700"><MessageCircle :size="12" />Sender</a>
+            <a :href="whatsappHref(delivery.receiver_phone, `Hello ${delivery.receiver_name}, here is an update for your delivery ${deliveryReference(delivery.id)}.`)" target="_blank" rel="noopener" class="inline-flex items-center gap-1 rounded-lg border border-success-200 px-2.5 py-2 text-[10.5px] font-semibold text-success-700"><MessageCircle :size="12" />Receiver</a>
             <button type="button" class="inline-flex items-center gap-1 rounded-lg border border-ink-900/10 px-2.5 py-2 text-[10.5px] font-semibold" @click="detailOpenId=detailOpenId===delivery.id ? '' : delivery.id"><Clock3 :size="12" />Timeline</button>
             <div v-if="delivery.tracking_url" class="flex w-full flex-wrap items-center gap-1.5 rounded-lg border border-brand-200 bg-brand-50/45 px-2.5 py-2 sm:w-auto dark:border-brand-400/20 dark:bg-brand-400/5">
-              <span class="inline-flex items-center gap-1 text-[9.5px] font-semibold text-brand-800 dark:text-indigo-200">
+              <span class="inline-flex items-center gap-1 text-[9.5px] font-semibold text-brand-700 dark:text-brand-200">
                 <Link :size="11" /> {{ delivery.tracking_code || 'Tracking link' }}
               </span>
               <button
                 type="button"
-                class="inline-flex items-center gap-1 rounded-md border border-brand-200 bg-white px-1.5 py-1 text-[9.5px] font-semibold text-brand-700 hover:bg-brand-50 dark:border-brand-400/20 dark:bg-white/5 dark:text-indigo-200"
+                class="inline-flex items-center gap-1 rounded-md border border-brand-200 bg-white px-1.5 py-1 text-[9.5px] font-semibold text-brand-700 hover:bg-brand-50 dark:border-brand-400/20 dark:bg-white/5 dark:text-brand-200"
                 @click="copyTrackingLink(delivery)"
               >
                 <Check v-if="copiedTrackingId === delivery.id" :size="10" />
@@ -628,7 +628,7 @@ function paymentLabel(delivery: Delivery) {
               </button>
               <button
                 type="button"
-                class="inline-flex items-center gap-1 rounded-md border border-brand-200 bg-white px-1.5 py-1 text-[9.5px] font-semibold text-brand-700 hover:bg-brand-50 dark:border-brand-400/20 dark:bg-white/5 dark:text-indigo-200"
+                class="inline-flex items-center gap-1 rounded-md border border-brand-200 bg-white px-1.5 py-1 text-[9.5px] font-semibold text-brand-700 hover:bg-brand-50 dark:border-brand-400/20 dark:bg-white/5 dark:text-brand-200"
                 @click="shareTrackingLink(delivery)"
               >
                 <Share2 :size="10" /> Share
@@ -637,7 +637,7 @@ function paymentLabel(delivery: Delivery) {
                 :href="delivery.tracking_url"
                 target="_blank"
                 rel="noopener"
-                class="inline-flex items-center gap-1 rounded-md border border-brand-200 bg-white px-1.5 py-1 text-[9.5px] font-semibold text-brand-700 hover:bg-brand-50 dark:border-brand-400/20 dark:bg-white/5 dark:text-indigo-200"
+                class="inline-flex items-center gap-1 rounded-md border border-brand-200 bg-white px-1.5 py-1 text-[9.5px] font-semibold text-brand-700 hover:bg-brand-50 dark:border-brand-400/20 dark:bg-white/5 dark:text-brand-200"
               >
                 <ExternalLink :size="10" /> Open
               </a>
@@ -666,9 +666,9 @@ function paymentLabel(delivery: Delivery) {
       >
         <header class="delivery-modal-heading sticky top-0 z-10 flex items-start justify-between gap-4 border-b px-5 py-4 sm:px-6">
           <div class="flex items-start gap-3">
-            <span class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-cyan-100 text-cyan-800 dark:bg-cyan-400/15 dark:text-cyan-200"><Truck :size="18" /></span>
+            <span class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-brand-100 text-brand-700 dark:bg-brand-400/15 dark:text-brand-200"><Truck :size="18" /></span>
             <div>
-              <p class="text-[9.5px] font-semibold tracking-[0.16em] text-brand-700 uppercase dark:text-indigo-200">NEW DELIVERY</p>
+              <p class="text-[9.5px] font-semibold tracking-[0.16em] text-brand-700 uppercase dark:text-brand-200">NEW DELIVERY</p>
               <h2 id="create-delivery-title" class="mt-1 text-[15px] font-semibold">Let’s set up this delivery</h2>
               <p class="mt-1 text-[11px] text-ink-900/50">Add the route, people and payment. Your receipt updates as you go.</p>
             </div>
@@ -685,7 +685,7 @@ function paymentLabel(delivery: Delivery) {
         <div class="grid gap-4 p-4 sm:p-5 lg:grid-cols-[minmax(0,1.4fr)_minmax(280px,0.8fr)]">
           <div class="space-y-3">
             <section class="delivery-form-section delivery-form-section--route rounded-xl border p-4">
-              <h3 class="inline-flex items-center gap-2 text-[12px] font-semibold"><MapPin :size="14" class="text-cyan-700 dark:text-cyan-200" /> Route</h3>
+              <h3 class="inline-flex items-center gap-2 text-[12px] font-semibold"><MapPin :size="14" class="text-brand-700 dark:text-brand-200" /> Route</h3>
               <div class="mt-3 grid gap-3 sm:grid-cols-2">
                 <label class="block">
                   <span class="mb-1.5 block text-[10.5px] font-medium text-ink-900/55">Pickup address</span>
@@ -699,7 +699,7 @@ function paymentLabel(delivery: Delivery) {
             </section>
 
             <section class="delivery-form-section delivery-form-section--contacts rounded-xl border p-4">
-              <h3 class="inline-flex items-center gap-2 text-[12px] font-semibold"><UserRound :size="14" class="text-violet-700 dark:text-violet-200" /> People</h3>
+              <h3 class="inline-flex items-center gap-2 text-[12px] font-semibold"><UserRound :size="14" class="text-brand-700 dark:text-brand-200" /> People</h3>
               <div class="mt-3 grid gap-4 sm:grid-cols-2">
                 <div class="space-y-3">
                   <p class="inline-flex items-center gap-1.5 text-[10px] font-semibold text-brand-700"><ArrowUpRight :size="13" /> Sender</p>
@@ -713,7 +713,7 @@ function paymentLabel(delivery: Delivery) {
                   </label>
                 </div>
                 <div class="space-y-3">
-                  <p class="inline-flex items-center gap-1.5 text-[10px] font-semibold text-rose-700"><ArrowDownLeft :size="13" /> Receiver</p>
+                  <p class="inline-flex items-center gap-1.5 text-[10px] font-semibold text-red-700"><ArrowDownLeft :size="13" /> Receiver</p>
                   <label class="block">
                     <span class="mb-1 block text-[10.5px] text-ink-900/55">Receiver name</span>
                     <input v-model="form.receiver_name" required minlength="2" maxlength="120" autocomplete="name" class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-[12px] focus:border-brand-500" />
@@ -727,7 +727,7 @@ function paymentLabel(delivery: Delivery) {
             </section>
 
             <section class="delivery-form-section delivery-form-section--payment rounded-xl border p-4">
-              <h3 class="inline-flex items-center gap-2 text-[12px] font-semibold"><ClipboardList :size="14" class="text-amber-700 dark:text-amber-200" /> Parcel & payment</h3>
+              <h3 class="inline-flex items-center gap-2 text-[12px] font-semibold"><ClipboardList :size="14" class="text-accent-700 dark:text-accent-200" /> Parcel & payment</h3>
               <label class="mt-3 block">
                 <span class="mb-1.5 block text-[10.5px] font-medium text-ink-900/55">Item description</span>
                 <textarea v-model="form.item_description" required minlength="2" maxlength="500" rows="2" class="w-full resize-y rounded-lg border border-slate-300 px-3 py-2.5 text-[12px] focus:border-brand-500" />
@@ -767,7 +767,7 @@ function paymentLabel(delivery: Delivery) {
             </section>
 
             <section class="delivery-form-section delivery-form-section--fulfillment rounded-xl border p-4">
-              <h3 class="inline-flex items-center gap-2 text-[12px] font-semibold"><Truck :size="14" class="text-emerald-700 dark:text-emerald-200" /> Fulfillment</h3>
+              <h3 class="inline-flex items-center gap-2 text-[12px] font-semibold"><Truck :size="14" class="text-success-700 dark:text-success-200" /> Fulfillment</h3>
               <label class="mt-3 block">
                 <span class="mb-1.5 block text-[10.5px] font-medium text-ink-900/55">Assign a driver (optional)</span>
                 <select v-model="form.assigned_driver_id" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-[12px] focus:border-brand-500">
@@ -822,7 +822,7 @@ function paymentLabel(delivery: Delivery) {
           <button type="button" :disabled="saving" class="rounded-lg border border-ink-900/10 px-4 py-2.5 text-[11.5px] font-semibold text-ink-900/60 hover:bg-canvas disabled:opacity-50" @click="closeForm">
             Cancel
           </button>
-          <button type="submit" :disabled="saving || !can('shipments.create')" class="inline-flex items-center gap-1.5 rounded-lg bg-brand-500 px-4 py-2.5 text-[11.5px] font-semibold text-white hover:bg-brand-600 disabled:opacity-50">
+          <button type="submit" :disabled="saving || !can('shipments.create')" class="inline-flex items-center gap-1.5 rounded-lg bg-accent-500 px-4 py-2.5 text-[11.5px] font-semibold text-ink-950 hover:bg-accent-500 disabled:opacity-50">
             <Loader2 v-if="saving" :size="14" class="animate-spin" />
             <Check v-else :size="14" />
             Save delivery

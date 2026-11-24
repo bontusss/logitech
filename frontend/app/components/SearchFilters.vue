@@ -48,7 +48,7 @@ const fieldClass =
         Filters
         <span
           v-if="activeCount"
-          class="rounded-full bg-brand-100 px-1.5 py-0.5 text-[9.5px] font-bold text-brand-700 dark:bg-brand-400/15 dark:text-indigo-200"
+          class="rounded-full bg-brand-100 px-1.5 py-0.5 text-[9.5px] font-bold text-brand-700 dark:bg-brand-400/15 dark:text-brand-200"
         >
           {{ activeCount }}
         </span>

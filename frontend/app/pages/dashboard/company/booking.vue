@@ -182,8 +182,8 @@ function downloadQrCode() {
 <template>
   <div class="dash-page">
     <header class="dash-hero relative overflow-hidden rounded-2xl border p-5 sm:p-6">
-      <div class="pointer-events-none absolute -top-16 right-10 size-44 rounded-full bg-fuchsia-400/15 blur-3xl" />
-      <div class="pointer-events-none absolute -right-8 -bottom-24 size-52 rounded-full bg-cyan-400/15 blur-3xl" />
+      <div class="pointer-events-none absolute -top-16 right-10 size-44 rounded-full bg-accent-400/15 blur-3xl" />
+      <div class="pointer-events-none absolute -right-8 -bottom-24 size-52 rounded-full bg-brand-400/15 blur-3xl" />
       <div class="relative flex flex-wrap items-start justify-between gap-4">
         <div class="min-w-0">
           <p class="dash-eyebrow inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-semibold tracking-wide">
@@ -213,7 +213,7 @@ function downloadQrCode() {
     <p
       v-else-if="!canManage"
       role="alert"
-      class="mt-8 flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 p-4 text-[12.5px] text-amber-800"
+      class="mt-8 flex items-start gap-2 rounded-xl border border-accent-200 bg-accent-50 p-4 text-[12.5px] text-accent-800"
     >
       <CircleAlert :size="16" class="mt-0.5 shrink-0" />
       You do not have permission to manage the booking page.
@@ -222,7 +222,7 @@ function downloadQrCode() {
     <template v-else>
       <div
         v-if="detail && !isVerified"
-        class="mt-6 flex flex-wrap items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-[12.5px] text-amber-800"
+        class="mt-6 flex flex-wrap items-start gap-3 rounded-xl border border-accent-200 bg-accent-50 p-4 text-[12.5px] text-accent-800"
       >
         <CircleAlert :size="16" class="mt-0.5 shrink-0" />
         <p class="flex-1">
@@ -231,7 +231,7 @@ function downloadQrCode() {
         </p>
         <NuxtLink
           to="/dashboard/company"
-          class="font-semibold text-amber-900 underline underline-offset-4"
+          class="font-semibold text-accent-800 underline underline-offset-4"
         >
           Company profile
         </NuxtLink>
@@ -251,7 +251,7 @@ function downloadQrCode() {
           @submit.prevent="save"
         >
           <div class="flex items-start gap-3">
-            <span class="flex size-9 shrink-0 items-center justify-center rounded-xl bg-cyan-100 text-cyan-700 dark:bg-cyan-400/15 dark:text-cyan-200">
+            <span class="flex size-9 shrink-0 items-center justify-center rounded-xl bg-brand-100 text-brand-700 dark:bg-brand-400/15 dark:text-brand-200">
               <CalendarCheck :size="16" />
             </span>
             <div>
@@ -289,7 +289,7 @@ function downloadQrCode() {
               </span>
               <span
                 v-else-if="availabilityForCurrentSlug?.available"
-                class="mt-1 flex items-center gap-1 text-[10.5px] font-medium text-emerald-700"
+                class="mt-1 flex items-center gap-1 text-[10.5px] font-medium text-success-700"
               >
                 <CheckCircle2 :size="12" /> This page name is available.
               </span>
@@ -380,7 +380,7 @@ function downloadQrCode() {
                 class="inline-flex items-center gap-1.5 rounded-lg border border-ink-900/10 px-3 py-2 text-[11.5px] font-semibold text-ink-900/70 transition hover:border-ink-900/25 disabled:opacity-40"
                 @click="copyLink"
               >
-                <Check v-if="copied" :size="13" class="text-emerald-600" />
+                <Check v-if="copied" :size="13" class="text-success-600" />
                 <Copy v-else :size="13" />
                 {{ copied ? 'Copied' : 'Copy link' }}
               </button>
@@ -417,7 +417,7 @@ function downloadQrCode() {
                 </button>
               </div>
             </div>
-            <p v-if="page && !page.is_published" class="mt-3 text-[11px] text-amber-700">
+            <p v-if="page && !page.is_published" class="mt-3 text-[11px] text-accent-700">
               This page is currently unpublished, so visitors will see “not found”.
             </p>
           </div>

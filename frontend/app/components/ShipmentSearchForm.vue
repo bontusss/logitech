@@ -83,7 +83,7 @@ function submit() {
           Where is it going?
         </h2>
       </div>
-      <span class="flex size-10 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-100 to-cyan-50 text-violet-700 dark:from-violet-400/15 dark:to-cyan-400/10 dark:text-violet-200">
+      <span class="flex size-10 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-100 to-brand-50 text-brand-700 dark:from-brand-400/15 dark:to-brand-400/10 dark:text-brand-200">
         <MapPin :size="18" />
       </span>
     </div>
@@ -93,13 +93,13 @@ function submit() {
         v-model:state="originState"
         v-model:city="originCity"
         label="Sending from"
-        tone="violet"
+        tone="brand"
       />
       <LocationSelector
         v-model:state="destinationState"
         v-model:city="destinationCity"
         label="Sending to"
-        tone="sky"
+        tone="accent"
       />
     </div>
 
@@ -123,7 +123,7 @@ function submit() {
           class="rounded-full border px-3 py-1.5 text-[11.5px] font-semibold transition"
           :class="
             speed === option.value
-              ? 'border-brand-400 bg-brand-50 text-brand-700 dark:border-brand-400/40 dark:bg-brand-400/10 dark:text-indigo-200'
+              ? 'border-brand-400 bg-brand-50 text-brand-700 dark:border-brand-400/40 dark:bg-brand-400/10 dark:text-brand-200'
               : 'border-slate-200 bg-white/70 text-ink-900/60 hover:border-slate-300 dark:border-white/10 dark:bg-white/5'
           "
           @click="speed = option.value"
@@ -151,7 +151,7 @@ function submit() {
     <button
       type="submit"
       :disabled="loading"
-      class="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-brand-600 to-violet-600 px-4 py-3.5 text-[14px] font-semibold text-white shadow-[0_14px_28px_-16px_rgba(43,75,255,0.9)] transition hover:-translate-y-0.5 disabled:translate-y-0 disabled:opacity-60"
+      class="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-brand-600 to-brand-600 px-4 py-3.5 text-[14px] font-semibold text-white shadow-[0_14px_28px_-16px_rgba(43,75,255,0.9)] transition hover:-translate-y-0.5 disabled:translate-y-0 disabled:opacity-60"
     >
       <Loader2 v-if="loading" :size="16" class="animate-spin" />
       <template v-else>

@@ -26,49 +26,42 @@ const stats = [
 
 const shipments = [
   { id: 'WB-2041', route: 'Aba → Lagos', customer: 'Ogadinma Textiles', status: 'In transit', tone: 'brand' },
-  { id: 'WB-2038', route: 'Onitsha → Abuja', customer: 'M. Okafor', status: 'Delivered', tone: 'emerald' },
-  { id: 'WB-2035', route: 'Port Harcourt → Lagos', customer: 'Delta Supply Co.', status: 'Pending pickup', tone: 'amber' },
+  { id: 'WB-2038', route: 'Onitsha → Abuja', customer: 'M. Okafor', status: 'Delivered', tone: 'success' },
+  { id: 'WB-2035', route: 'Port Harcourt → Lagos', customer: 'Delta Supply Co.', status: 'Pending pickup', tone: 'accent' },
 ]
 
 const toneClasses: Record<string, string> = {
-  brand: 'border-brand-200 bg-brand-50 text-brand-700',
-  emerald: 'border-emerald-200 bg-emerald-50 text-emerald-700',
-  amber: 'border-amber-200 bg-amber-50 text-amber-700',
+  brand: 'border-brand-200 bg-brand-50 text-ink-900 dark:border-white/10 dark:bg-white/10 dark:text-brand-200',
+  success: 'border-success-200 bg-success-50 text-success-700 dark:border-success-500/25 dark:bg-success-500/10',
+  accent: 'border-accent-200 bg-accent-50 text-accent-800 dark:border-accent-500/25 dark:bg-accent-500/10 dark:text-accent-300',
 }
 
 const bars = [38, 52, 44, 68, 58, 76, 62, 84, 71, 92, 80, 96]
-
-const statTones = [
-  'from-violet-50 to-white dark:from-violet-400/10 dark:to-transparent',
-  'from-sky-50 to-white dark:from-sky-400/10 dark:to-transparent',
-  'from-amber-50 to-white dark:from-amber-400/10 dark:to-transparent',
-  'from-emerald-50 to-white dark:from-emerald-400/10 dark:to-transparent',
-]
 </script>
 
 <template>
   <div class="relative">
     <div
       aria-hidden="true"
-      class="absolute -inset-x-6 -top-6 bottom-0 rounded-3xl bg-gradient-to-b from-brand-100/60 to-transparent"
+      class="absolute -inset-x-6 -top-6 bottom-0 rounded-3xl bg-gradient-to-b from-brand-100/50 to-transparent dark:from-brand-400/10"
     />
 
     <div
-      class="relative overflow-hidden rounded-2xl border border-ink-900/10 bg-white shadow-[0_40px_90px_-55px_rgba(10,18,32,0.55)]"
+      class="relative overflow-hidden rounded-2xl border border-ink-900/10 bg-surface shadow-[0_40px_90px_-55px_rgba(5,13,31,0.55)]"
     >
       <!-- Browser chrome -->
-      <div class="flex items-center gap-2 border-b border-ink-900/8 bg-slate-50 px-3 py-2.5">
-        <span class="size-2 rounded-full bg-slate-300" />
-        <span class="size-2 rounded-full bg-slate-300" />
-        <span class="size-2 rounded-full bg-slate-300" />
+      <div class="flex items-center gap-2 border-b border-ink-900/8 bg-canvas px-3 py-2.5">
+        <span class="size-2 rounded-full bg-ink-900/15" />
+        <span class="size-2 rounded-full bg-ink-900/15" />
+        <span class="size-2 rounded-full bg-ink-900/15" />
         <div
-          class="mx-auto flex items-center gap-1.5 rounded-md border border-slate-200 bg-white px-2.5 py-1 text-[9.5px] text-ink-900/40"
+          class="mx-auto flex items-center gap-1.5 rounded-md border border-ink-900/10 bg-surface px-2.5 py-1 text-[9.5px] text-ink-900/40"
         >
-          <span class="size-1.5 rounded-full bg-emerald-500" />
+          <span class="size-1.5 rounded-full bg-success-500" />
           app.basedonlogistics.com
         </div>
         <span
-          class="rounded border border-slate-200 bg-white px-1.5 py-0.5 text-[9px] font-medium tracking-[0.08em] text-ink-900/40 uppercase"
+          class="rounded border border-ink-900/10 bg-surface px-1.5 py-0.5 text-[9px] font-medium tracking-[0.08em] text-ink-900/40 uppercase"
         >
           Sample
         </span>
@@ -86,7 +79,7 @@ const statTones = [
             type="button"
             tabindex="-1"
             class="flex size-8 items-center justify-center rounded-md"
-            :class="index === 0 ? 'bg-gradient-to-br from-brand-500 to-violet-500 text-white shadow-sm shadow-brand-600/40' : 'text-white/35'"
+            :class="index === 0 ? 'bg-accent-500 text-ink-950 shadow-sm shadow-accent-500/40' : 'text-white/35'"
             :aria-label="`Dashboard navigation item ${index + 1} (illustrative)`"
           >
             <component :is="icon" :size="15" />
@@ -109,7 +102,7 @@ const statTones = [
               <p class="text-[9.5px] text-ink-900/40">Aba headquarters · All branches</p>
             </div>
             <div
-              class="ml-auto hidden items-center gap-1.5 rounded-md border border-slate-200 px-2 py-1 text-[9.5px] text-ink-900/40 md:flex"
+              class="ml-auto hidden items-center gap-1.5 rounded-md border border-ink-900/10 px-2 py-1 text-[9.5px] text-ink-900/40 md:flex"
             >
               <Search :size="11" /> Search
             </div>
@@ -123,7 +116,7 @@ const statTones = [
             </button>
             <div class="flex items-center gap-1.5">
               <span
-                class="flex size-6 items-center justify-center rounded-full bg-ink-900 text-[8px] font-semibold text-white"
+                class="flex size-6 items-center justify-center rounded-full bg-ink-950 text-[8px] font-semibold text-white"
               >
                 AO
               </span>
@@ -135,14 +128,13 @@ const statTones = [
             <!-- Stat cards -->
             <div class="grid grid-cols-2 gap-2 lg:grid-cols-4">
               <div
-                v-for="(stat, index) in stats"
+                v-for="stat in stats"
                 :key="stat.label"
-                class="rounded-lg border border-ink-900/8 bg-gradient-to-br p-2.5"
-                :class="statTones[index % statTones.length]"
+                class="rounded-lg border border-ink-900/8 bg-canvas p-2.5"
               >
                 <div class="flex items-center justify-between">
                   <p class="text-[9.5px] font-medium text-ink-900/45">{{ stat.label }}</p>
-                  <component :is="stat.icon" :size="12" class="text-ink-900/25" />
+                  <component :is="stat.icon" :size="12" class="text-ink-900/30" />
                 </div>
                 <p class="mt-1.5 text-[16px] font-semibold tracking-[-0.03em]">{{ stat.value }}</p>
                 <p class="mt-0.5 text-[9px] text-ink-900/35">{{ stat.note }}</p>
@@ -154,7 +146,7 @@ const statTones = [
               <div class="overflow-hidden rounded-lg border border-ink-900/8">
                 <div class="flex items-center justify-between border-b border-ink-900/8 px-3 py-2">
                   <p class="text-[10.5px] font-semibold">Recent shipments</p>
-                  <span class="inline-flex items-center gap-0.5 text-[9px] font-medium text-brand-600">
+                  <span class="inline-flex items-center gap-0.5 text-[9px] font-medium text-accent-700 dark:text-accent-400">
                     View all <ArrowUpRight :size="10" />
                   </span>
                 </div>
@@ -201,7 +193,7 @@ const statTones = [
                     <p class="text-[10.5px] font-semibold">Weekly volume</p>
                     <p class="mt-0.5 text-[8.5px] text-ink-900/35">Shipments created</p>
                   </div>
-                  <span class="rounded border border-emerald-200 bg-emerald-50 px-1.5 py-0.5 text-[8px] font-medium text-emerald-700">
+                  <span class="rounded border border-success-200 bg-success-50 px-1.5 py-0.5 text-[8px] font-medium text-success-700 dark:border-success-500/25 dark:bg-success-500/10">
                     +14%
                   </span>
                 </div>
@@ -210,7 +202,7 @@ const statTones = [
                     v-for="(bar, index) in bars"
                     :key="index"
                     class="flex-1 rounded-sm"
-                    :class="index === bars.length - 1 ? 'bg-gradient-to-t from-brand-600 to-violet-500' : 'bg-brand-100 dark:bg-brand-500/25'"
+                    :class="index === bars.length - 1 ? 'bg-accent-500' : 'bg-brand-100 dark:bg-white/10'"
                     :style="{ height: `${bar}%` }"
                   />
                 </div>

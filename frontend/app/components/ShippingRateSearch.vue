@@ -83,9 +83,9 @@ const dimensions = [
 ] as const
 
 const fieldClass =
-  'w-full rounded-xl border border-slate-200 bg-canvas px-3.5 py-3 text-[13px] font-medium text-ink-900 transition placeholder:text-ink-900/35 hover:border-slate-300 focus:border-brand-500 dark:border-white/10 dark:bg-white/5'
+  'w-full rounded-xl border border-ink-900/12 bg-canvas px-3.5 py-3 text-[13px] font-medium text-ink-900 transition placeholder:text-ink-900/35 hover:border-ink-900/25 focus:border-accent-500 focus:bg-surface'
 const selectClass =
-  'w-full rounded-xl border border-slate-200 bg-canvas px-3 py-2.5 text-[12.5px] font-medium text-ink-900 transition hover:border-slate-300 focus:border-brand-500 disabled:cursor-not-allowed disabled:opacity-60 dark:border-white/10 dark:bg-white/5'
+  'w-full rounded-xl border border-ink-900/12 bg-canvas px-3 py-2.5 text-[12.5px] font-medium text-ink-900 transition hover:border-ink-900/25 focus:border-accent-500 disabled:cursor-not-allowed disabled:opacity-60'
 const labelClass = 'mb-1.5 block text-[11px] font-semibold text-ink-900/55'
 
 watch(
@@ -307,18 +307,18 @@ function submitSearch() {
   >
     <div class="flex items-start justify-between gap-4">
       <div>
-        <p class="text-[10px] font-bold tracking-[0.18em] text-brand-600 uppercase">Start here</p>
+        <p class="text-[10px] font-bold tracking-[0.18em] text-accent-700 uppercase dark:text-accent-400">Start here</p>
         <h2 class="mt-1.5 text-[19px] font-semibold tracking-[-0.03em]">Where are you sending?</h2>
         <p class="mt-1 text-[12.5px] text-ink-900/65">
           Enter your shipment to compare live provider rates.
         </p>
       </div>
-      <div class="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-100 to-cyan-50 text-violet-700 shadow-sm dark:from-violet-400/15 dark:to-cyan-400/10 dark:text-violet-200">
+      <IconTile tone="accent" size="lg" rounded="2xl">
         <PackageCheck :size="20" />
-      </div>
+      </IconTile>
     </div>
 
-    <div class="mt-4 grid grid-cols-2 gap-1 rounded-xl border border-slate-200 bg-canvas p-1 dark:border-white/10 dark:bg-white/5" role="tablist" aria-label="Delivery type">
+    <div class="mt-4 grid grid-cols-2 gap-1 rounded-xl border border-ink-900/10 bg-canvas p-1" role="tablist" aria-label="Delivery type">
       <button
         v-for="mode in ([
           { id: 'intercity', label: 'Between cities', icon: Building2 },
@@ -330,7 +330,7 @@ function submitSearch() {
         :aria-selected="serviceMode === mode.id"
         class="inline-flex items-center justify-center gap-1.5 rounded-lg px-2.5 py-2.5 text-[11.5px] font-semibold transition"
         :class="serviceMode === mode.id
-          ? 'bg-white text-ink-900 shadow-sm dark:bg-white/10 dark:text-white'
+          ? 'bg-surface text-ink-900 shadow-sm ring-1 ring-ink-900/5'
           : 'text-ink-900/50 hover:text-ink-900'"
         @click="setMode(mode.id)"
       >
@@ -370,7 +370,7 @@ function submitSearch() {
           </div>
           <button
             type="button"
-            class="mb-1 flex size-9 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-canvas text-ink-900/50 transition hover:-translate-y-0.5 hover:border-brand-200 hover:text-brand-600 dark:border-white/10 dark:bg-white/5"
+            class="mb-1 flex size-9 shrink-0 items-center justify-center rounded-xl border border-ink-900/10 bg-canvas text-ink-900/50 transition hover:-translate-y-0.5 hover:border-accent-500/40 hover:text-accent-700 dark:hover:text-accent-400"
             aria-label="Swap origin and destination"
             @click="swapCities"
           >
@@ -406,18 +406,18 @@ function submitSearch() {
       </template>
 
       <template v-else>
-        <div class="space-y-3 rounded-xl border border-slate-200/80 bg-canvas/60 p-3 dark:border-white/10 dark:bg-white/5">
+        <div class="space-y-3 rounded-xl border border-ink-900/10 bg-canvas/60 p-3">
           <VerifiedAddressField v-model="pickup" label="Pickup address" placeholder="Street, estate or landmark" />
           <VerifiedAddressField v-model="dropoff" label="Drop-off address" placeholder="Street, estate or landmark" />
-          <div class="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-[10.5px] dark:border-white/10 dark:bg-white/5">
-            <Loader2 v-if="distanceLoading" :size="13" class="animate-spin text-brand-600" />
-            <MapPin v-else :size="13" class="text-brand-600" />
+          <div class="flex items-center gap-2 rounded-lg border border-ink-900/10 bg-surface px-2.5 py-2 text-[10.5px]">
+            <Loader2 v-if="distanceLoading" :size="13" class="animate-spin text-accent-600 dark:text-accent-400" />
+            <MapPin v-else :size="13" class="text-accent-600 dark:text-accent-400" />
             <span v-if="distanceLoading" class="text-ink-900/55">Calculating the Mapbox road distance…</span>
-            <span v-else-if="distanceKm" class="font-semibold text-emerald-700 dark:text-emerald-300">
+            <span v-else-if="distanceKm" class="font-semibold text-success-700">
               {{ distanceKm.toLocaleString() }} km verified route
               <span class="ml-1 font-normal text-ink-900/45">· used for local rates</span>
             </span>
-            <span v-else-if="distanceError" class="text-rose-600">{{ distanceError }}</span>
+            <span v-else-if="distanceError" class="text-accent-700 dark:text-accent-300">{{ distanceError }}</span>
             <span v-else class="text-ink-900/45">Choose both verified addresses to calculate distance.</span>
           </div>
         </div>
@@ -482,7 +482,7 @@ function submitSearch() {
       <button
         type="submit"
         :disabled="loading"
-        class="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-brand-600 to-violet-600 px-4 py-3.5 text-[14px] font-semibold text-white shadow-[0_14px_28px_-16px_rgba(43,75,255,0.9)] transition hover:-translate-y-0.5 hover:shadow-[0_18px_32px_-16px_rgba(43,75,255,0.95)] disabled:translate-y-0 disabled:opacity-60"
+        class="flex w-full items-center justify-center gap-2 rounded-xl bg-accent-500 px-4 py-3.5 text-[14px] font-semibold text-ink-950 shadow-[0_14px_28px_-16px_rgba(255,122,0,0.75)] transition hover:-translate-y-0.5 hover:bg-accent-400 hover:shadow-[0_18px_32px_-16px_rgba(255,122,0,0.85)] disabled:translate-y-0 disabled:opacity-60"
       >
         <Loader2 v-if="loading" :size="16" class="animate-spin" />
         <Search v-else :size="16" />

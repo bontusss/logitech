@@ -88,7 +88,7 @@ async function save() {
 <template>
   <div class="dash-panel rounded-2xl border p-5">
     <div class="flex items-start gap-2.5">
-      <span class="flex size-9 shrink-0 items-center justify-center rounded-xl bg-sky-100 text-sky-700 dark:bg-sky-400/15 dark:text-sky-200">
+      <span class="flex size-9 shrink-0 items-center justify-center rounded-xl bg-brand-100 text-brand-700 dark:bg-brand-400/15 dark:text-brand-200">
         <Globe2 :size="16" />
       </span>
       <div>
@@ -122,7 +122,7 @@ async function save() {
         v-if="canManage"
         type="button"
         :disabled="checking || saving"
-        class="inline-flex items-center gap-1.5 rounded-lg bg-brand-600 px-3.5 py-2.5 text-[12px] font-semibold text-white shadow-sm shadow-brand-600/20 transition hover:bg-brand-700 disabled:opacity-60"
+        class="inline-flex items-center gap-1.5 rounded-lg bg-accent-500 px-3.5 py-2.5 text-[12px] font-semibold text-ink-950 shadow-sm shadow-accent-500/20 transition hover:bg-accent-400 disabled:opacity-60"
         @click="save"
       >
         <Loader2 v-if="saving || checking" :size="14" class="animate-spin" />
@@ -137,7 +137,7 @@ async function save() {
 
     <p
       v-if="availability.available === true"
-      class="mt-2 flex items-start gap-1.5 text-[11px] text-emerald-700"
+      class="mt-2 flex items-start gap-1.5 text-[11px] text-success-700"
     >
       <CheckCircle2 :size="13" class="mt-0.5 shrink-0" />
       {{ availability.reason || 'This subdomain is available.' }}
