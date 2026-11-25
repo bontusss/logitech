@@ -62,11 +62,11 @@ func (q *Queries) CountCompanyOwners(ctx context.Context, companyID uuid.UUID) (
 
 const createCompany = `-- name: CreateCompany :one
 INSERT INTO companies (
-  name, slug, business_email, phone, business_type, country, state, city, address, owner_user_id
+  name, slug, business_email, phone, country, state, city, address, owner_user_id
 ) VALUES (
-  $1, $2, $3, $4, $5, $6, NULLIF($7::text, ''), NULLIF($8::text, ''), NULLIF($9::text, ''), $10
+  $1, $2, $3, $4, $5, NULLIF($6::text, ''), NULLIF($7::text, ''), NULLIF($8::text, ''), $9
 )
-RETURNING id, name, slug, business_email, phone, business_type, cac_business_name, country, state, city, address, accepted_item_categories, prohibited_item_categories, status, onboarding_status, owner_user_id, verified_at, created_at, updated_at, deleted_at, description, cover_image_url, operating_hours, website_url, instagram_url, facebook_url, twitter_url, linkedin_url, year_established, photo_urls
+RETURNING id, name, slug, business_email, phone, cac_business_name, country, state, city, address, accepted_item_categories, prohibited_item_categories, status, onboarding_status, owner_user_id, verified_at, created_at, updated_at, deleted_at, description, cover_image_url, operating_hours, website_url, instagram_url, facebook_url, twitter_url, linkedin_url, year_established, photo_urls
 `
 
 type CreateCompanyParams struct {
@@ -74,11 +74,10 @@ type CreateCompanyParams struct {
 	Slug          string    `json:"slug"`
 	BusinessEmail string    `json:"business_email"`
 	Phone         string    `json:"phone"`
-	BusinessType  string    `json:"business_type"`
 	Country       string    `json:"country"`
+	Column6       string    `json:"column_6"`
 	Column7       string    `json:"column_7"`
 	Column8       string    `json:"column_8"`
-	Column9       string    `json:"column_9"`
 	OwnerUserID   uuid.UUID `json:"owner_user_id"`
 }
 
@@ -88,11 +87,10 @@ func (q *Queries) CreateCompany(ctx context.Context, arg CreateCompanyParams) (C
 		arg.Slug,
 		arg.BusinessEmail,
 		arg.Phone,
-		arg.BusinessType,
 		arg.Country,
+		arg.Column6,
 		arg.Column7,
 		arg.Column8,
-		arg.Column9,
 		arg.OwnerUserID,
 	)
 	var i Company
@@ -102,7 +100,6 @@ func (q *Queries) CreateCompany(ctx context.Context, arg CreateCompanyParams) (C
 		&i.Slug,
 		&i.BusinessEmail,
 		&i.Phone,
-		&i.BusinessType,
 		&i.CacBusinessName,
 		&i.Country,
 		&i.State,
@@ -324,7 +321,7 @@ func (q *Queries) GetCompanyBranding(ctx context.Context, companyID uuid.UUID) (
 }
 
 const getCompanyByID = `-- name: GetCompanyByID :one
-SELECT id, name, slug, business_email, phone, business_type, cac_business_name, country, state, city, address, accepted_item_categories, prohibited_item_categories, status, onboarding_status, owner_user_id, verified_at, created_at, updated_at, deleted_at, description, cover_image_url, operating_hours, website_url, instagram_url, facebook_url, twitter_url, linkedin_url, year_established, photo_urls FROM companies
+SELECT id, name, slug, business_email, phone, cac_business_name, country, state, city, address, accepted_item_categories, prohibited_item_categories, status, onboarding_status, owner_user_id, verified_at, created_at, updated_at, deleted_at, description, cover_image_url, operating_hours, website_url, instagram_url, facebook_url, twitter_url, linkedin_url, year_established, photo_urls FROM companies
 WHERE id = $1 AND deleted_at IS NULL
 `
 
@@ -337,7 +334,6 @@ func (q *Queries) GetCompanyByID(ctx context.Context, id uuid.UUID) (Company, er
 		&i.Slug,
 		&i.BusinessEmail,
 		&i.Phone,
-		&i.BusinessType,
 		&i.CacBusinessName,
 		&i.Country,
 		&i.State,
@@ -739,24 +735,23 @@ UPDATE companies
 SET name = $2,
     business_email = $3,
     phone = $4,
-    business_type = $5,
-    country = $6,
-    state = NULLIF($7::text, ''),
-    city = NULLIF($8::text, ''),
-    address = NULLIF($9::text, ''),
-    description = NULLIF($10::text, ''),
-    cover_image_url = NULLIF($11::text, ''),
-    operating_hours = $12,
-    website_url = NULLIF($13::text, ''),
-    instagram_url = NULLIF($14::text, ''),
-    facebook_url = NULLIF($15::text, ''),
-    twitter_url = NULLIF($16::text, ''),
-    linkedin_url = NULLIF($17::text, ''),
-    year_established = NULLIF($18::int, 0),
-    photo_urls = $19::text[],
+    country = $5,
+    state = NULLIF($6::text, ''),
+    city = NULLIF($7::text, ''),
+    address = NULLIF($8::text, ''),
+    description = NULLIF($9::text, ''),
+    cover_image_url = NULLIF($10::text, ''),
+    operating_hours = $11,
+    website_url = NULLIF($12::text, ''),
+    instagram_url = NULLIF($13::text, ''),
+    facebook_url = NULLIF($14::text, ''),
+    twitter_url = NULLIF($15::text, ''),
+    linkedin_url = NULLIF($16::text, ''),
+    year_established = NULLIF($17::int, 0),
+    photo_urls = $18::text[],
     updated_at = now()
 WHERE id = $1 AND deleted_at IS NULL
-RETURNING id, name, slug, business_email, phone, business_type, cac_business_name, country, state, city, address, accepted_item_categories, prohibited_item_categories, status, onboarding_status, owner_user_id, verified_at, created_at, updated_at, deleted_at, description, cover_image_url, operating_hours, website_url, instagram_url, facebook_url, twitter_url, linkedin_url, year_established, photo_urls
+RETURNING id, name, slug, business_email, phone, cac_business_name, country, state, city, address, accepted_item_categories, prohibited_item_categories, status, onboarding_status, owner_user_id, verified_at, created_at, updated_at, deleted_at, description, cover_image_url, operating_hours, website_url, instagram_url, facebook_url, twitter_url, linkedin_url, year_established, photo_urls
 `
 
 type UpdateCompanyParams struct {
@@ -764,21 +759,20 @@ type UpdateCompanyParams struct {
 	Name           string    `json:"name"`
 	BusinessEmail  string    `json:"business_email"`
 	Phone          string    `json:"phone"`
-	BusinessType   string    `json:"business_type"`
 	Country        string    `json:"country"`
+	Column6        string    `json:"column_6"`
 	Column7        string    `json:"column_7"`
 	Column8        string    `json:"column_8"`
 	Column9        string    `json:"column_9"`
 	Column10       string    `json:"column_10"`
-	Column11       string    `json:"column_11"`
 	OperatingHours []byte    `json:"operating_hours"`
+	Column12       string    `json:"column_12"`
 	Column13       string    `json:"column_13"`
 	Column14       string    `json:"column_14"`
 	Column15       string    `json:"column_15"`
 	Column16       string    `json:"column_16"`
-	Column17       string    `json:"column_17"`
-	Column18       int32     `json:"column_18"`
-	Column19       []string  `json:"column_19"`
+	Column17       int32     `json:"column_17"`
+	Column18       []string  `json:"column_18"`
 }
 
 func (q *Queries) UpdateCompany(ctx context.Context, arg UpdateCompanyParams) (Company, error) {
@@ -787,21 +781,20 @@ func (q *Queries) UpdateCompany(ctx context.Context, arg UpdateCompanyParams) (C
 		arg.Name,
 		arg.BusinessEmail,
 		arg.Phone,
-		arg.BusinessType,
 		arg.Country,
+		arg.Column6,
 		arg.Column7,
 		arg.Column8,
 		arg.Column9,
 		arg.Column10,
-		arg.Column11,
 		arg.OperatingHours,
+		arg.Column12,
 		arg.Column13,
 		arg.Column14,
 		arg.Column15,
 		arg.Column16,
 		arg.Column17,
 		arg.Column18,
-		arg.Column19,
 	)
 	var i Company
 	err := row.Scan(
@@ -810,7 +803,6 @@ func (q *Queries) UpdateCompany(ctx context.Context, arg UpdateCompanyParams) (C
 		&i.Slug,
 		&i.BusinessEmail,
 		&i.Phone,
-		&i.BusinessType,
 		&i.CacBusinessName,
 		&i.Country,
 		&i.State,
@@ -900,7 +892,7 @@ UPDATE companies
 SET cac_business_name = NULLIF($2::text, ''),
     updated_at = now()
 WHERE id = $1 AND deleted_at IS NULL
-RETURNING id, name, slug, business_email, phone, business_type, cac_business_name, country, state, city, address, accepted_item_categories, prohibited_item_categories, status, onboarding_status, owner_user_id, verified_at, created_at, updated_at, deleted_at, description, cover_image_url, operating_hours, website_url, instagram_url, facebook_url, twitter_url, linkedin_url, year_established, photo_urls
+RETURNING id, name, slug, business_email, phone, cac_business_name, country, state, city, address, accepted_item_categories, prohibited_item_categories, status, onboarding_status, owner_user_id, verified_at, created_at, updated_at, deleted_at, description, cover_image_url, operating_hours, website_url, instagram_url, facebook_url, twitter_url, linkedin_url, year_established, photo_urls
 `
 
 type UpdateCompanyCACNameParams struct {
@@ -917,7 +909,6 @@ func (q *Queries) UpdateCompanyCACName(ctx context.Context, arg UpdateCompanyCAC
 		&i.Slug,
 		&i.BusinessEmail,
 		&i.Phone,
-		&i.BusinessType,
 		&i.CacBusinessName,
 		&i.Country,
 		&i.State,
@@ -997,7 +988,7 @@ SET status = $2,
     verified_at = $4,
     updated_at = now()
 WHERE id = $1 AND deleted_at IS NULL
-RETURNING id, name, slug, business_email, phone, business_type, cac_business_name, country, state, city, address, accepted_item_categories, prohibited_item_categories, status, onboarding_status, owner_user_id, verified_at, created_at, updated_at, deleted_at, description, cover_image_url, operating_hours, website_url, instagram_url, facebook_url, twitter_url, linkedin_url, year_established, photo_urls
+RETURNING id, name, slug, business_email, phone, cac_business_name, country, state, city, address, accepted_item_categories, prohibited_item_categories, status, onboarding_status, owner_user_id, verified_at, created_at, updated_at, deleted_at, description, cover_image_url, operating_hours, website_url, instagram_url, facebook_url, twitter_url, linkedin_url, year_established, photo_urls
 `
 
 type UpdateCompanyVerificationParams struct {
@@ -1021,7 +1012,6 @@ func (q *Queries) UpdateCompanyVerification(ctx context.Context, arg UpdateCompa
 		&i.Slug,
 		&i.BusinessEmail,
 		&i.Phone,
-		&i.BusinessType,
 		&i.CacBusinessName,
 		&i.Country,
 		&i.State,

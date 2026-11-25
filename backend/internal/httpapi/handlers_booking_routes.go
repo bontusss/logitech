@@ -70,22 +70,8 @@ func (a *API) listCompanyBookingRoutes(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"routes": result})
 }
 
-func (a *API) providerOffersService(c *gin.Context, service string) bool {
-	tenant, _ := currentTenant(c)
-	company, err := a.svc.Q.GetCompanyByID(c.Request.Context(), tenant.CompanyID)
-	if err != nil {
-		return false
-	}
-	businessType := strings.ToLower(company.BusinessType)
-	return strings.Contains(businessType, service)
-}
-
 func (a *API) createCompanyBookingRoute(c *gin.Context) {
 	tenant, _ := currentTenant(c)
-	if !a.providerOffersService(c, "intercity") {
-		fail(c, http.StatusForbidden, "service_not_offered", "This provider does not offer inter-city services.")
-		return
-	}
 	var req bookingRouteInput
 	if err := c.ShouldBindJSON(&req); err != nil {
 		fail(c, http.StatusBadRequest, "invalid_booking_route", "Add the origin, destination, distance and at least one service price.")
@@ -110,10 +96,6 @@ func (a *API) createCompanyBookingRoute(c *gin.Context) {
 
 func (a *API) updateCompanyBookingRoute(c *gin.Context) {
 	tenant, _ := currentTenant(c)
-	if !a.providerOffersService(c, "intercity") {
-		fail(c, http.StatusForbidden, "service_not_offered", "This provider does not offer inter-city services.")
-		return
-	}
 	routeID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		fail(c, http.StatusBadRequest, "invalid_booking_route", "That route id is invalid.")
@@ -159,10 +141,6 @@ func (a *API) updateCompanyBookingRoute(c *gin.Context) {
 
 func (a *API) duplicateCompanyBookingRoute(c *gin.Context) {
 	tenant, _ := currentTenant(c)
-	if !a.providerOffersService(c, "intercity") {
-		fail(c, http.StatusForbidden, "service_not_offered", "This provider does not offer inter-city services.")
-		return
-	}
 	routeID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		fail(c, http.StatusBadRequest, "invalid_booking_route", "That route id is invalid.")
@@ -186,10 +164,6 @@ func (a *API) duplicateCompanyBookingRoute(c *gin.Context) {
 
 func (a *API) deleteCompanyBookingRoute(c *gin.Context) {
 	tenant, _ := currentTenant(c)
-	if !a.providerOffersService(c, "intercity") {
-		fail(c, http.StatusForbidden, "service_not_offered", "This provider does not offer inter-city services.")
-		return
-	}
 	routeID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		fail(c, http.StatusBadRequest, "invalid_booking_route", "That route id is invalid.")
@@ -204,10 +178,6 @@ func (a *API) deleteCompanyBookingRoute(c *gin.Context) {
 
 func (a *API) setCompanyBookingRouteStatus(c *gin.Context) {
 	tenant, _ := currentTenant(c)
-	if !a.providerOffersService(c, "intercity") {
-		fail(c, http.StatusForbidden, "service_not_offered", "This provider does not offer inter-city services.")
-		return
-	}
 	routeID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		fail(c, http.StatusBadRequest, "invalid_booking_route", "That route id is invalid.")

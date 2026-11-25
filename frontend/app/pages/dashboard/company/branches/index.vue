@@ -11,7 +11,6 @@ import {
   Sparkles,
 } from 'lucide-vue-next'
 import type { Branch, BranchInput, StaffMember } from '~/types/auth'
-import { parseProviderBusinessTypes } from '~/utils/providerBusinessTypes'
 
 definePageMeta({ middleware: 'auth', layout: 'app' })
 useSeoMeta({ title: 'Branches' })
@@ -27,11 +26,6 @@ const search = ref('')
 const status = ref<'all' | 'active' | 'inactive'>('all')
 const formOpen = ref(false)
 const saving = ref(false)
-
-const lastMileOnly = computed(() => {
-  const types = parseProviderBusinessTypes(detail.value?.company.business_type ?? '')
-  return types.length === 1 && types[0] === 'lastmile'
-})
 
 onMounted(async () => {
   await load()
@@ -126,7 +120,7 @@ async function toggleBranch(branch: Branch) {
         <div class="flex items-center gap-2">
           <LookupRefreshButton :loading="loading" @refresh="fetchData" />
           <button
-            v-if="can('branches.create') && !lastMileOnly"
+            v-if="can('branches.create')"
             type="button"
             class="inline-flex min-h-10 items-center gap-1.5 rounded-xl bg-accent-500 px-4 py-2.5 text-[12px] font-semibold text-ink-950 shadow-sm shadow-accent-500/20 transition hover:-translate-y-0.5 hover:bg-accent-400"
             @click="formOpen = true"
@@ -172,7 +166,7 @@ async function toggleBranch(branch: Branch) {
     </section>
 
     <BranchForm
-      v-if="formOpen && !lastMileOnly"
+      v-if="formOpen"
       class="mt-4"
       :members="members"
       :saving="saving"
@@ -211,7 +205,7 @@ async function toggleBranch(branch: Branch) {
       :branches="filtered"
       :members="members"
       :loading="loading"
-      :can-create="can('branches.create') && !lastMileOnly"
+      :can-create="can('branches.create')"
       :can-update="can('branches.update')"
       :can-deactivate="can('branches.deactivate')"
       @create="formOpen = true"

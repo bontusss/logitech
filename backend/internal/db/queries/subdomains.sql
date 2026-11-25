@@ -19,7 +19,6 @@ SELECT
   c.id,
   c.name,
   c.slug,
-  c.business_type,
   c.description,
   c.city,
   c.state,

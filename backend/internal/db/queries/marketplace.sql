@@ -147,7 +147,6 @@ SELECT
   c.id,
   c.name,
   c.slug,
-  c.business_type,
   c.state,
   c.city,
   c.country,

@@ -1,8 +1,8 @@
 -- name: CreateCompany :one
 INSERT INTO companies (
-  name, slug, business_email, phone, business_type, country, state, city, address, owner_user_id
+  name, slug, business_email, phone, country, state, city, address, owner_user_id
 ) VALUES (
-  $1, $2, $3, $4, $5, $6, NULLIF($7::text, ''), NULLIF($8::text, ''), NULLIF($9::text, ''), $10
+  $1, $2, $3, $4, $5, NULLIF($6::text, ''), NULLIF($7::text, ''), NULLIF($8::text, ''), $9
 )
 RETURNING *;
 
@@ -28,21 +28,20 @@ UPDATE companies
 SET name = $2,
     business_email = $3,
     phone = $4,
-    business_type = $5,
-    country = $6,
-    state = NULLIF($7::text, ''),
-    city = NULLIF($8::text, ''),
-    address = NULLIF($9::text, ''),
-    description = NULLIF($10::text, ''),
-    cover_image_url = NULLIF($11::text, ''),
-    operating_hours = $12,
-    website_url = NULLIF($13::text, ''),
-    instagram_url = NULLIF($14::text, ''),
-    facebook_url = NULLIF($15::text, ''),
-    twitter_url = NULLIF($16::text, ''),
-    linkedin_url = NULLIF($17::text, ''),
-    year_established = NULLIF($18::int, 0),
-    photo_urls = $19::text[],
+    country = $5,
+    state = NULLIF($6::text, ''),
+    city = NULLIF($7::text, ''),
+    address = NULLIF($8::text, ''),
+    description = NULLIF($9::text, ''),
+    cover_image_url = NULLIF($10::text, ''),
+    operating_hours = $11,
+    website_url = NULLIF($12::text, ''),
+    instagram_url = NULLIF($13::text, ''),
+    facebook_url = NULLIF($14::text, ''),
+    twitter_url = NULLIF($15::text, ''),
+    linkedin_url = NULLIF($16::text, ''),
+    year_established = NULLIF($17::int, 0),
+    photo_urls = $18::text[],
     updated_at = now()
 WHERE id = $1 AND deleted_at IS NULL
 RETURNING *;

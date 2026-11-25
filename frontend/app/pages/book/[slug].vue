@@ -48,7 +48,6 @@ interface PublicBookingPage {
     name: string
     slug: string
     public_name: string
-    business_type: string
     business_email: string
     phone: string
     city: string | null
@@ -104,17 +103,26 @@ interface PublicReview {
   created_at: string
 }
 
+interface RawZoneRoute {
+  id: string
+  price_minor: number
+  included_weight_kg: number
+  additional_weight_fee_minor: number
+  from_zone: { id: string; name: string; state: string; lga: string }
+  to_zone: { id: string; name: string; state: string; lga: string }
+}
+
 interface PublicRoute {
   id: string
   origin_state: string
   origin_city: string
   destination_state: string
   destination_city: string
-  distance_km: number
-  standard_price_per_km_minor: number | null
-  express_price_per_km_minor: number | null
-  same_day_price_per_km_minor: number | null
-  minimum_charge_minor: number
+  origin_zone_id: string
+  destination_zone_id: string
+  price_minor: number
+  included_weight_kg: number
+  additional_weight_fee_minor: number
   currency: string
 }
 
@@ -138,7 +146,7 @@ const { data, error: pageLoadError, status } = await useAsyncData(
 const { data: routeData, error: routeLoadError } = await useAsyncData(
   () => `booking-routes:${slug.value}`,
   () =>
-    $fetch<{ routes: PublicRoute[] }>(`/public/book/${encodeURIComponent(slug.value)}/routes`, {
+    $fetch<{ routes: RawZoneRoute[] }>(`/public/book/${encodeURIComponent(slug.value)}/zone-routes`, {
       baseURL: apiBase,
     }),
   { watch: [slug], default: () => ({ routes: [] }) },
@@ -165,7 +173,21 @@ const location = computed(() =>
 )
 const pageURL = computed(() => `${origin}/book/${data.value?.booking_page.slug || slug.value}`)
 const phoneHref = computed(() => `tel:${(company.value?.phone || '').replace(/[^+\d]/g, '')}`)
-const routes = computed(() => routeData.value?.routes ?? [])
+const routes = computed<PublicRoute[]>(() =>
+  (routeData.value?.routes ?? []).map((route) => ({
+    id: route.id,
+    origin_state: route.from_zone.state,
+    origin_city: route.from_zone.lga,
+    destination_state: route.to_zone.state,
+    destination_city: route.to_zone.lga,
+    origin_zone_id: route.from_zone.id,
+    destination_zone_id: route.to_zone.id,
+    price_minor: route.price_minor,
+    included_weight_kg: route.included_weight_kg,
+    additional_weight_fee_minor: route.additional_weight_fee_minor,
+    currency: 'NGN',
+  })),
+)
 const branches = computed(() => data.value?.branches ?? [])
 const reviews = ref<PublicReview[]>([])
 const reviewSummary = ref({ review_count: 0, average_rating: 0 })
@@ -437,35 +459,19 @@ const pickupText = computed(() => pickedRoute.value
 const dropoffText = computed(() => pickedRoute.value
   ? `${pickedRoute.value.destination_city}, ${pickedRoute.value.destination_state}`
   : form.dropoff?.address || '')
-const servicePricePerKm = computed(() => {
-  if (!routeSelected.value) return null
-  return {
-    standard: routeSelected.value.standard_price_per_km_minor,
-    express: routeSelected.value.express_price_per_km_minor,
-    same_day: routeSelected.value.same_day_price_per_km_minor,
-  }[form.deliverySpeed]
-})
 const estimatedDeliveryPrice = computed(() => {
-  if (!routeSelected.value || servicePricePerKm.value === null) return null
-  return Math.max(
-    routeSelected.value.minimum_charge_minor,
-    Math.ceil(servicePricePerKm.value * routeSelected.value.distance_km),
-  )
+  const providerRoute = routeSelected.value
+  if (!providerRoute) return null
+  const weight = Number(form.weightKg)
+  if (!Number.isFinite(weight) || weight <= 0) return providerRoute.price_minor
+  const extraKg = Math.max(0, Math.ceil((weight - providerRoute.included_weight_kg) * 100) / 100)
+  return providerRoute.price_minor + Math.ceil(extraKg * providerRoute.additional_weight_fee_minor)
 })
 const serviceLabels = {
-  standard: 'Standard',
-  express: 'Express',
-  same_day: 'Same-day',
+  standard: 'Zone route',
+  express: 'Zone route',
+  same_day: 'Zone route',
 } as const
-const deliveryServices = computed(() => {
-  const providerRoute = routeSelected.value
-  if (!providerRoute) return []
-  return [
-    { key: 'standard' as const, label: 'Standard', price: providerRoute.standard_price_per_km_minor },
-    { key: 'express' as const, label: 'Express', price: providerRoute.express_price_per_km_minor },
-    { key: 'same_day' as const, label: 'Same-day', price: providerRoute.same_day_price_per_km_minor },
-  ].filter((service) => service.price !== null)
-})
 
 function nextStep() {
   error.value = ''
@@ -476,10 +482,6 @@ function nextStep() {
     }
     if (routeMode.value === 'map' && (!form.pickup || !form.dropoff)) {
       error.value = 'Choose both locations from the Mapbox suggestions to confirm their pins.'
-      return
-    }
-    if (routeMode.value === 'route' && routeSelected.value && servicePricePerKm.value === null) {
-      error.value = 'Choose a delivery speed offered on this route.'
       return
     }
   } else if (currentStep.value === 1) {
@@ -516,15 +518,6 @@ function previousStep() {
 
 function selectRoute(providerRoute: PublicRoute) {
   form.selectedRouteId = providerRoute.id
-  const availableSpeeds = [
-    ['standard', providerRoute.standard_price_per_km_minor],
-    ['express', providerRoute.express_price_per_km_minor],
-    ['same_day', providerRoute.same_day_price_per_km_minor],
-  ] as const
-  if (!availableSpeeds.some(([speed, price]) => speed === form.deliverySpeed && price !== null)) {
-    const firstAvailable = availableSpeeds.find(([, price]) => price !== null)
-    if (firstAvailable) form.deliverySpeed = firstAvailable[0]
-  }
 }
 
 async function uploadPhoto(event: Event) {
@@ -597,7 +590,9 @@ async function createBooking() {
           pickup_longitude: routeMode.value === 'map' ? form.pickup?.longitude : null,
           dropoff_latitude: routeMode.value === 'map' ? form.dropoff?.latitude : null,
           dropoff_longitude: routeMode.value === 'map' ? form.dropoff?.longitude : null,
-          selected_route_id: routeMode.value === 'route' ? form.selectedRouteId : null,
+          selected_zone_route_id: routeMode.value === 'route' ? form.selectedRouteId : null,
+          origin_zone_id: routeMode.value === 'route' ? routeSelected.value?.origin_zone_id : null,
+          destination_zone_id: routeMode.value === 'route' ? routeSelected.value?.destination_zone_id : null,
           delivery_speed: form.deliverySpeed,
         },
       },
@@ -1112,7 +1107,7 @@ const bookingCode = computed(() => bookingReference.value
                   <span class="flex size-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-brand-100 to-brand-50 text-brand-700 dark:from-brand-400/15 dark:to-brand-400/10 dark:text-brand-200"><MapPin :size="16" /></span>
                   <span class="min-w-0 flex-1">
                     <span class="block text-[12px] font-bold">{{ providerRoute.origin_city }}, {{ providerRoute.origin_state }} <span class="mx-1 text-slate-400">→</span> {{ providerRoute.destination_city }}, {{ providerRoute.destination_state }}</span>
-                    <span class="mt-1 block text-[10px] text-slate-600">{{ providerRoute.distance_km }} km · {{ formatCurrency(Math.min(...[providerRoute.standard_price_per_km_minor, providerRoute.express_price_per_km_minor, providerRoute.same_day_price_per_km_minor].filter((price): price is number => price !== null)), providerRoute.currency) }}/km from</span>
+                    <span class="mt-1 block text-[10px] text-slate-600">{{ formatCurrency(providerRoute.price_minor, providerRoute.currency) }} base · {{ providerRoute.included_weight_kg }} kg included</span>
                   </span>
                   <span v-if="form.selectedRouteId === providerRoute.id" class="flex size-5 shrink-0 items-center justify-center rounded-full text-white" :style="{ backgroundColor: primary }"><Check :size="12" /></span>
                   <span v-else class="size-5 shrink-0 rounded-full border border-slate-300" />
@@ -1127,26 +1122,14 @@ const bookingCode = computed(() => bookingReference.value
                 <BadgeCheck :size="14" class="mt-0.5 shrink-0" /> Search and select a Mapbox suggestion to verify each map pin.
               </div>
               <div v-if="routeMode === 'route' && routeSelected" class="booking-soft mt-4 rounded-2xl border p-3.5 sm:p-4">
-                <p class="text-[11px] font-semibold text-slate-800 dark:text-slate-100">Choose a delivery speed</p>
-                <p class="mt-0.5 text-[10px] text-slate-500">Your price is calculated from this route’s distance.</p>
-                <div class="mt-3 grid gap-2 sm:grid-cols-3">
-                  <button
-                    v-for="service in deliveryServices"
-                    :key="service.key"
-                    type="button"
-                    class="booking-price-card rounded-xl border p-3 text-left"
-                    :class="`booking-price-card--${service.key === 'same_day' ? 'same-day' : service.key}`"
-                    :style="form.deliverySpeed === service.key ? { borderColor: primary, boxShadow: `0 0 0 1px ${primary}40` } : {}"
-                    @click="form.deliverySpeed = service.key"
-                  >
-                    <span class="flex items-center justify-between gap-1 text-[10px] font-semibold text-slate-600">
-                      {{ service.label }}
-                      <Check v-if="form.deliverySpeed === service.key" :size="12" :style="{ color: primary }" />
-                    </span>
-                    <span class="mt-1 block text-[12px] font-extrabold">{{ formatCurrency(Math.max(routeSelected.minimum_charge_minor, Math.ceil((service.price ?? 0) * routeSelected.distance_km)), routeSelected.currency) }}</span>
-                    <span class="mt-0.5 block text-[9px] text-slate-500">{{ formatCurrency(service.price ?? 0, routeSelected.currency) }}/km</span>
-                  </button>
-                </div>
+                <p class="text-[11px] font-semibold text-slate-800 dark:text-slate-100">Route price</p>
+                <p class="mt-1 text-[10px] leading-5 text-slate-500">
+                  {{ formatCurrency(routeSelected.price_minor, routeSelected.currency) }} covers up to {{ routeSelected.included_weight_kg }} kg.
+                  Each extra kilogram is {{ formatCurrency(routeSelected.additional_weight_fee_minor, routeSelected.currency) }}.
+                </p>
+                <p v-if="estimatedDeliveryPrice !== null" class="mt-1 text-[11px] font-bold text-slate-800 dark:text-slate-100">
+                  Estimated for this package: {{ formatMoney(estimatedDeliveryPrice) }}
+                </p>
               </div>
             </div>
 
@@ -1279,8 +1262,8 @@ const bookingCode = computed(() => bookingReference.value
                   <Sparkles :size="13" />
                 </span>
                 <p v-if="estimatedDeliveryPrice !== null" class="text-[10.5px] leading-5 text-success-700 dark:text-success-200">
-                  <b>{{ serviceLabels[form.deliverySpeed] }} delivery: {{ formatMoney(estimatedDeliveryPrice) }} for {{ routeSelected?.distance_km }} km.</b>
-                  Calculated from the provider’s published per-kilometre rate and minimum charge.
+                  <b>Zone route delivery: {{ formatMoney(estimatedDeliveryPrice) }}.</b>
+                  Calculated from the provider’s base route price, included weight and extra-kilogram fee.
                 </p>
                 <p v-else class="text-[10.5px] leading-5 text-accent-800 dark:text-accent-200">
                   <b>Delivery fee: confirmed by {{ displayName }}.</b>
@@ -1513,7 +1496,7 @@ const bookingCode = computed(() => bookingReference.value
                   <span v-if="estimatedDeliveryPrice !== null" class="text-[15px] font-extrabold tracking-tight">{{ formatMoney(estimatedDeliveryPrice) }}</span>
                   <span v-else class="rounded-full bg-accent-50 px-2.5 py-1 text-[9px] font-bold text-accent-700 dark:bg-accent-400/10 dark:text-accent-200">Provider confirms</span>
                 </div>
-                <p v-if="estimatedDeliveryPrice !== null" class="mt-1 text-[9.5px] text-slate-500">{{ serviceLabels[form.deliverySpeed] }} · {{ routeSelected?.distance_km }} km × published rate</p>
+                <p v-if="estimatedDeliveryPrice !== null" class="mt-1 text-[9.5px] text-slate-500">Zone route · base price plus published extra-weight fee</p>
                 <p class="mt-2 text-[9.5px] leading-4 text-slate-500">The item value below is for protection and is not your delivery charge.</p>
                 <div class="booking-soft mt-3 flex items-center justify-between rounded-xl border px-3 py-2.5">
                   <span class="text-[10px] text-slate-500">Item value</span>

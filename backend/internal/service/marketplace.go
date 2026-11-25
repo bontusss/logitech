@@ -21,7 +21,9 @@ type MarketplacePackage struct {
 
 // MarketplaceRouteRequest is the resolved search request.
 type MarketplaceRouteRequest struct {
-	ServiceType      string             `json:"service_type,omitempty"`
+	ServiceType       string            `json:"service_type,omitempty"`
+	OriginZoneID      string            `json:"origin_zone_id,omitempty"`
+	DestinationZoneID string            `json:"destination_zone_id,omitempty"`
 	OriginState      string             `json:"origin_state"`
 	OriginCity       string             `json:"origin_city"`
 	DestinationState string             `json:"destination_state"`
@@ -76,6 +78,7 @@ type MarketplaceQuote struct {
 	ProviderName           string       `json:"provider_name"`
 	ProviderLogo           string       `json:"provider_logo"`
 	ProviderSlug           string       `json:"provider_slug"`
+	ProviderRating         float64      `json:"provider_rating"`
 	BookingSlug            string       `json:"booking_slug,omitempty"`
 	RouteID                string       `json:"-"`
 	ServiceKey             string       `json:"service_key"`
@@ -235,6 +238,13 @@ func SortMarketplaceQuotes(quotes []MarketplaceQuote, order string) {
 		sort.SliceStable(quotes, func(i, j int) bool {
 			if quotes[i].EstimatedDurationDays != quotes[j].EstimatedDurationDays {
 				return quotes[i].EstimatedDurationDays < quotes[j].EstimatedDurationDays
+			}
+			return quotes[i].TotalPriceMinor < quotes[j].TotalPriceMinor
+		})
+	case "rating":
+		sort.SliceStable(quotes, func(i, j int) bool {
+			if quotes[i].ProviderRating != quotes[j].ProviderRating {
+				return quotes[i].ProviderRating > quotes[j].ProviderRating
 			}
 			return quotes[i].TotalPriceMinor < quotes[j].TotalPriceMinor
 		})

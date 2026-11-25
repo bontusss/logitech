@@ -296,7 +296,6 @@ func (a *API) respondPublicCompany(c *gin.Context, subdomain string) {
 			"name":          row.Name,
 			"slug":          row.Slug,
 			"public_name":   publicName,
-			"business_type": row.BusinessType,
 			"description":   row.Description,
 			"city":          row.City,
 			"state":         row.State,

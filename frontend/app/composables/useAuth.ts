@@ -4,8 +4,6 @@ export interface CompanyRegistrationPayload {
   company_name: string
   business_email: string
   phone: string
-  business_type: string
-  business_types?: ('intercity' | 'lastmile')[]
   country: string
   state: string
   city: string

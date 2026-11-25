@@ -9,7 +9,6 @@ import (
 	"errors"
 	"net/http"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -28,27 +27,18 @@ const (
 )
 
 type marketplaceSearchInput struct {
-	ServiceType      string   `json:"service_type" binding:"omitempty,oneof=intercity last_mile"`
-	OriginState      string   `json:"origin_state" binding:"required,min=2,max=100"`
-	OriginCity       string   `json:"origin_city" binding:"required,min=2,max=100"`
-	DestinationState string   `json:"destination_state" binding:"required,min=2,max=100"`
-	DestinationCity  string   `json:"destination_city" binding:"required,min=2,max=100"`
-	PickupAddress    string   `json:"pickup_address" binding:"omitempty,max=500"`
-	DropoffAddress   string   `json:"dropoff_address" binding:"omitempty,max=500"`
-	PickupLatitude   *float64 `json:"pickup_latitude"`
-	PickupLongitude  *float64 `json:"pickup_longitude"`
-	DropoffLatitude  *float64 `json:"dropoff_latitude"`
-	DropoffLongitude *float64 `json:"dropoff_longitude"`
-	DistanceKm       float64  `json:"distance_km" binding:"gte=0,lte=500"`
-	WeightKg         float64  `json:"weight_kg" binding:"required,gt=0,lte=500"`
-	LengthCM         *float64 `json:"length_cm"`
-	WidthCM          *float64 `json:"width_cm"`
-	HeightCM         *float64 `json:"height_cm"`
-	Category         string   `json:"category" binding:"omitempty,max=50"`
-	Speed            string   `json:"speed" binding:"omitempty,oneof=standard express same_day"`
-	PickupRequired   bool     `json:"pickup_required"`
-	DeliveryRequired bool     `json:"delivery_required"`
-	Sort             string   `json:"sort" binding:"omitempty,oneof=cheapest fastest recommended"`
+	OriginZoneID      string   `json:"origin_zone_id" binding:"required,uuid"`
+	DestinationZoneID string   `json:"destination_zone_id" binding:"required,uuid"`
+	PickupAddress     string   `json:"pickup_address" binding:"omitempty,max=500"`
+	DropoffAddress    string   `json:"dropoff_address" binding:"omitempty,max=500"`
+	WeightKg          float64  `json:"weight_kg" binding:"required,gt=0,lte=500"`
+	LengthCM          *float64 `json:"length_cm"`
+	WidthCM           *float64 `json:"width_cm"`
+	HeightCM          *float64 `json:"height_cm"`
+	Category          string   `json:"category" binding:"omitempty,max=50"`
+	PickupRequired    bool     `json:"pickup_required"`
+	DeliveryRequired  bool     `json:"delivery_required"`
+	Sort              string   `json:"sort" binding:"omitempty,oneof=cheapest fastest recommended rating"`
 }
 
 func (req marketplaceSearchInput) toRouteRequest() (service.MarketplaceRouteRequest, error) {
@@ -72,34 +62,13 @@ func (req marketplaceSearchInput) toRouteRequest() (service.MarketplaceRouteRequ
 	if category == "" {
 		category = "other"
 	}
-	serviceType := strings.TrimSpace(req.ServiceType)
-	if serviceType == "" {
-		serviceType = "intercity"
-	}
-	if serviceType == "last_mile" {
-		if strings.TrimSpace(req.PickupAddress) == "" || strings.TrimSpace(req.DropoffAddress) == "" {
-			return service.MarketplaceRouteRequest{}, errors.New("Choose verified pickup and drop-off addresses.")
-		}
-		if !validCoordinatePair(req.PickupLatitude, req.PickupLongitude) ||
-			!validCoordinatePair(req.DropoffLatitude, req.DropoffLongitude) {
-			return service.MarketplaceRouteRequest{}, errors.New("Choose pickup and drop-off locations from the map suggestions.")
-		}
-		if req.DistanceKm <= 0 || req.DistanceKm > 200 {
-			return service.MarketplaceRouteRequest{}, errors.New("The last-mile route distance must be between 0 and 200 km.")
-		}
-	}
 	return service.MarketplaceRouteRequest{
-		ServiceType:      serviceType,
-		OriginState:      strings.TrimSpace(req.OriginState),
-		OriginCity:       strings.TrimSpace(req.OriginCity),
-		DestinationState: strings.TrimSpace(req.DestinationState),
-		DestinationCity:  strings.TrimSpace(req.DestinationCity),
-		PickupAddress:    strings.TrimSpace(req.PickupAddress),
-		DropoffAddress:   strings.TrimSpace(req.DropoffAddress),
-		DistanceKm:       req.DistanceKm,
-		Speed:            req.Speed,
-		PickupRequired:   req.PickupRequired,
-		DeliveryRequired: req.DeliveryRequired,
+		OriginZoneID:      strings.TrimSpace(req.OriginZoneID),
+		DestinationZoneID: strings.TrimSpace(req.DestinationZoneID),
+		PickupAddress:     strings.TrimSpace(req.PickupAddress),
+		DropoffAddress:    strings.TrimSpace(req.DropoffAddress),
+		PickupRequired:    req.PickupRequired,
+		DeliveryRequired:  req.DeliveryRequired,
 		Package: service.MarketplacePackage{
 			WeightKg: req.WeightKg, LengthCM: length, WidthCM: width, HeightCM: height, Category: category,
 		},
@@ -191,7 +160,6 @@ func (a *API) marketplaceProvider(c *gin.Context) {
 			"primary_color":   provider.PrimaryColor,
 			"secondary_color": provider.SecondaryColor,
 			"description":     provider.PublicDescription,
-			"business_type":   provider.BusinessType,
 			"state":           provider.State,
 			"city":            provider.City,
 			"country":         provider.Country,
@@ -328,10 +296,28 @@ func (a *API) marketplaceSearch(c *gin.Context) {
 		fail(c, http.StatusUnprocessableEntity, "invalid_search", err.Error())
 		return
 	}
-	if req.ServiceType != "last_mile" && strings.EqualFold(req.OriginCity, req.DestinationCity) && strings.EqualFold(req.OriginState, req.DestinationState) {
-		fail(c, http.StatusUnprocessableEntity, "same_location", "Origin and destination must be different.")
+	originID, err := uuid.Parse(req.OriginZoneID)
+	if err != nil {
+		fail(c, http.StatusUnprocessableEntity, "invalid_search", "Choose a pickup zone.")
 		return
 	}
+	destinationID, err := uuid.Parse(req.DestinationZoneID)
+	if err != nil {
+		fail(c, http.StatusUnprocessableEntity, "invalid_search", "Choose a destination zone.")
+		return
+	}
+	origin, err := a.svc.Q.GetGeoZone(c.Request.Context(), originID)
+	if err != nil {
+		fail(c, http.StatusUnprocessableEntity, "invalid_search", "That pickup zone is not available.")
+		return
+	}
+	destination, err := a.svc.Q.GetGeoZone(c.Request.Context(), destinationID)
+	if err != nil {
+		fail(c, http.StatusUnprocessableEntity, "invalid_search", "That destination zone is not available.")
+		return
+	}
+	req.OriginCity, req.OriginState = origin.Lga, origin.State
+	req.DestinationCity, req.DestinationState = destination.Lga, destination.State
 
 	ctx, cancel := context.WithTimeout(c.Request.Context(), marketplaceTimeout)
 	defer cancel()
@@ -386,79 +372,51 @@ type providerQuoteResult struct {
 }
 
 func (a *API) runMarketplaceSearch(ctx context.Context, req service.MarketplaceRouteRequest, customerID *uuid.UUID) (marketplaceSearchResult, error) {
-	if req.ServiceType == "last_mile" {
-		return a.runLastMileMarketplaceSearch(ctx, req, customerID)
-	}
-	rows, err := a.svc.Q.ListMarketplaceRoutesForLane(ctx, db.ListMarketplaceRoutesForLaneParams{
-		OriginState:      req.OriginState,
-		OriginCity:       req.OriginCity,
-		DestinationState: req.DestinationState,
-		DestinationCity:  req.DestinationCity,
+	originID, _ := uuid.Parse(req.OriginZoneID)
+	destinationID, _ := uuid.Parse(req.DestinationZoneID)
+	rows, err := a.svc.Q.ListMarketplaceZoneRoutesForLane(ctx, db.ListMarketplaceZoneRoutesForLaneParams{
+		OriginZoneID:      originID,
+		DestinationZoneID: destinationID,
 	})
 	if err != nil {
 		return marketplaceSearchResult{}, err
 	}
 
 	expiresAt := time.Now().Add(service.MarketplaceQuoteExpiry)
-	jobs := make(chan providerQuoteJob)
-	results := make(chan providerQuoteResult, len(rows))
-	sem := make(chan struct{}, marketplaceWorkers)
-	var wg sync.WaitGroup
-
-	for _, row := range rows {
-		job := providerQuoteJob{provider: providerRateFromRow(row)}
-		wg.Add(1)
-		go func(job providerQuoteJob) {
-			defer wg.Done()
-			select {
-			case sem <- struct{}{}:
-				defer func() { <-sem }()
-			case <-ctx.Done():
-				results <- providerQuoteResult{failure: &marketplaceProviderFailure{Provider: job.provider.CompanyName, Code: "timeout"}}
-				return
-			}
-			quotes, err := service.BuildProviderQuotes(job.provider, req, expiresAt)
-			if err != nil {
-				a.log.Warn("marketplace provider quote failed", "company_id", job.provider.CompanyID, "error", err)
-				results <- providerQuoteResult{failure: &marketplaceProviderFailure{Provider: job.provider.CompanyName, Code: quoteFailureCode(err)}}
-				return
-			}
-			results <- providerQuoteResult{quotes: quotes}
-		}(job)
-	}
-	go func() {
-		wg.Wait()
-		close(results)
-		close(jobs)
-	}()
-
-	quotes := make([]service.MarketplaceQuote, 0)
+	quotes := make([]service.MarketplaceQuote, 0, len(rows))
+	quoteIndex := make(map[string]int, len(rows))
 	failures := make([]marketplaceProviderFailure, 0)
-	seen := map[string]bool{}
-	considered := map[string]bool{}
+	failedProviders := make(map[string]bool)
+	considered := make(map[string]bool, len(rows))
+
 	for _, row := range rows {
-		considered[row.CompanyID.String()] = true
-	}
-	for result := range results {
-		if result.failure != nil {
-			failures = append(failures, *result.failure)
+		provider := zoneProviderFromRow(row)
+		considered[provider.CompanyID] = true
+		quote, quoteErr := service.BuildZoneRouteQuote(provider, req, expiresAt)
+		if quoteErr != nil {
+			a.log.Warn("zone route quote failed", "company_id", provider.CompanyID, "route_id", provider.RouteID, "error", quoteErr)
+			if !failedProviders[provider.CompanyID] {
+				failedProviders[provider.CompanyID] = true
+				failures = append(failures, marketplaceProviderFailure{Provider: provider.CompanyName, Code: quoteFailureCode(quoteErr)})
+			}
 			continue
 		}
-		for _, quote := range result.quotes {
-			key := quote.ProviderID + "|" + quote.ServiceKey
-			if seen[key] {
-				continue
+		if index, exists := quoteIndex[provider.CompanyID]; exists {
+			if quote.TotalPriceMinor < quotes[index].TotalPriceMinor {
+				quotes[index] = quote
 			}
-			seen[key] = true
-			quotes = append(quotes, quote)
+			continue
 		}
+		quoteIndex[provider.CompanyID] = len(quotes)
+		quotes = append(quotes, quote)
 	}
 
 	metadata, _ := json.Marshal(map[string]any{
-		"package":           req.Package,
-		"speed":             req.Speed,
-		"pickup_required":   req.PickupRequired,
-		"delivery_required": req.DeliveryRequired,
+		"origin_zone_id":      req.OriginZoneID,
+		"destination_zone_id": req.DestinationZoneID,
+		"package":             req.Package,
+		"pickup_required":     req.PickupRequired,
+		"delivery_required":   req.DeliveryRequired,
 	})
 	logRow, err := a.svc.Q.CreateMarketplaceSearchLog(ctx, db.CreateMarketplaceSearchLogParams{
 		CustomerID:       customerID,
@@ -476,9 +434,9 @@ func (a *API) runMarketplaceSearch(ctx context.Context, req service.MarketplaceR
 
 	persisted := make([]service.MarketplaceQuote, 0, len(quotes))
 	for _, quote := range quotes {
-		saved, err := a.persistMarketplaceQuote(ctx, logRow.ID, quote, req)
-		if err != nil {
-			a.log.Error("marketplace quote persistence failed", "reference", quote.QuoteReference, "error", err)
+		saved, persistErr := a.persistMarketplaceQuote(ctx, logRow.ID, quote, req)
+		if persistErr != nil {
+			a.log.Error("zone route quote persistence failed", "reference", quote.QuoteReference, "error", persistErr)
 			failures = append(failures, marketplaceProviderFailure{Provider: quote.ProviderName, Code: "quote_failed"})
 			continue
 		}
@@ -491,6 +449,38 @@ func (a *API) runMarketplaceSearch(ctx context.Context, req service.MarketplaceR
 		considered: len(considered),
 		failures:   failures,
 	}, nil
+}
+
+func zoneProviderFromRow(row db.ListMarketplaceZoneRoutesForLaneRow) service.ZoneRouteProvider {
+	publicDescription := ""
+	if row.PublicDescription != nil {
+		publicDescription = strings.TrimSpace(*row.PublicDescription)
+	}
+	return service.ZoneRouteProvider{
+		CompanyID:         row.CompanyID.String(),
+		CompanyName:       row.CompanyName,
+		CompanySlug:       row.CompanySlug,
+		BookingSlug:       row.BookingSlug,
+		LogoURL:           row.LogoUrl,
+		PublicDescription: publicDescription,
+		RouteID:           row.RouteID.String(),
+		FromZoneID:        row.FromZoneID.String(),
+		FromZoneName:      row.FromZoneName,
+		FromState:         row.FromState,
+		FromLGA:           row.FromLga,
+		ToZoneID:          row.ToZoneID.String(),
+		ToZoneName:        row.ToZoneName,
+		ToState:           row.ToState,
+		ToLGA:             row.ToLga,
+		Pricing: service.ZoneRoutePricing{
+			BasePriceMinor:           row.PriceMinor,
+			IncludedWeightKg:         numericToFloat64(row.IncludedWeightKg),
+			AdditionalWeightFeeMinor: row.AdditionalWeightFeeMinor,
+		},
+		AcceptedCategories:   row.AcceptedItemCategories,
+		ProhibitedCategories: row.ProhibitedItemCategories,
+		ProviderRating:       row.ProviderRating,
+	}
 }
 
 func (a *API) runLastMileMarketplaceSearch(ctx context.Context, req service.MarketplaceRouteRequest, customerID *uuid.UUID) (marketplaceSearchResult, error) {

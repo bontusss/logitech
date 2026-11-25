@@ -41,7 +41,6 @@ CREATE TABLE companies (
   slug              citext NOT NULL,
   business_email    citext NOT NULL,
   phone             text NOT NULL,
-  business_type     text NOT NULL,
   cac_business_name text,
   country           text NOT NULL DEFAULT 'NG',
   state             text,
@@ -583,19 +582,41 @@ CREATE TABLE last_mile_service_areas (
 CREATE INDEX last_mile_service_areas_company_status_idx ON last_mile_service_areas(company_id, coverage_status);
 CREATE TRIGGER last_mile_service_areas_set_updated_at BEFORE UPDATE ON last_mile_service_areas FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
+CREATE TABLE geo_zones (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(), country_code text NOT NULL DEFAULT 'NG',
+  state text NOT NULL, lga text NOT NULL, name text NOT NULL,
+  parent_id uuid REFERENCES geo_zones(id) ON DELETE SET NULL,
+  status text NOT NULL DEFAULT 'active' CHECK (status IN ('active','inactive')),
+  created_at timestamptz NOT NULL DEFAULT now(), UNIQUE (country_code, state, lga, name)
+);
+CREATE INDEX geo_zones_state_lga_idx ON geo_zones (lower(state), lower(lga));
+CREATE INDEX geo_zones_parent_idx ON geo_zones(parent_id);
+
 CREATE TABLE service_zones (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(), area_id uuid NOT NULL REFERENCES last_mile_service_areas(id) ON DELETE CASCADE,
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(), company_id uuid NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+  area_id uuid REFERENCES last_mile_service_areas(id) ON DELETE CASCADE, geo_zone_id uuid REFERENCES geo_zones(id) ON DELETE SET NULL,
   name text NOT NULL, neighbourhoods text[] NOT NULL DEFAULT '{}', state text, city text, lga text, custom_location text,
+  parent_zone_id uuid REFERENCES service_zones(id) ON DELETE SET NULL,
   created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(), UNIQUE (area_id, name)
 );
+CREATE INDEX service_zones_company_idx ON service_zones(company_id);
+CREATE UNIQUE INDEX service_zones_company_geo_unique ON service_zones(company_id, geo_zone_id) WHERE geo_zone_id IS NOT NULL;
+CREATE INDEX service_zones_parent_idx ON service_zones(parent_zone_id);
 CREATE TRIGGER service_zones_set_updated_at BEFORE UPDATE ON service_zones FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
 CREATE TABLE pricing_zone_rates (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(), area_id uuid NOT NULL REFERENCES last_mile_service_areas(id) ON DELETE CASCADE,
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(), company_id uuid NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+  area_id uuid REFERENCES last_mile_service_areas(id) ON DELETE CASCADE,
   from_zone_id uuid NOT NULL REFERENCES service_zones(id) ON DELETE CASCADE, to_zone_id uuid NOT NULL REFERENCES service_zones(id) ON DELETE CASCADE,
-  price_minor bigint NOT NULL CHECK (price_minor >= 0), created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(),
+  price_minor bigint NOT NULL CHECK (price_minor >= 0),
+  included_weight_kg numeric(10,2) NOT NULL DEFAULT 0 CHECK (included_weight_kg >= 0),
+  additional_weight_fee_minor bigint NOT NULL DEFAULT 0 CHECK (additional_weight_fee_minor >= 0),
+  status text NOT NULL DEFAULT 'active' CHECK (status IN ('active','inactive')),
+  created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(),
   UNIQUE (area_id, from_zone_id, to_zone_id)
 );
+CREATE INDEX pricing_zone_rates_company_idx ON pricing_zone_rates(company_id, status);
+CREATE UNIQUE INDEX pricing_zone_rates_company_direction_unique ON pricing_zone_rates(company_id, from_zone_id, to_zone_id);
 CREATE INDEX pricing_zone_rates_area_idx ON pricing_zone_rates(area_id);
 CREATE TRIGGER pricing_zone_rates_set_updated_at BEFORE UPDATE ON pricing_zone_rates FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
@@ -683,7 +704,7 @@ CREATE TABLE marketplace_quotes (
   origin_city             text NOT NULL,
   destination_state       text NOT NULL,
   destination_city        text NOT NULL,
-  service_key             text NOT NULL CHECK (service_key IN ('standard', 'express', 'same_day', 'last_mile')),
+  service_key             text NOT NULL CHECK (service_key IN ('standard', 'express', 'same_day', 'last_mile', 'zone_route')),
   service_name            text NOT NULL,
   distance_km             numeric(10,2) NOT NULL,
   package_snapshot        jsonb NOT NULL,

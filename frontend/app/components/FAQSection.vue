@@ -12,7 +12,7 @@ const faqs = [
   },
   {
     q: 'What kind of shipments will BOL support?',
-    a: 'BOL is designed for intercity parcel deliveries, including documents, everyday parcels, electronics and larger shipments. What you can send will depend on each provider’s service rules.',
+    a: 'BOL is designed for parcel deliveries between provider service zones, including documents, everyday parcels, electronics and larger shipments. What you can send will depend on each provider’s service rules.',
   },
   {
     q: 'Will I be able to compare delivery times as well as prices?',

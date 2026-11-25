@@ -43,16 +43,12 @@ const capabilities = [
       <div aria-hidden="true" class="pointer-events-none absolute inset-0 grid-paper opacity-50 [mask-image:linear-gradient(to_bottom,black,transparent_90%)] dark:opacity-30" />
       <div aria-hidden="true" class="absolute -top-56 right-[-8rem] h-[560px] w-[560px] rounded-full bg-accent-500/15 blur-[120px]" />
       <div aria-hidden="true" class="absolute bottom-[-16rem] left-[-8rem] h-[420px] w-[420px] rounded-full bg-brand-600/10 blur-[110px] dark:bg-brand-400/10" />
-      <div class="relative mx-auto max-w-[1200px] px-5 py-16 sm:px-8 sm:py-24">
-        <SectionEyebrow tone="surface" dot>
-          <Building2 :size="13" />
-          For logistics businesses
-        </SectionEyebrow>
+      <div class="relative mx-auto max-w-[1200px] px-5 py-3 sm:px-8 sm:py-24">
         <div class="mt-6 grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(260px,0.65fr)] lg:items-end">
           <div class="max-w-[740px]">
             <h1 class="text-[clamp(2.6rem,6vw,4.7rem)] leading-[0.96] font-semibold tracking-[-0.06em] text-balance">
-              Run smoother.
-              <span class="block text-accent-600 dark:text-accent-400">Reach further.</span>
+              Setup your business where.
+              <span class="block text-accent-600 dark:text-accent-400">Customers are looking.</span>
             </h1>
             <p class="mt-5 max-w-[650px] text-[16px] leading-[1.7] text-ink-900/60">
               Bring branches, people, shipments and pricing into one clear workspace—and make it easier for customers to find your services.
@@ -92,7 +88,7 @@ const capabilities = [
         <SectionHeading
           eyebrow="Built around your operation"
           title="Your routes are different. Your tools should understand that."
-          lede="BOL is being built for the real variety of intercity logistics: different branches, service types and pricing models, without forcing every operator into the same setup."
+          lede="BOL is being built for the real variety of Nigerian logistics: different branches, service zones and pricing models, without forcing every operator into the same setup."
           align="center"
         />
         <div class="mt-9 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">

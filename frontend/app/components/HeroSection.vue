@@ -48,35 +48,25 @@ async function runSearch(payload: MarketplaceSearchPayload) {
       <div class="absolute bottom-[-18rem] left-[-10rem] h-[500px] w-[500px] rounded-full bg-accent-500/10 blur-[110px]" />
     </div>
 
-    <div class="relative mx-auto max-w-[1200px] px-5 pt-14 pb-16 sm:px-8 sm:pt-20 lg:pt-24 lg:pb-24">
+    <div class="relative mx-auto max-w-[1200px] px-5 pt-4 pb-16 sm:px-8 sm:pt-20 lg:pt-24 lg:pb-24">
       <div class="mx-auto max-w-[780px] text-center">
-        <SectionEyebrow
-          tone="surface"
-          class="hero-country-badge reveal"
-        >
-          <span class="flex size-4 items-center justify-center rounded-full bg-accent-500 text-ink-950">
-            <Sparkles :size="9" />
-          </span>
-          Nigeria, one delivery at a time
-        </SectionEyebrow>
-
         <h1 class="reveal reveal-1 mt-6 text-[clamp(2.8rem,6.2vw,5.2rem)] leading-[0.94] font-semibold tracking-[-0.06em] text-balance">
-          Send it right.
+          Anything logistics
           <span class="block text-accent-600 dark:text-accent-400">
-            Know your options.
+            Sort it with BOL.
           </span>
         </h1>
 
         <p class="reveal reveal-2 mx-auto mt-6 max-w-[620px] text-[16px] leading-[1.7] text-ink-900/65 sm:text-[17px]">
-          Compare intercity delivery options by price and speed, then choose the service that works for you. No more calling around to figure out where to start.
+          Find, compare and connect with logistics providers for your deliveries, shipments and transportation. Waybill your goods without stress, See the price, pick who carries it, track it till it reaches the destination.
         </p>
 
         <div class="reveal reveal-3 mt-6 flex flex-wrap items-center justify-center gap-x-3 gap-y-2 text-[12px] font-semibold text-ink-900/75">
           <SurfaceChip class="px-3 py-1.5">
-            <ShieldCheck :size="15" class="text-success-600" /> Compare with clarity
+            <ShieldCheck :size="15" class="text-success-600" /> Find verified providers
           </SurfaceChip>
           <SurfaceChip class="px-3 py-1.5">
-            <Truck :size="15" class="text-ink-900/70" /> Built for intercity shipping
+            <Truck :size="15" class="text-ink-900/70" /> Book deliveries
           </SurfaceChip>
         </div>
       </div>

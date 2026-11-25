@@ -1,11 +1,6 @@
 <script setup lang="ts">
 import { Building2, CheckCircle2, ShoppingBag, UserPlus } from 'lucide-vue-next'
 import { isValidNigerianPhone } from '~/utils/nigeria'
-import {
-  providerBusinessTypes,
-  serializeProviderBusinessTypes,
-  type ProviderBusinessType,
-} from '~/utils/providerBusinessTypes'
 
 definePageMeta({ layout: 'auth' })
 useSeoMeta({
@@ -25,7 +20,6 @@ const googleAccountEmail = ref('')
 const customer = reactive({ full_name: '', email: '', phone: '', password: '' })
 const company = reactive({
   company_name: '',
-  business_types: ['intercity'] as ProviderBusinessType[],
   business_email: '',
   phone: '',
   contact_name: '',
@@ -83,10 +77,6 @@ async function submitCustomer() {
 
 async function submitCompany() {
   error.value = ''
-  if (!company.business_types.length) {
-    error.value = 'Select at least one business type.'
-    return
-  }
   if (!isValidNigerianPhone(company.phone)) {
     error.value = 'Enter a valid Nigerian phone number.'
     return
@@ -103,15 +93,9 @@ async function submitCompany() {
         state: company.state,
         city: company.city,
         address: company.address,
-        business_type: serializeProviderBusinessTypes(company.business_types),
-        business_types: company.business_types,
       })
     } else {
-      await registerCompany({
-        ...company,
-        business_type: serializeProviderBusinessTypes(company.business_types),
-        business_types: company.business_types,
-      })
+      await registerCompany({ ...company })
     }
     await navigateTo('/onboarding')
   } catch (err) {
@@ -236,22 +220,6 @@ const labelClass = 'mb-1.5 block text-[11.5px] font-semibold text-ink-900/75'
           placeholder="Aba Freight Ltd"
           required
         />
-        <fieldset class="block">
-          <legend :class="labelClass">Business type</legend>
-          <div class="flex flex-wrap gap-2">
-            <label
-              v-for="type in providerBusinessTypes"
-              :key="type.value"
-              class="flex cursor-pointer items-center gap-2 rounded-full border px-3 py-2 text-[11.5px] transition"
-              :class="company.business_types.includes(type.value)
-                ? 'border-accent-500/60 bg-accent-50 text-accent-800 dark:border-accent-500/40 dark:bg-accent-500/10 dark:text-accent-300'
-                : 'border-ink-900/15 bg-canvas text-ink-900/60 hover:border-ink-900/30'"
-            >
-              <input v-model="company.business_types" type="checkbox" :value="type.value" class="size-3.5 accent-accent-600" />
-              {{ type.label }}
-            </label>
-          </div>
-        </fieldset>
       </div>
 
       <div class="grid gap-3 sm:grid-cols-2">

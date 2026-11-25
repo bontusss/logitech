@@ -87,7 +87,6 @@ type Company struct {
 	Slug                     string      `json:"slug"`
 	BusinessEmail            string      `json:"business_email"`
 	Phone                    string      `json:"phone"`
-	BusinessType             string      `json:"business_type"`
 	CacBusinessName          *string     `json:"cac_business_name"`
 	Country                  string      `json:"country"`
 	State                    *string     `json:"state"`
@@ -332,6 +331,17 @@ type EmailVerification struct {
 	CreatedAt  time.Time  `json:"created_at"`
 }
 
+type GeoZone struct {
+	ID          uuid.UUID  `json:"id"`
+	CountryCode string     `json:"country_code"`
+	State       string     `json:"state"`
+	Lga         string     `json:"lga"`
+	Name        string     `json:"name"`
+	ParentID    *uuid.UUID `json:"parent_id"`
+	Status      string     `json:"status"`
+	CreatedAt   time.Time  `json:"created_at"`
+}
+
 type InvitationBranch struct {
 	InvitationID uuid.UUID `json:"invitation_id"`
 	BranchID     uuid.UUID `json:"branch_id"`
@@ -448,13 +458,17 @@ type Permission struct {
 }
 
 type PricingZoneRate struct {
-	ID         uuid.UUID `json:"id"`
-	AreaID     uuid.UUID `json:"area_id"`
-	FromZoneID uuid.UUID `json:"from_zone_id"`
-	ToZoneID   uuid.UUID `json:"to_zone_id"`
-	PriceMinor int64     `json:"price_minor"`
-	CreatedAt  time.Time `json:"created_at"`
-	UpdatedAt  time.Time `json:"updated_at"`
+	ID                       uuid.UUID      `json:"id"`
+	CompanyID                uuid.UUID      `json:"company_id"`
+	AreaID                   *uuid.UUID     `json:"area_id"`
+	FromZoneID               uuid.UUID      `json:"from_zone_id"`
+	ToZoneID                 uuid.UUID      `json:"to_zone_id"`
+	PriceMinor               int64          `json:"price_minor"`
+	IncludedWeightKg         pgtype.Numeric `json:"included_weight_kg"`
+	AdditionalWeightFeeMinor int64          `json:"additional_weight_fee_minor"`
+	Status                   string         `json:"status"`
+	CreatedAt                time.Time      `json:"created_at"`
+	UpdatedAt                time.Time      `json:"updated_at"`
 }
 
 type RefreshToken struct {
@@ -487,16 +501,19 @@ type RolePermission struct {
 }
 
 type ServiceZone struct {
-	ID             uuid.UUID `json:"id"`
-	AreaID         uuid.UUID `json:"area_id"`
-	Name           string    `json:"name"`
-	Neighbourhoods []string  `json:"neighbourhoods"`
-	State          *string   `json:"state"`
-	City           *string   `json:"city"`
-	Lga            *string   `json:"lga"`
-	CustomLocation *string   `json:"custom_location"`
-	CreatedAt      time.Time `json:"created_at"`
-	UpdatedAt      time.Time `json:"updated_at"`
+	ID             uuid.UUID  `json:"id"`
+	CompanyID      uuid.UUID  `json:"company_id"`
+	AreaID         *uuid.UUID `json:"area_id"`
+	GeoZoneID      *uuid.UUID `json:"geo_zone_id"`
+	Name           string     `json:"name"`
+	Neighbourhoods []string   `json:"neighbourhoods"`
+	State          *string    `json:"state"`
+	City           *string    `json:"city"`
+	Lga            *string    `json:"lga"`
+	CustomLocation *string    `json:"custom_location"`
+	ParentZoneID   *uuid.UUID `json:"parent_zone_id"`
+	CreatedAt      time.Time  `json:"created_at"`
+	UpdatedAt      time.Time  `json:"updated_at"`
 }
 
 type State struct {

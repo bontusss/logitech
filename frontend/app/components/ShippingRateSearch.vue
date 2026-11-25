@@ -2,69 +2,35 @@
 import {
   ArrowLeftRight,
   ArrowRight,
-  Building2,
-  Car,
   Loader2,
-  MapPin,
   PackageCheck,
   Search,
 } from 'lucide-vue-next'
 import type { MarketplaceSearchPayload } from '~/types/marketplace'
-import type { VerifiedAddress } from '~/components/VerifiedAddressField.vue'
-import { NIGERIAN_LOCATIONS } from '~/utils/nigeria'
 import { ITEM_CATEGORIES } from '~/utils/itemCategories'
 
 withDefaults(defineProps<{ loading?: boolean }>(), { loading: false })
 
 const emit = defineEmits<{ search: [payload: MarketplaceSearchPayload] }>()
 
-interface MarketplaceLocation {
+interface GeoZone {
+  id: string
   state: string
-  city: string
-}
-
-const fallbackLocations: MarketplaceLocation[] = Object.entries(NIGERIAN_LOCATIONS).flatMap(
-  ([state, cities]) => cities.map((city) => ({ state, city })),
-)
-if (!fallbackLocations.some((location) => location.state === 'Lagos' && location.city === 'Lagos')) {
-  fallbackLocations.push({ state: 'Lagos', city: 'Lagos' })
+  lga: string
+  name: string
 }
 
 const { api } = useApi()
-const { token: mapboxToken, load: loadMapboxToken } = useMapboxToken()
-const locations = ref<MarketplaceLocation[]>(fallbackLocations)
-const liveLocations = ref(false)
-const serviceMode = ref<'intercity' | 'last_mile'>('intercity')
-const pickup = ref<VerifiedAddress | null>(null)
-const dropoff = ref<VerifiedAddress | null>(null)
-const distanceKm = ref(0)
-const distanceLoading = ref(false)
-const distanceError = ref('')
+const zones = ref<GeoZone[]>([])
+const reachableZones = ref<GeoZone[]>([])
+const zonesLoading = ref(true)
+const reachableLoading = ref(false)
+const zoneError = ref('')
 const error = ref('')
-let distanceTimer: ReturnType<typeof setTimeout> | undefined
-let distanceController: AbortController | null = null
-
-const cityMap = computed(() => {
-  const map: Record<string, string[]> = {}
-  for (const location of locations.value) {
-    const cities = map[location.state] ?? (map[location.state] = [])
-    if (!cities.includes(location.city)) cities.push(location.city)
-  }
-  for (const state of Object.keys(map)) {
-    map[state]!.sort((a, b) => a.localeCompare(b))
-  }
-  return map
-})
-
-const states = computed(() => Object.keys(cityMap.value).sort((a, b) => a.localeCompare(b)))
-const originCities = computed(() => cityMap.value[form.originState] ?? [])
-const destinationCities = computed(() => cityMap.value[form.destinationState] ?? [])
 
 const form = reactive({
-  originState: 'Abia',
-  originCity: 'Aba',
-  destinationState: 'Lagos',
-  destinationCity: 'Lagos',
+  originZoneId: '',
+  destinationZoneId: '',
   weight: 2,
   length: 20,
   width: 15,
@@ -88,129 +54,72 @@ const selectClass =
   'w-full rounded-xl border border-ink-900/12 bg-canvas px-3 py-2.5 text-[12.5px] font-medium text-ink-900 transition hover:border-ink-900/25 focus:border-accent-500 disabled:cursor-not-allowed disabled:opacity-60'
 const labelClass = 'mb-1.5 block text-[11px] font-semibold text-ink-900/55'
 
-watch(
-  () => form.originState,
-  () => {
-    if (!originCities.value.includes(form.originCity)) {
-      form.originCity = originCities.value[0] ?? ''
-    }
-  },
-)
-watch(
-  () => form.destinationState,
-  () => {
-    if (!destinationCities.value.includes(form.destinationCity)) {
-      form.destinationCity = destinationCities.value[0] ?? ''
-    }
-  },
-)
-watch([pickup, dropoff], () => scheduleDistance())
+function zoneLabel(zone: GeoZone) {
+  return `${zone.lga}, ${zone.state}`
+}
+
+function groupZones(list: GeoZone[]) {
+  const grouped = new Map<string, GeoZone[]>()
+  for (const zone of list) {
+    const entries = grouped.get(zone.state) ?? []
+    entries.push(zone)
+    grouped.set(zone.state, entries)
+  }
+  return [...grouped.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([state, entries]) => ({
+      state,
+      zones: entries.sort((a, b) => a.lga.localeCompare(b.lga)),
+    }))
+}
+
+const originGroups = computed(() => groupZones(zones.value))
+const destinationGroups = computed(() => groupZones(reachableZones.value))
 
 onMounted(async () => {
-  void loadMapboxToken()
   try {
-    const response = await api<{ locations: MarketplaceLocation[] }>('/marketplace/locations')
-    if (response.locations?.length) {
-      locations.value = response.locations
-      liveLocations.value = true
-      ensureSelection()
+    const response = await api<{ zones: GeoZone[] }>('/public/zones')
+    zones.value = response.zones ?? []
+    if (zones.value.length) {
+      form.originZoneId = zones.value[0]!.id
+      await loadReachable()
     }
-  } catch {
-    // Keep the built-in Nigerian location list so the search remains usable.
-  }
-})
-
-onBeforeUnmount(() => {
-  if (distanceTimer) clearTimeout(distanceTimer)
-  distanceController?.abort()
-})
-
-function ensureSelection() {
-  if (!originCities.value.includes(form.originCity)) {
-    const first = locations.value[0]
-    if (first) {
-      form.originState = first.state
-      form.originCity = first.city
-    }
-  }
-  if (!destinationCities.value.includes(form.destinationCity)) {
-    const next = locations.value.find(
-      (location) =>
-        location.state !== form.originState || location.city !== form.originCity,
-    )
-    if (next) {
-      form.destinationState = next.state
-      form.destinationCity = next.city
-    }
-  }
-}
-
-function swapCities() {
-  const originState = form.originState
-  const originCity = form.originCity
-  form.originState = form.destinationState
-  form.originCity = form.destinationCity
-  form.destinationState = originState
-  form.destinationCity = originCity
-}
-
-function setMode(mode: 'intercity' | 'last_mile') {
-  serviceMode.value = mode
-  error.value = ''
-}
-
-function scheduleDistance() {
-  if (distanceTimer) clearTimeout(distanceTimer)
-  distanceController?.abort()
-  distanceKm.value = 0
-  distanceError.value = ''
-  if (serviceMode.value !== 'last_mile' || !pickup.value || !dropoff.value) {
-    distanceLoading.value = false
-    return
-  }
-  distanceTimer = setTimeout(() => void calculateDistance(), 350)
-}
-
-async function calculateDistance() {
-  if (!pickup.value || !dropoff.value) return
-  if (!mapboxToken.value) {
-    distanceError.value = 'Mapbox distance calculation is not configured.'
-    return
-  }
-  if (
-    pickup.value.latitude === dropoff.value.latitude
-    && pickup.value.longitude === dropoff.value.longitude
-  ) {
-    distanceError.value = 'Pickup and drop-off must be different addresses.'
-    return
-  }
-  const controller = new AbortController()
-  distanceController = controller
-  distanceLoading.value = true
-  distanceError.value = ''
-  try {
-    const coordinates = `${pickup.value.longitude},${pickup.value.latitude};${dropoff.value.longitude},${dropoff.value.latitude}`
-    const params = new URLSearchParams({
-      overview: 'false',
-      access_token: mapboxToken.value,
-    })
-    const response = await fetch(
-      `https://api.mapbox.com/directions/v5/mapbox/driving/${coordinates}?${params}`,
-      { signal: controller.signal },
-    )
-    if (!response.ok) throw new Error('Could not calculate the road distance right now.')
-    const result = await response.json() as { routes?: Array<{ distance?: number }> }
-    const meters = result.routes?.[0]?.distance
-    if (controller.signal.aborted) return
-    if (!meters || meters <= 0) throw new Error('Mapbox could not calculate a route between these addresses.')
-    distanceKm.value = Math.round((meters / 1000) * 100) / 100
   } catch (cause) {
-    if (!controller.signal.aborted) {
-      distanceError.value = cause instanceof Error ? cause.message : 'Could not calculate the road distance.'
-    }
+    zoneError.value = apiErrorMessage(cause, 'Could not load service zones.')
   } finally {
-    if (!controller.signal.aborted) distanceLoading.value = false
+    zonesLoading.value = false
   }
+})
+
+async function loadReachable() {
+  reachableZones.value = []
+  form.destinationZoneId = ''
+  if (!form.originZoneId) return
+  reachableLoading.value = true
+  zoneError.value = ''
+  try {
+    const params = new URLSearchParams({ origin_zone_id: form.originZoneId })
+    const response = await api<{ zones: GeoZone[] }>(`/public/zones/reachable?${params}`)
+    reachableZones.value = response.zones ?? []
+    const current = reachableZones.value.find((zone) => zone.id === form.destinationZoneId)
+    form.destinationZoneId = current?.id ?? reachableZones.value[0]?.id ?? ''
+  } catch (cause) {
+    zoneError.value = apiErrorMessage(cause, 'Could not load destination zones for that pickup zone.')
+  } finally {
+    reachableLoading.value = false
+  }
+}
+
+function swapZones() {
+  const previousOrigin = form.originZoneId
+  const previousDestination = form.destinationZoneId
+  if (!previousDestination) return
+  form.originZoneId = previousDestination
+  void loadReachable().then(() => {
+    if (reachableZones.value.some((zone) => zone.id === previousOrigin)) {
+      form.destinationZoneId = previousOrigin
+    }
+  })
 }
 
 function packagePayload() {
@@ -242,58 +151,22 @@ function validatePackage() {
 
 function submitSearch() {
   error.value = ''
+  if (!form.originZoneId) {
+    error.value = 'Choose a pickup zone.'
+    return
+  }
+  if (!form.destinationZoneId) {
+    error.value = 'Choose a destination zone with an active provider route.'
+    return
+  }
   if (!validatePackage()) return
-
-  if (serviceMode.value === 'last_mile') {
-    if (!pickup.value || !dropoff.value) {
-      error.value = 'Choose both addresses from the Mapbox suggestions so we can verify the route.'
-      return
-    }
-    if (!pickup.value.city || !pickup.value.state || !dropoff.value.city || !dropoff.value.state) {
-      error.value = 'Those addresses are missing a city or state. Choose a more specific suggestion.'
-      return
-    }
-    if (distanceLoading.value) {
-      error.value = 'Wait for the road distance to finish calculating.'
-      return
-    }
-    if (!distanceKm.value || distanceError.value) {
-      error.value = distanceError.value || 'Choose verified pickup and drop-off addresses first.'
-      return
-    }
-    emit('search', {
-      service_type: 'last_mile',
-      origin_state: pickup.value.state,
-      origin_city: pickup.value.city,
-      destination_state: dropoff.value.state,
-      destination_city: dropoff.value.city,
-      pickup_address: pickup.value.address,
-      dropoff_address: dropoff.value.address,
-      pickup_latitude: pickup.value.latitude,
-      pickup_longitude: pickup.value.longitude,
-      dropoff_latitude: dropoff.value.latitude,
-      dropoff_longitude: dropoff.value.longitude,
-      distance_km: distanceKm.value,
-      ...packagePayload(),
-      sort: 'cheapest',
-    })
-    return
-  }
-
-  if (!form.originState || !form.originCity || !form.destinationState || !form.destinationCity) {
-    error.value = 'Choose the origin and destination states and cities.'
-    return
-  }
-  if (form.originState === form.destinationState && form.originCity === form.destinationCity) {
-    error.value = 'Origin and destination must be different.'
-    return
-  }
+  const origin = zones.value.find((zone) => zone.id === form.originZoneId)
+  const destination = reachableZones.value.find((zone) => zone.id === form.destinationZoneId)
   emit('search', {
-    service_type: 'intercity',
-    origin_state: form.originState,
-    origin_city: form.originCity,
-    destination_state: form.destinationState,
-    destination_city: form.destinationCity,
+    origin_zone_id: form.originZoneId,
+    destination_zone_id: form.destinationZoneId,
+    origin_label: origin ? zoneLabel(origin) : undefined,
+    destination_label: destination ? zoneLabel(destination) : undefined,
     ...packagePayload(),
     sort: 'cheapest',
   })
@@ -307,10 +180,10 @@ function submitSearch() {
   >
     <div class="flex items-start justify-between gap-4">
       <div>
-        <p class="text-[10px] font-bold tracking-[0.18em] text-accent-700 uppercase dark:text-accent-400">Start here</p>
+        <p class="text-[10px] font-bold tracking-[0.18em] text-accent-700 uppercase dark:text-accent-400">where are you sending?</p>
         <h2 class="mt-1.5 text-[19px] font-semibold tracking-[-0.03em]">Where are you sending?</h2>
         <p class="mt-1 text-[12.5px] text-ink-900/65">
-          Enter your shipment to compare live provider rates.
+          Choose the pickup zone, then a destination served by a provider route.
         </p>
       </div>
       <IconTile tone="accent" size="lg" rounded="2xl">
@@ -318,110 +191,61 @@ function submitSearch() {
       </IconTile>
     </div>
 
-    <div class="mt-4 grid grid-cols-2 gap-1 rounded-xl border border-ink-900/10 bg-canvas p-1" role="tablist" aria-label="Delivery type">
-      <button
-        v-for="mode in ([
-          { id: 'intercity', label: 'Between cities', icon: Building2 },
-          { id: 'last_mile', label: 'Within a city', icon: Car },
-        ] as const)"
-        :key="mode.id"
-        type="button"
-        role="tab"
-        :aria-selected="serviceMode === mode.id"
-        class="inline-flex items-center justify-center gap-1.5 rounded-lg px-2.5 py-2.5 text-[11.5px] font-semibold transition"
-        :class="serviceMode === mode.id
-          ? 'bg-surface text-ink-900 shadow-sm ring-1 ring-ink-900/5'
-          : 'text-ink-900/50 hover:text-ink-900'"
-        @click="setMode(mode.id)"
-      >
-        <component :is="mode.icon" :size="13" />
-        {{ mode.label }}
-      </button>
-    </div>
-
-    <form class="mt-4 space-y-3.5" @submit.prevent="submitSearch">
-      <template v-if="serviceMode === 'intercity'">
-        <div class="grid grid-cols-[1fr_auto_1fr] items-end gap-2">
-          <div class="min-w-0">
-            <span :class="labelClass">Sending from</span>
-            <div class="space-y-1.5">
-              <select
-                v-model="form.originState"
-                :class="selectClass"
-                name="origin_state"
-                aria-label="Origin state"
-                required
-              >
-                <option value="" disabled>State</option>
-                <option v-for="state in states" :key="state" :value="state">{{ state }}</option>
-              </select>
-              <select
-                v-model="form.originCity"
-                :class="selectClass"
-                name="origin_city"
-                aria-label="Origin city"
-                :disabled="!form.originState"
-                required
-              >
-                <option value="" disabled>City</option>
-                <option v-for="city in originCities" :key="city" :value="city">{{ city }}</option>
-              </select>
-            </div>
-          </div>
-          <button
-            type="button"
-            class="mb-1 flex size-9 shrink-0 items-center justify-center rounded-xl border border-ink-900/10 bg-canvas text-ink-900/50 transition hover:-translate-y-0.5 hover:border-accent-500/40 hover:text-accent-700 dark:hover:text-accent-400"
-            aria-label="Swap origin and destination"
-            @click="swapCities"
+    <form class="mt-5 space-y-3.5" @submit.prevent="submitSearch">
+      <div class="grid grid-cols-[1fr_auto_1fr] items-end gap-2">
+        <div class="min-w-0">
+          <span :class="labelClass">Pickup zone</span>
+          <select
+            v-model="form.originZoneId"
+            :class="selectClass"
+            name="origin_zone_id"
+            aria-label="Pickup zone"
+            :disabled="zonesLoading || !zones.length"
+            required
+            @change="loadReachable"
           >
-            <ArrowLeftRight :size="15" />
-          </button>
-          <div class="min-w-0">
-            <span :class="labelClass">Sending to</span>
-            <div class="space-y-1.5">
-              <select
-                v-model="form.destinationState"
-                :class="selectClass"
-                name="destination_state"
-                aria-label="Destination state"
-                required
-              >
-                <option value="" disabled>State</option>
-                <option v-for="state in states" :key="state" :value="state">{{ state }}</option>
-              </select>
-              <select
-                v-model="form.destinationCity"
-                :class="selectClass"
-                name="destination_city"
-                aria-label="Destination city"
-                :disabled="!form.destinationState"
-                required
-              >
-                <option value="" disabled>City</option>
-                <option v-for="city in destinationCities" :key="city" :value="city">{{ city }}</option>
-              </select>
-            </div>
-          </div>
+            <option value="" disabled>{{ zonesLoading ? 'Loading zones…' : 'Choose a zone' }}</option>
+            <optgroup v-for="group in originGroups" :key="group.state" :label="group.state">
+              <option v-for="zone in group.zones" :key="zone.id" :value="zone.id">
+                {{ zone.lga }}
+              </option>
+            </optgroup>
+          </select>
         </div>
-      </template>
+        <button
+          type="button"
+          class="mb-1 flex size-9 shrink-0 items-center justify-center rounded-xl border border-ink-900/10 bg-canvas text-ink-900/50 transition hover:-translate-y-0.5 hover:border-accent-500/40 hover:text-accent-700 disabled:opacity-40 dark:hover:text-accent-400"
+          aria-label="Swap pickup and destination zones"
+          :disabled="!form.destinationZoneId"
+          @click="swapZones"
+        >
+          <ArrowLeftRight :size="15" />
+        </button>
+        <div class="min-w-0">
+          <span :class="labelClass">Destination zone</span>
+          <select
+            v-model="form.destinationZoneId"
+            :class="selectClass"
+            name="destination_zone_id"
+            aria-label="Destination zone"
+            :disabled="reachableLoading || !reachableZones.length"
+            required
+          >
+            <option value="" disabled>
+              {{ reachableLoading ? 'Finding routes…' : reachableZones.length ? 'Choose a zone' : 'No routes yet' }}
+            </option>
+            <optgroup v-for="group in destinationGroups" :key="group.state" :label="group.state">
+              <option v-for="zone in group.zones" :key="zone.id" :value="zone.id">
+                {{ zone.lga }}
+              </option>
+            </optgroup>
+          </select>
+        </div>
+      </div>
 
-      <template v-else>
-        <div class="space-y-3 rounded-xl border border-ink-900/10 bg-canvas/60 p-3">
-          <VerifiedAddressField v-model="pickup" label="Pickup address" placeholder="Street, estate or landmark" />
-          <VerifiedAddressField v-model="dropoff" label="Drop-off address" placeholder="Street, estate or landmark" />
-          <div class="flex items-center gap-2 rounded-lg border border-ink-900/10 bg-surface px-2.5 py-2 text-[10.5px]">
-            <Loader2 v-if="distanceLoading" :size="13" class="animate-spin text-accent-600 dark:text-accent-400" />
-            <MapPin v-else :size="13" class="text-accent-600 dark:text-accent-400" />
-            <span v-if="distanceLoading" class="text-ink-900/55">Calculating the Mapbox road distance…</span>
-            <span v-else-if="distanceKm" class="font-semibold text-success-700">
-              {{ distanceKm.toLocaleString() }} km verified route
-              <span class="ml-1 font-normal text-ink-900/45">· used for local rates</span>
-            </span>
-            <span v-else-if="distanceError" class="text-accent-700 dark:text-accent-300">{{ distanceError }}</span>
-            <span v-else class="text-ink-900/45">Choose both verified addresses to calculate distance.</span>
-          </div>
-        </div>
-      </template>
+      <p v-if="zoneError" class="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-[12px] font-medium text-amber-800">
+        {{ zoneError }}
+      </p>
 
       <div class="grid grid-cols-2 gap-3">
         <label>
@@ -481,20 +305,18 @@ function submitSearch() {
 
       <button
         type="submit"
-        :disabled="loading"
+        :disabled="loading || zonesLoading || !form.destinationZoneId"
         class="flex w-full items-center justify-center gap-2 rounded-xl bg-accent-500 px-4 py-3.5 text-[14px] font-semibold text-ink-950 shadow-[0_14px_28px_-16px_rgba(255,122,0,0.75)] transition hover:-translate-y-0.5 hover:bg-accent-400 hover:shadow-[0_18px_32px_-16px_rgba(255,122,0,0.85)] disabled:translate-y-0 disabled:opacity-60"
       >
         <Loader2 v-if="loading" :size="16" class="animate-spin" />
         <Search v-else :size="16" />
-        {{ loading ? 'Checking providers…' : serviceMode === 'last_mile' ? 'Compare local delivery options' : 'Compare delivery options' }}
+        {{ loading ? 'Checking providers…' : 'Compare provider routes' }}
         <ArrowRight :size="15" class="ml-auto" />
       </button>
     </form>
 
     <p class="mt-3 text-center text-[10.5px] leading-relaxed text-ink-900/40">
-      <template v-if="serviceMode === 'last_mile'">Mapbox-verified addresses · live last-mile coverage.</template>
-      <template v-else-if="liveLocations">Live provider coverage. No account needed.</template>
-      <template v-else>No commitment. Review provider rates before you choose.</template>
+      Only providers with an active route in that direction are shown. No account needed.
     </p>
   </div>
 </template>

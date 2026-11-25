@@ -29,7 +29,6 @@ interface AdminProvider {
   name: string
   business_email: string
   phone: string
-  business_type: string
   cac_business_name: string | null
   state: string | null
   city: string | null

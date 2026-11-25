@@ -16,7 +16,7 @@ import { ArrowRight, PackageSearch } from 'lucide-vue-next'
           Your next delivery deserves a better way.
         </h2>
         <p class="mx-auto mt-4 max-w-[540px] text-[14px] leading-[1.7] text-white/60">
-          BOL is building a simpler way to compare intercity shipping options. Be among the first to know when live rates and booking are ready.
+          BOL is building a simpler way to compare provider routes. Be among the first to know when live rates and booking are ready.
         </p>
         <div class="mt-7 flex flex-col justify-center gap-2.5 sm:flex-row">
           <AppButton to="/register" size="lg">

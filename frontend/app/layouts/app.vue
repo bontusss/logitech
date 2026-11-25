@@ -92,7 +92,7 @@ const navigationGroups = computed<NavigationGroup[]>(() => {
       label: 'Setup',
       items: [
         { label: 'Booking page', to: '/dashboard/company/booking', icon: CalendarCheck, tone: 'success', permission: 'bookings.manage' },
-        { label: 'Rates & Coverage', to: '/dashboard/company/rates', icon: ClipboardList, tone: 'brand', permission: 'rates.view' },
+        { label: 'Zones & Routes', to: '/dashboard/company/rates', icon: ClipboardList, tone: 'brand', permission: 'rates.view' },
       ],
     },
     {

@@ -192,7 +192,6 @@ SELECT
   c.id,
   c.name,
   c.slug,
-  c.business_type,
   c.state,
   c.city,
   c.country,
@@ -222,7 +221,6 @@ type GetMarketplaceProviderBySlugRow struct {
 	ID                uuid.UUID   `json:"id"`
 	Name              string      `json:"name"`
 	Slug              string      `json:"slug"`
-	BusinessType      string      `json:"business_type"`
 	State             *string     `json:"state"`
 	City              *string     `json:"city"`
 	Country           string      `json:"country"`
@@ -246,7 +244,6 @@ func (q *Queries) GetMarketplaceProviderBySlug(ctx context.Context, slug string)
 		&i.ID,
 		&i.Name,
 		&i.Slug,
-		&i.BusinessType,
 		&i.State,
 		&i.City,
 		&i.Country,

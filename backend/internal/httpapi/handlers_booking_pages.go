@@ -320,7 +320,6 @@ func (a *API) publicBookingPage(c *gin.Context) {
 			"name":             row.Name,
 			"slug":             row.CompanySlug,
 			"public_name":      row.PublicName,
-			"business_type":    row.BusinessType,
 			"business_email":   row.BusinessEmail,
 			"phone":            row.Phone,
 			"city":             row.City,
@@ -381,6 +380,39 @@ func (a *API) publicBookingRoutes(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"routes": routes})
 }
 
+func (a *API) publicBookingZoneRoutes(c *gin.Context) {
+	slug, reason := validateBookingPageSlug(c.Param("slug"))
+	if reason != "" {
+		fail(c, http.StatusNotFound, "booking_page_not_found", "That booking page was not found.")
+		return
+	}
+	page, err := a.svc.Q.GetPublicBookingPage(c.Request.Context(), slug)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			fail(c, http.StatusNotFound, "booking_page_not_found", "That booking page was not found.")
+			return
+		}
+		a.handleServiceError(c, err)
+		return
+	}
+	routes, err := a.svc.Q.ListPublicBookingZoneRoutes(c.Request.Context(), page.CompanyID)
+	if err != nil {
+		a.handleServiceError(c, err)
+		return
+	}
+	items := make([]gin.H, 0, len(routes))
+	for _, route := range routes {
+		items = append(items, gin.H{
+			"id": route.ID, "price_minor": route.PriceMinor,
+			"included_weight_kg":          numericToFloat64(route.IncludedWeightKg),
+			"additional_weight_fee_minor": route.AdditionalWeightFeeMinor,
+			"from_zone":                   gin.H{"id": route.FromZoneID, "name": route.FromZoneName, "state": route.FromState, "lga": route.FromLga},
+			"to_zone":                     gin.H{"id": route.ToZoneID, "name": route.ToZoneName, "state": route.ToState, "lga": route.ToLga},
+		})
+	}
+	c.JSON(http.StatusOK, gin.H{"routes": items})
+}
+
 func (a *API) createPublicBooking(c *gin.Context) {
 	slug, reason := validateBookingPageSlug(c.Param("slug"))
 	if reason != "" {
@@ -401,8 +433,8 @@ func (a *API) createPublicBooking(c *gin.Context) {
 		SenderPhone            string   `json:"sender_phone" binding:"required,min=7,max=30"`
 		ReceiverName           string   `json:"receiver_name" binding:"required,min=2,max=120"`
 		ReceiverPhone          string   `json:"receiver_phone" binding:"required,min=7,max=30"`
-		PickupAddress          string   `json:"pickup_address" binding:"required,min=3,max=500"`
-		DropoffAddress         string   `json:"dropoff_address" binding:"required,min=3,max=500"`
+		PickupAddress          string   `json:"pickup_address" binding:"omitempty,max=500"`
+		DropoffAddress         string   `json:"dropoff_address" binding:"omitempty,max=500"`
 		PackageCategory        string   `json:"package_category" binding:"required,oneof=cloth electronics document food jewelry other"`
 		DeclaredValueMinor     int64    `json:"declared_value_minor" binding:"required,min=0"`
 		WeightKg               float64  `json:"weight_kg" binding:"required,gt=0,lte=500"`
@@ -413,6 +445,9 @@ func (a *API) createPublicBooking(c *gin.Context) {
 		DropoffLatitude        *float64 `json:"dropoff_latitude"`
 		DropoffLongitude       *float64 `json:"dropoff_longitude"`
 		SelectedRouteID        *string  `json:"selected_route_id"`
+		SelectedZoneRouteID    *string  `json:"selected_zone_route_id"`
+		OriginZoneID           string   `json:"origin_zone_id"`
+		DestinationZoneID      string   `json:"destination_zone_id"`
 		DeliverySpeed          string   `json:"delivery_speed" binding:"omitempty,oneof=standard express same_day"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -436,7 +471,51 @@ func (a *API) createPublicBooking(c *gin.Context) {
 	deliveryPriceMinor := int64(0)
 	distanceKM := float64(0)
 	priceIsEstimate := true
-	if req.SelectedRouteID != nil && strings.TrimSpace(*req.SelectedRouteID) != "" {
+	if req.SelectedZoneRouteID != nil && strings.TrimSpace(*req.SelectedZoneRouteID) != "" {
+		parsedID, parseErr := uuid.Parse(strings.TrimSpace(*req.SelectedZoneRouteID))
+		if parseErr != nil {
+			fail(c, http.StatusBadRequest, "invalid_route", "Choose a zone route offered by this provider.")
+			return
+		}
+		selectedRoute, routeErr := a.svc.Q.GetPublicBookingZoneRoute(c.Request.Context(), db.GetPublicBookingZoneRouteParams{
+			CompanyID: page.CompanyID,
+			ID:        parsedID,
+		})
+		if routeErr != nil {
+			if routeErr == pgx.ErrNoRows {
+				fail(c, http.StatusBadRequest, "invalid_route", "That zone route is no longer available.")
+				return
+			}
+			a.handleServiceError(c, routeErr)
+			return
+		}
+		if originID, originErr := uuid.Parse(strings.TrimSpace(req.OriginZoneID)); originErr == nil && selectedRoute.FromZoneID != originID {
+			fail(c, http.StatusBadRequest, "invalid_route", "The pickup zone does not match that route.")
+			return
+		}
+		if destinationID, destinationErr := uuid.Parse(strings.TrimSpace(req.DestinationZoneID)); destinationErr == nil && selectedRoute.ToZoneID != destinationID {
+			fail(c, http.StatusBadRequest, "invalid_route", "The destination zone does not match that route.")
+			return
+		}
+		price, priceErr := service.CalculateZoneRoutePrice(service.ZoneRoutePricing{
+			BasePriceMinor:           selectedRoute.PriceMinor,
+			IncludedWeightKg:         numericToFloat64(selectedRoute.IncludedWeightKg),
+			AdditionalWeightFeeMinor: selectedRoute.AdditionalWeightFeeMinor,
+		}, req.WeightKg)
+		if priceErr != nil {
+			fail(c, http.StatusUnprocessableEntity, "missing_rate", "This zone route has no usable price.")
+			return
+		}
+		deliveryPriceMinor = price.TotalMinor
+		priceIsEstimate = false
+		deliverySpeed = "standard"
+		if strings.TrimSpace(req.PickupAddress) == "" {
+			req.PickupAddress = selectedRoute.FromZoneName + ", " + selectedRoute.FromLga + ", " + selectedRoute.FromState
+		}
+		if strings.TrimSpace(req.DropoffAddress) == "" {
+			req.DropoffAddress = selectedRoute.ToZoneName + ", " + selectedRoute.ToLga + ", " + selectedRoute.ToState
+		}
+	} else if req.SelectedRouteID != nil && strings.TrimSpace(*req.SelectedRouteID) != "" {
 		parsedID, parseErr := uuid.Parse(strings.TrimSpace(*req.SelectedRouteID))
 		if parseErr != nil {
 			fail(c, http.StatusBadRequest, "invalid_route", "Choose a route offered by this provider.")
@@ -487,6 +566,11 @@ func (a *API) createPublicBooking(c *gin.Context) {
 	} else if !validCoordinatePair(req.PickupLatitude, req.PickupLongitude) ||
 		!validCoordinatePair(req.DropoffLatitude, req.DropoffLongitude) {
 		fail(c, http.StatusBadRequest, "locations_not_verified", "Choose pickup and drop-off locations from the map suggestions.")
+		return
+	}
+
+	if strings.TrimSpace(req.PickupAddress) == "" || strings.TrimSpace(req.DropoffAddress) == "" {
+		fail(c, http.StatusBadRequest, "invalid_address", "Choose pickup and drop-off addresses.")
 		return
 	}
 

@@ -67,7 +67,6 @@ type CompanyRegistration struct {
 	CompanyName   string
 	BusinessEmail string
 	Phone         string
-	BusinessType  string
 	Country       string
 	State         string
 	City          string
@@ -314,11 +313,10 @@ func (s *Service) createCompanyForUser(ctx context.Context, tx pgx.Tx, user db.U
 		Slug:          newSlug(input.CompanyName),
 		BusinessEmail: email,
 		Phone:         strings.TrimSpace(input.Phone),
-		BusinessType:  strings.TrimSpace(input.BusinessType),
 		Country:       defaultString(strings.TrimSpace(input.Country), "NG"),
-		Column7:       strings.TrimSpace(input.State),
-		Column8:       strings.TrimSpace(input.City),
-		Column9:       strings.TrimSpace(input.Address),
+		Column6:       strings.TrimSpace(input.State),
+		Column7:       strings.TrimSpace(input.City),
+		Column8:       strings.TrimSpace(input.Address),
 		OwnerUserID:   user.ID,
 	})
 	if err != nil {

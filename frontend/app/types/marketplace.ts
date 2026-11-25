@@ -7,27 +7,20 @@ export interface MarketplacePackage {
 }
 
 export interface MarketplaceSearchPayload {
-  service_type?: 'intercity' | 'last_mile'
-  origin_state: string
-  origin_city: string
-  destination_state: string
-  destination_city: string
+  origin_zone_id: string
+  destination_zone_id: string
+  origin_label?: string
+  destination_label?: string
   pickup_address?: string
   dropoff_address?: string
-  pickup_latitude?: number
-  pickup_longitude?: number
-  dropoff_latitude?: number
-  dropoff_longitude?: number
-  distance_km?: number
   weight_kg: number
   length_cm?: number
   width_cm?: number
   height_cm?: number
   category?: string
-  speed?: 'standard' | 'express' | 'same_day' | ''
   pickup_required?: boolean
   delivery_required?: boolean
-  sort?: 'cheapest' | 'fastest' | 'recommended'
+  sort?: 'cheapest' | 'fastest' | 'recommended' | 'rating'
 }
 
 export interface MarketplaceQuote {
@@ -37,7 +30,8 @@ export interface MarketplaceQuote {
   provider_logo: string
   provider_slug: string
   booking_slug?: string
-  service_key: 'standard' | 'express' | 'same_day' | 'last_mile'
+  provider_rating: number
+  service_key: 'zone_route'
   service_name: string
   origin_state: string
   origin_city: string
@@ -122,7 +116,6 @@ export interface MarketplaceProviderProfile {
   primary_color: string
   secondary_color: string
   description: string
-  business_type: string
   state?: string
   city?: string
   country: string

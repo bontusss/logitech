@@ -57,7 +57,7 @@ const socials = [
         <div>
           <AppLogo :size="36" tone="light" />
           <p class="mt-5 max-w-[330px] text-[14.5px] leading-[1.65] text-white/45">
-            A clearer way to find intercity delivery options across Nigeria.
+            A clearer way to find delivery routes across Nigeria.
           </p>
 
           <div class="mt-6 space-y-1.5 text-[13.5px] text-white/45">

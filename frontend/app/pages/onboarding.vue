@@ -18,12 +18,6 @@ import {
 } from 'lucide-vue-next'
 import type { CompanyDetail } from '~/types/auth'
 import { isValidNigerianPhone } from '~/utils/nigeria'
-import {
-  parseProviderBusinessTypes,
-  providerBusinessTypes,
-  serializeProviderBusinessTypes,
-  type ProviderBusinessType,
-} from '~/utils/providerBusinessTypes'
 
 definePageMeta({ middleware: 'auth', layout: 'app' })
 useSeoMeta({ title: 'Company onboarding' })
@@ -53,7 +47,6 @@ const steps = [
 
 const form = reactive({
   name: '',
-  business_types: [] as ProviderBusinessType[],
   cac_business_name: '',
   business_email: '',
   phone: '',
@@ -88,7 +81,6 @@ async function load() {
     detail.value = data
     Object.assign(form, {
       name: data.company.name,
-      business_types: parseProviderBusinessTypes(data.company.business_type),
       cac_business_name: data.company.cac_business_name ?? '',
       business_email: data.company.business_email,
       phone: data.company.phone,
@@ -157,10 +149,6 @@ async function saveCurrentStep(): Promise<boolean> {
   success.value = ''
   try {
     if (step.value === 0) {
-      if (!form.business_types.length) {
-        error.value = 'Select at least one business type.'
-        return false
-      }
       if (!isValidNigerianPhone(form.phone)) {
         error.value = 'Enter a valid Nigerian company phone number.'
         return false
@@ -169,8 +157,6 @@ async function saveCurrentStep(): Promise<boolean> {
         method: 'PATCH',
         body: {
           name: form.name,
-          business_type: serializeProviderBusinessTypes(form.business_types),
-          business_types: form.business_types,
           phone: form.phone,
         },
       })
@@ -378,20 +364,6 @@ const whatsappVerified = computed(() =>
               <span class="mb-1.5 block text-[11px] font-semibold text-ink-900/65">Company name</span>
               <input v-model="form.name" type="text" class="w-full rounded-xl border border-slate-200 bg-canvas px-3.5 py-2.5 text-sm transition placeholder:text-ink-900/35 hover:border-slate-300 focus:border-brand-500 dark:border-white/10 dark:bg-white/5" />
             </label>
-            <fieldset class="block">
-              <legend class="mb-1.5 block text-[11px] font-semibold text-ink-900/65">Business type</legend>
-              <div class="flex flex-wrap gap-2">
-                <label
-                  v-for="type in providerBusinessTypes"
-                  :key="type.value"
-                  class="flex cursor-pointer items-center gap-2 rounded-full border px-3 py-2 text-[11.5px] font-medium transition"
-                  :class="form.business_types.includes(type.value) ? 'border-brand-400 bg-brand-50 text-brand-700 dark:border-brand-400/40 dark:bg-brand-400/10 dark:text-brand-200' : 'border-slate-200 bg-canvas text-ink-900/65 hover:border-slate-300 dark:border-white/10 dark:bg-white/5'"
-                >
-                  <input v-model="form.business_types" type="checkbox" :value="type.value" class="size-3.5 rounded border-slate-300" />
-                  {{ type.label }}
-                </label>
-              </div>
-            </fieldset>
             <label class="block">
               <span class="mb-1.5 block text-[11px] font-semibold text-ink-900/65">Phone</span>
               <NigeriaPhoneInput v-model="form.phone" required />

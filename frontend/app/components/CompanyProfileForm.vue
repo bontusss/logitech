@@ -2,12 +2,6 @@
 import { Building2, CircleAlert, Loader2, Save } from 'lucide-vue-next'
 import type { Company, OperatingHours } from '~/types/auth'
 import { isValidNigerianPhone } from '~/utils/nigeria'
-import {
-  parseProviderBusinessTypes,
-  providerBusinessTypes,
-  serializeProviderBusinessTypes,
-  type ProviderBusinessType,
-} from '~/utils/providerBusinessTypes'
 
 const props = defineProps<{
   company: Company
@@ -23,7 +17,6 @@ const form = reactive({
   name: '',
   business_email: '',
   phone: '',
-  business_types: [] as ProviderBusinessType[],
   country: 'NG',
   state: '',
   city: '',
@@ -48,7 +41,6 @@ watch(
       name: company.name,
       business_email: company.business_email,
       phone: company.phone,
-      business_types: parseProviderBusinessTypes(company.business_type),
       country: company.country,
       state: company.state ?? '',
       city: company.city ?? '',
@@ -70,11 +62,7 @@ watch(
 async function save() {
   error.value = ''
   if (!form.name.trim() || !form.business_email.trim() || !form.phone.trim()) {
-    error.value = 'Name, business email, phone and business type are required.'
-    return
-  }
-  if (!form.business_types.length) {
-    error.value = 'Select at least one business type.'
+    error.value = 'Name, business email and phone are required.'
     return
   }
   if (!isValidNigerianPhone(form.phone)) {
@@ -89,8 +77,6 @@ async function save() {
         name: form.name.trim(),
         business_email: form.business_email.trim(),
         phone: form.phone.trim(),
-        business_type: serializeProviderBusinessTypes(form.business_types),
-        business_types: form.business_types,
         country: form.country.trim().toUpperCase(),
         state: form.state.trim(),
         city: form.city.trim(),
@@ -166,20 +152,6 @@ async function save() {
         <span class="mb-1.5 block text-[11px] font-medium text-ink-900/55">Phone</span>
         <NigeriaPhoneInput v-model="form.phone" required :disabled="!canEdit" />
       </label>
-      <fieldset class="block">
-        <legend class="mb-1.5 block text-[11px] font-medium text-ink-900/55">Business type</legend>
-        <div class="flex flex-wrap gap-2">
-          <label
-            v-for="type in providerBusinessTypes"
-            :key="type.value"
-            class="flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-[12px]"
-            :class="form.business_types.includes(type.value) ? 'border-brand-500 bg-brand-50 text-brand-700' : 'border-slate-300 bg-white text-ink-900/60'"
-          >
-            <input v-model="form.business_types" type="checkbox" :value="type.value" :disabled="!canEdit" class="size-3.5 rounded border-slate-300" />
-            {{ type.label }}
-          </label>
-        </div>
-      </fieldset>
       <label class="block">
         <span class="mb-1.5 block text-[11px] font-medium text-ink-900/55">Country code</span>
         <input

@@ -51,7 +51,6 @@ export interface Company {
   slug: string
   business_email: string
   phone: string
-  business_type: string
   cac_business_name: string | null
   country: string
   state: string | null
@@ -215,7 +214,6 @@ export interface PublicBranding {
     name: string
     slug: string
     public_name: string
-    business_type: string
     description: string | null
     city: string | null
     state: string | null

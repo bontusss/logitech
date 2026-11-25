@@ -11,7 +11,6 @@ SELECT
   c.name,
   c.business_email,
   c.phone,
-  c.business_type,
   c.cac_business_name,
   c.state,
   c.city,

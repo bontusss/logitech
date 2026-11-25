@@ -29,7 +29,6 @@ SELECT
   c.id AS company_id,
   c.name,
   c.slug AS company_slug,
-  c.business_type,
   c.business_email,
   c.phone,
   c.city,

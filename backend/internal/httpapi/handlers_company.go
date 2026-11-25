@@ -23,60 +23,27 @@ var (
 	currencyPattern = regexp.MustCompile(`^[A-Z]{3}$`)
 )
 
-func normalizeProviderBusinessTypes(values []string, legacy string) (string, bool) {
-	types := make(map[string]bool)
-	for _, value := range append(values, legacy) {
-		normalized := strings.ToLower(strings.TrimSpace(value))
-		for _, part := range strings.FieldsFunc(normalized, func(r rune) bool {
-			return r == ',' || r == ';' || r == '|'
-		}) {
-			part = strings.TrimSpace(part)
-			if strings.Contains(part, "intercity") {
-				types["intercity"] = true
-			}
-			if strings.Contains(part, "lastmile") || strings.Contains(part, "last mile") {
-				types["lastmile"] = true
-			}
-		}
-	}
-	if len(types) == 0 {
-		return "", false
-	}
-	result := make([]string, 0, 2)
-	if types["intercity"] {
-		result = append(result, "intercity")
-	}
-	if types["lastmile"] {
-		result = append(result, "lastmile")
-	}
-	return strings.Join(result, ","), true
-}
-
 type companyRegistrationRequest struct {
-	CompanyName   string   `json:"company_name" binding:"required,min=2,max=160"`
-	BusinessEmail string   `json:"business_email" binding:"required,email,max=254"`
-	Phone         string   `json:"phone" binding:"required,max=30"`
-	BusinessType  string   `json:"business_type" binding:"omitempty,max=80"`
-	BusinessTypes []string `json:"business_types"`
-	Country       string   `json:"country" binding:"omitempty,max=2"`
-	State         string   `json:"state" binding:"required,max=80"`
-	City          string   `json:"city" binding:"required,max=80"`
-	Address       string   `json:"address" binding:"required,max=240"`
-	ContactName   string   `json:"contact_name" binding:"required,min=2,max=120"`
-	Password      string   `json:"password" binding:"required,min=8,max=128"`
+	CompanyName   string `json:"company_name" binding:"required,min=2,max=160"`
+	BusinessEmail string `json:"business_email" binding:"required,email,max=254"`
+	Phone         string `json:"phone" binding:"required,max=30"`
+	Country       string `json:"country" binding:"omitempty,max=2"`
+	State         string `json:"state" binding:"required,max=80"`
+	City          string `json:"city" binding:"required,max=80"`
+	Address       string `json:"address" binding:"required,max=240"`
+	ContactName   string `json:"contact_name" binding:"required,min=2,max=120"`
+	Password      string `json:"password" binding:"required,min=8,max=128"`
 }
 
 type companySetupRequest struct {
-	CompanyName   string   `json:"company_name" binding:"required,min=2,max=160"`
-	BusinessEmail string   `json:"business_email" binding:"required,email,max=254"`
-	Phone         string   `json:"phone" binding:"required,max=30"`
-	BusinessType  string   `json:"business_type" binding:"omitempty,max=80"`
-	BusinessTypes []string `json:"business_types"`
-	Country       string   `json:"country" binding:"omitempty,max=2"`
-	State         string   `json:"state" binding:"required,max=80"`
-	City          string   `json:"city" binding:"required,max=80"`
-	Address       string   `json:"address" binding:"required,max=240"`
-	ContactName   string   `json:"contact_name" binding:"required,min=2,max=120"`
+	CompanyName   string `json:"company_name" binding:"required,min=2,max=160"`
+	BusinessEmail string `json:"business_email" binding:"required,email,max=254"`
+	Phone         string `json:"phone" binding:"required,max=30"`
+	Country       string `json:"country" binding:"omitempty,max=2"`
+	State         string `json:"state" binding:"required,max=80"`
+	City          string `json:"city" binding:"required,max=80"`
+	Address       string `json:"address" binding:"required,max=240"`
+	ContactName   string `json:"contact_name" binding:"required,min=2,max=120"`
 }
 
 type companyDTO struct {
@@ -85,7 +52,6 @@ type companyDTO struct {
 	Slug             string          `json:"slug"`
 	BusinessEmail    string          `json:"business_email"`
 	Phone            string          `json:"phone"`
-	BusinessType     string          `json:"business_type"`
 	CACBusinessName  *string         `json:"cac_business_name"`
 	Country          string          `json:"country"`
 	State            *string         `json:"state"`
@@ -119,7 +85,6 @@ func toCompanyDTO(company db.Company) companyDTO {
 		Slug:             company.Slug,
 		BusinessEmail:    company.BusinessEmail,
 		Phone:            company.Phone,
-		BusinessType:     company.BusinessType,
 		CACBusinessName:  company.CacBusinessName,
 		Country:          company.Country,
 		State:            company.State,
@@ -149,17 +114,10 @@ func (a *API) registerCompany(c *gin.Context) {
 		return
 	}
 
-	businessType, ok := normalizeProviderBusinessTypes(req.BusinessTypes, req.BusinessType)
-	if !ok {
-		fail(c, http.StatusUnprocessableEntity, "invalid_business_type", "Select intercity, last mile, or both.")
-		return
-	}
-
 	session, err := a.svc.RegisterCompany(c.Request.Context(), service.CompanyRegistration{
 		CompanyName:   req.CompanyName,
 		BusinessEmail: req.BusinessEmail,
 		Phone:         req.Phone,
-		BusinessType:  businessType,
 		Country:       strings.ToUpper(req.Country),
 		State:         req.State,
 		City:          req.City,
@@ -191,17 +149,10 @@ func (a *API) setupCompany(c *gin.Context) {
 		return
 	}
 
-	businessType, ok := normalizeProviderBusinessTypes(req.BusinessTypes, req.BusinessType)
-	if !ok {
-		fail(c, http.StatusUnprocessableEntity, "invalid_business_type", "Select intercity, last mile, or both.")
-		return
-	}
-
 	companyID, err := a.svc.SetupCompanyForUser(c.Request.Context(), user.ID, service.CompanyRegistration{
 		CompanyName:   req.CompanyName,
 		BusinessEmail: req.BusinessEmail,
 		Phone:         req.Phone,
-		BusinessType:  businessType,
 		Country:       strings.ToUpper(req.Country),
 		State:         req.State,
 		City:          req.City,
@@ -259,8 +210,6 @@ func (a *API) updateCompany(c *gin.Context) {
 		Name            *string         `json:"name" binding:"omitempty,min=2,max=160"`
 		BusinessEmail   *string         `json:"business_email" binding:"omitempty,email"`
 		Phone           *string         `json:"phone" binding:"omitempty,max=30"`
-		BusinessType    *string         `json:"business_type" binding:"omitempty,max=80"`
-		BusinessTypes   []string        `json:"business_types"`
 		CACBusinessName *string         `json:"cac_business_name" binding:"omitempty,max=200"`
 		Country         *string         `json:"country" binding:"omitempty,max=2"`
 		State           *string         `json:"state" binding:"omitempty,max=80"`
@@ -284,12 +233,6 @@ func (a *API) updateCompany(c *gin.Context) {
 	name := valueOr(req.Name, current.Name)
 	email := valueOr(req.BusinessEmail, current.BusinessEmail)
 	phone := valueOr(req.Phone, current.Phone)
-	businessTypeInput := valueOr(req.BusinessType, current.BusinessType)
-	businessType, ok := normalizeProviderBusinessTypes(req.BusinessTypes, businessTypeInput)
-	if !ok {
-		fail(c, http.StatusUnprocessableEntity, "invalid_business_type", "Select intercity, last mile, or both.")
-		return
-	}
 	country := strings.ToUpper(valueOr(req.Country, current.Country))
 	state := valueOr(req.State, deref(current.State))
 	city := valueOr(req.City, deref(current.City))
@@ -340,8 +283,8 @@ func (a *API) updateCompany(c *gin.Context) {
 		hours = req.OperatingHours
 	}
 
-	if name == "" || email == "" || phone == "" || businessType == "" || country == "" {
-		fail(c, http.StatusBadRequest, "invalid_input", "Name, email, phone, business type and country are required.")
+	if name == "" || email == "" || phone == "" || country == "" {
+		fail(c, http.StatusBadRequest, "invalid_input", "Name, email, phone and country are required.")
 		return
 	}
 
@@ -357,21 +300,20 @@ func (a *API) updateCompany(c *gin.Context) {
 		Name:           strings.TrimSpace(name),
 		BusinessEmail:  strings.ToLower(strings.TrimSpace(email)),
 		Phone:          strings.TrimSpace(phone),
-		BusinessType:   strings.TrimSpace(businessType),
 		Country:        country,
-		Column7:        state,
-		Column8:        city,
-		Column9:        address,
-		Column10:       description,
-		Column11:       deref(current.CoverImageUrl),
+		Column6:        state,
+		Column7:        city,
+		Column8:        address,
+		Column9:        description,
+		Column10:       deref(current.CoverImageUrl),
 		OperatingHours: hours,
-		Column13:       website,
-		Column14:       instagram,
-		Column15:       facebook,
-		Column16:       twitter,
-		Column17:       linkedin,
-		Column18:       yearEstablished,
-		Column19:       nonNilStrings(photos),
+		Column12:       website,
+		Column13:       instagram,
+		Column14:       facebook,
+		Column15:       twitter,
+		Column16:       linkedin,
+		Column17:       yearEstablished,
+		Column18:       nonNilStrings(photos),
 	})
 	if err != nil {
 		if strings.Contains(err.Error(), "23505") {

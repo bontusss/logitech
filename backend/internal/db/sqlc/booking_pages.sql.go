@@ -182,7 +182,6 @@ SELECT
   c.id AS company_id,
   c.name,
   c.slug AS company_slug,
-  c.business_type,
   c.business_email,
   c.phone,
   c.city,
@@ -224,7 +223,6 @@ type GetPublicBookingPageRow struct {
 	CompanyID                uuid.UUID   `json:"company_id"`
 	Name                     string      `json:"name"`
 	CompanySlug              string      `json:"company_slug"`
-	BusinessType             string      `json:"business_type"`
 	BusinessEmail            string      `json:"business_email"`
 	Phone                    string      `json:"phone"`
 	City                     *string     `json:"city"`
@@ -261,7 +259,6 @@ func (q *Queries) GetPublicBookingPage(ctx context.Context, slug string) (GetPub
 		&i.CompanyID,
 		&i.Name,
 		&i.CompanySlug,
-		&i.BusinessType,
 		&i.BusinessEmail,
 		&i.Phone,
 		&i.City,

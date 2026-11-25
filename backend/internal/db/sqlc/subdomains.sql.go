@@ -28,7 +28,6 @@ SELECT
   c.id,
   c.name,
   c.slug,
-  c.business_type,
   c.description,
   c.city,
   c.state,
@@ -54,7 +53,6 @@ type GetPublicCompanyBySubdomainRow struct {
 	ID                  uuid.UUID  `json:"id"`
 	Name                string     `json:"name"`
 	Slug                string     `json:"slug"`
-	BusinessType        string     `json:"business_type"`
 	Description         *string    `json:"description"`
 	City                *string    `json:"city"`
 	State               *string    `json:"state"`
@@ -79,7 +77,6 @@ func (q *Queries) GetPublicCompanyBySubdomain(ctx context.Context, subdomain str
 		&i.ID,
 		&i.Name,
 		&i.Slug,
-		&i.BusinessType,
 		&i.Description,
 		&i.City,
 		&i.State,

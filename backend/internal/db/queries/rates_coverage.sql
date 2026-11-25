@@ -50,9 +50,20 @@ SELECT z.* FROM service_zones z JOIN last_mile_service_areas a ON a.id=z.area_id
 WHERE a.company_id=$1 AND z.area_id=$2 ORDER BY z.created_at;
 
 -- name: CreateServiceZone :one
-INSERT INTO service_zones (area_id,name,neighbourhoods,state,city,lga,custom_location)
-SELECT $1,$2,$3,$4,$5,$6,$7 FROM last_mile_service_areas
-WHERE id=$1 AND company_id=$8 RETURNING *;
+INSERT INTO service_zones (company_id,area_id,name,neighbourhoods,state,city,lga,custom_location,parent_zone_id)
+SELECT $9,$1,$2,$3,$4,$5,$6,$7,$8 FROM last_mile_service_areas
+WHERE id=$1 AND company_id=$9 RETURNING *;
+
+-- name: UpdateServiceZone :one
+UPDATE service_zones z SET name=$4, neighbourhoods=$5, state=$6, city=$7, lga=$8,
+  custom_location=$9, parent_zone_id=$10, updated_at=now()
+FROM last_mile_service_areas a
+WHERE z.id=$3 AND z.area_id=$2 AND z.area_id=a.id AND a.company_id=$1
+RETURNING z.*;
+
+-- name: GetServiceZone :one
+SELECT z.* FROM service_zones z JOIN last_mile_service_areas a ON a.id=z.area_id
+WHERE a.company_id=$1 AND z.area_id=$2 AND z.id=$3;
 
 -- name: DeleteServiceZone :exec
 DELETE FROM service_zones z USING last_mile_service_areas a
@@ -63,8 +74,8 @@ DELETE FROM pricing_zone_rates r USING last_mile_service_areas a
 WHERE r.area_id=a.id AND a.company_id=$1 AND r.area_id=$2;
 
 -- name: CreatePricingZoneRate :one
-INSERT INTO pricing_zone_rates (area_id,from_zone_id,to_zone_id,price_minor)
-SELECT $1,$2,$3,$4 WHERE EXISTS (
+INSERT INTO pricing_zone_rates (company_id,area_id,from_zone_id,to_zone_id,price_minor)
+SELECT $5,$1,$2,$3,$4 WHERE EXISTS (
   SELECT 1 FROM last_mile_service_areas a WHERE a.id=$1 AND a.company_id=$5
 ) AND EXISTS (SELECT 1 FROM service_zones z WHERE z.id=$2 AND z.area_id=$1)
 AND EXISTS (SELECT 1 FROM service_zones z WHERE z.id=$3 AND z.area_id=$1)
@@ -75,6 +86,20 @@ RETURNING *;
 
 
 
+
+-- name: GetPricingZoneRate :one
+SELECT r.* FROM pricing_zone_rates r JOIN last_mile_service_areas a ON a.id=r.area_id
+WHERE a.company_id=$1 AND r.area_id=$2 AND r.id=$3;
+
+-- name: UpdatePricingZoneRate :one
+UPDATE pricing_zone_rates r SET from_zone_id=$4, to_zone_id=$5, price_minor=$6, updated_at=now()
+FROM last_mile_service_areas a
+WHERE r.id=$3 AND r.area_id=$2 AND r.area_id=a.id AND a.company_id=$1
+RETURNING r.*;
+
+-- name: DeletePricingZoneRate :exec
+DELETE FROM pricing_zone_rates r USING last_mile_service_areas a
+WHERE r.id=$3 AND r.area_id=$2 AND r.area_id=a.id AND a.company_id=$1;
 
 -- name: ListZoneRates :many
 SELECT r.* FROM pricing_zone_rates r JOIN last_mile_service_areas a ON a.id=r.area_id

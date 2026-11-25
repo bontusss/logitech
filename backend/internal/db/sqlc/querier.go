@@ -38,7 +38,9 @@ type Querier interface {
 	CreateCompanyMember(ctx context.Context, arg CreateCompanyMemberParams) (CompanyMember, error)
 	CreateCompanyReview(ctx context.Context, arg CreateCompanyReviewParams) (CreateCompanyReviewRow, error)
 	CreateCompanyRole(ctx context.Context, arg CreateCompanyRoleParams) (Role, error)
+	CreateCompanyServiceZone(ctx context.Context, arg CreateCompanyServiceZoneParams) (ServiceZone, error)
 	CreateCompanySettings(ctx context.Context, companyID uuid.UUID) (CompanySetting, error)
+	CreateCompanyZoneRoute(ctx context.Context, arg CreateCompanyZoneRouteParams) (PricingZoneRate, error)
 	CreateDelivery(ctx context.Context, arg CreateDeliveryParams) (Delivery, error)
 	CreateDriverProfile(ctx context.Context, arg CreateDriverProfileParams) (DriverProfile, error)
 	CreateEmailVerification(ctx context.Context, arg CreateEmailVerificationParams) (EmailVerification, error)
@@ -56,9 +58,12 @@ type Querier interface {
 	DeleteBranchMembers(ctx context.Context, branchID uuid.UUID) error
 	DeleteCompanyBookingRoute(ctx context.Context, arg DeleteCompanyBookingRouteParams) error
 	DeleteCompanyRole(ctx context.Context, arg DeleteCompanyRoleParams) error
+	DeleteCompanyServiceZone(ctx context.Context, arg DeleteCompanyServiceZoneParams) error
+	DeleteCompanyZoneRoute(ctx context.Context, arg DeleteCompanyZoneRouteParams) error
 	DeleteLastMileArea(ctx context.Context, arg DeleteLastMileAreaParams) error
 	DeleteMemberBranches(ctx context.Context, memberID uuid.UUID) error
 	DeleteMemberRoles(ctx context.Context, memberID uuid.UUID) error
+	DeletePricingZoneRate(ctx context.Context, arg DeletePricingZoneRateParams) error
 	DeleteRolePermissions(ctx context.Context, roleID uuid.UUID) error
 	DeleteServiceZone(ctx context.Context, arg DeleteServiceZoneParams) error
 	DuplicateCompanyBookingRoute(ctx context.Context, arg DuplicateCompanyBookingRouteParams) (CompanyBookingRoute, error)
@@ -77,12 +82,15 @@ type Querier interface {
 	GetCompanyMemberByID(ctx context.Context, arg GetCompanyMemberByIDParams) (CompanyMember, error)
 	GetCompanyReviewSummary(ctx context.Context, companyID uuid.UUID) (GetCompanyReviewSummaryRow, error)
 	GetCompanyRole(ctx context.Context, arg GetCompanyRoleParams) (Role, error)
+	GetCompanyServiceZone(ctx context.Context, arg GetCompanyServiceZoneParams) (GetCompanyServiceZoneRow, error)
 	GetCompanySettings(ctx context.Context, companyID uuid.UUID) (CompanySetting, error)
+	GetCompanyZoneRoute(ctx context.Context, arg GetCompanyZoneRouteParams) (PricingZoneRate, error)
 	GetCustomerSavedQuoteByReference(ctx context.Context, arg GetCustomerSavedQuoteByReferenceParams) (GetCustomerSavedQuoteByReferenceRow, error)
 	GetDriverActiveAssignment(ctx context.Context, arg GetDriverActiveAssignmentParams) (GetDriverActiveAssignmentRow, error)
 	GetDriverProfileForPortal(ctx context.Context, portalTokenHash string) (GetDriverProfileForPortalRow, error)
 	GetDriverProfileForPortalByID(ctx context.Context, id uuid.UUID) (GetDriverProfileForPortalByIDRow, error)
 	GetEmailVerificationByHash(ctx context.Context, tokenHash string) (EmailVerification, error)
+	GetGeoZone(ctx context.Context, id uuid.UUID) (GeoZone, error)
 	GetInvitationByToken(ctx context.Context, tokenHash string) (CompanyInvitation, error)
 	GetInvitationDetails(ctx context.Context, tokenHash string) (GetInvitationDetailsRow, error)
 	GetItemCategoryPolicy(ctx context.Context, id uuid.UUID) (GetItemCategoryPolicyRow, error)
@@ -91,13 +99,16 @@ type Querier interface {
 	GetMarketplaceQuoteByReference(ctx context.Context, quoteReference string) (MarketplaceQuote, error)
 	GetMarketplaceSettings(ctx context.Context, companyID uuid.UUID) (MarketplaceSetting, error)
 	GetPasswordResetByHash(ctx context.Context, tokenHash string) (PasswordReset, error)
+	GetPricingZoneRate(ctx context.Context, arg GetPricingZoneRateParams) (PricingZoneRate, error)
 	GetPublicBookingPage(ctx context.Context, slug string) (GetPublicBookingPageRow, error)
 	GetPublicBookingRoute(ctx context.Context, arg GetPublicBookingRouteParams) (GetPublicBookingRouteRow, error)
+	GetPublicBookingZoneRoute(ctx context.Context, arg GetPublicBookingZoneRouteParams) (GetPublicBookingZoneRouteRow, error)
 	GetPublicCompanyBySubdomain(ctx context.Context, subdomain string) (GetPublicCompanyBySubdomainRow, error)
 	GetRefreshTokenByHash(ctx context.Context, tokenHash string) (RefreshToken, error)
 	GetRoleByCompanyAndKey(ctx context.Context, arg GetRoleByCompanyAndKeyParams) (Role, error)
 	GetSavedQuoteForCustomer(ctx context.Context, arg GetSavedQuoteForCustomerParams) (CustomerSavedQuote, error)
 	GetSavedQuoteForGuest(ctx context.Context, arg GetSavedQuoteForGuestParams) (CustomerSavedQuote, error)
+	GetServiceZone(ctx context.Context, arg GetServiceZoneParams) (ServiceZone, error)
 	GetSubdomainByCompany(ctx context.Context, companyID uuid.UUID) (CompanySubdomain, error)
 	GetSystemRoleByKey(ctx context.Context, key string) (Role, error)
 	GetUserByEmail(ctx context.Context, email string) (User, error)
@@ -117,12 +128,17 @@ type Querier interface {
 	ListCompanyMembers(ctx context.Context, companyID uuid.UUID) ([]ListCompanyMembersRow, error)
 	ListCompanyRequests(ctx context.Context, companyID uuid.UUID) ([]ListCompanyRequestsRow, error)
 	ListCompanyReviews(ctx context.Context, companyID uuid.UUID) ([]ListCompanyReviewsRow, error)
+	ListCompanyServiceZones(ctx context.Context, companyID uuid.UUID) ([]ListCompanyServiceZonesRow, error)
+	ListCompanyZoneRoutes(ctx context.Context, companyID uuid.UUID) ([]ListCompanyZoneRoutesRow, error)
 	ListCustomerAccounts(ctx context.Context) ([]ListCustomerAccountsRow, error)
 	ListCustomerBookings(ctx context.Context, customerID *uuid.UUID) ([]ListCustomerBookingsRow, error)
 	ListCustomerSavedQuotes(ctx context.Context, customerID *uuid.UUID) ([]ListCustomerSavedQuotesRow, error)
 	ListDeliveryTimeline(ctx context.Context, arg ListDeliveryTimelineParams) ([]DeliveryTimelineEvent, error)
 	ListDriverProfiles(ctx context.Context, companyID uuid.UUID) ([]ListDriverProfilesRow, error)
 	ListDriversOnRoad(ctx context.Context, companyID uuid.UUID) ([]ListDriversOnRoadRow, error)
+	ListGeoLgas(ctx context.Context, state string) ([]string, error)
+	ListGeoStates(ctx context.Context) ([]string, error)
+	ListGeoZones(ctx context.Context, arg ListGeoZonesParams) ([]GeoZone, error)
 	ListInvitationBranchIDs(ctx context.Context, invitationID uuid.UUID) ([]uuid.UUID, error)
 	ListLastMileAreas(ctx context.Context, companyID uuid.UUID) ([]LastMileServiceArea, error)
 	ListMarketplaceLastMileAreas(ctx context.Context, arg ListMarketplaceLastMileAreasParams) ([]ListMarketplaceLastMileAreasRow, error)
@@ -130,6 +146,7 @@ type Querier interface {
 	ListMarketplaceProviderRoutes(ctx context.Context, companyID uuid.UUID) ([]ListMarketplaceProviderRoutesRow, error)
 	ListMarketplaceProviders(ctx context.Context, arg ListMarketplaceProvidersParams) ([]ListMarketplaceProvidersRow, error)
 	ListMarketplaceRoutesForLane(ctx context.Context, arg ListMarketplaceRoutesForLaneParams) ([]ListMarketplaceRoutesForLaneRow, error)
+	ListMarketplaceZoneRoutesForLane(ctx context.Context, arg ListMarketplaceZoneRoutesForLaneParams) ([]ListMarketplaceZoneRoutesForLaneRow, error)
 	ListMemberBranchIDs(ctx context.Context, arg ListMemberBranchIDsParams) ([]uuid.UUID, error)
 	ListMemberBranches(ctx context.Context, arg ListMemberBranchesParams) ([]ListMemberBranchesRow, error)
 	ListMemberRoles(ctx context.Context, memberID uuid.UUID) ([]string, error)
@@ -137,7 +154,9 @@ type Querier interface {
 	ListPlatformAdmins(ctx context.Context) ([]ListPlatformAdminsRow, error)
 	ListProviderCompanies(ctx context.Context) ([]ListProviderCompaniesRow, error)
 	ListPublicBookingRoutes(ctx context.Context, companyID uuid.UUID) ([]ListPublicBookingRoutesRow, error)
+	ListPublicBookingZoneRoutes(ctx context.Context, companyID uuid.UUID) ([]ListPublicBookingZoneRoutesRow, error)
 	ListPublicCompanyBranches(ctx context.Context, companyID uuid.UUID) ([]ListPublicCompanyBranchesRow, error)
+	ListReachableDestinationZones(ctx context.Context, originZoneID uuid.UUID) ([]ListReachableDestinationZonesRow, error)
 	ListRolePermissionKeys(ctx context.Context, roleID uuid.UUID) ([]string, error)
 	ListRolesForCompany(ctx context.Context, companyID *uuid.UUID) ([]ListRolesForCompanyRow, error)
 	ListServiceZones(ctx context.Context, arg ListServiceZonesParams) ([]ServiceZone, error)
@@ -158,6 +177,7 @@ type Querier interface {
 	RotateRefreshToken(ctx context.Context, arg RotateRefreshTokenParams) error
 	SetBranchStatus(ctx context.Context, arg SetBranchStatusParams) (Branch, error)
 	SetCompanyBookingRouteStatus(ctx context.Context, arg SetCompanyBookingRouteStatusParams) (CompanyBookingRoute, error)
+	SetCompanyZoneRouteStatus(ctx context.Context, arg SetCompanyZoneRouteStatusParams) (PricingZoneRate, error)
 	SetDriverPortalTokenHash(ctx context.Context, arg SetDriverPortalTokenHashParams) error
 	SetDriverProfileStatus(ctx context.Context, arg SetDriverProfileStatusParams) (SetDriverProfileStatusRow, error)
 	SoftDeleteMember(ctx context.Context, arg SoftDeleteMemberParams) error
@@ -172,14 +192,18 @@ type Querier interface {
 	UpdateCompanyDelivery(ctx context.Context, arg UpdateCompanyDeliveryParams) (Delivery, error)
 	UpdateCompanyDeliveryStatus(ctx context.Context, arg UpdateCompanyDeliveryStatusParams) (Delivery, error)
 	UpdateCompanyRole(ctx context.Context, arg UpdateCompanyRoleParams) (Role, error)
+	UpdateCompanyServiceZone(ctx context.Context, arg UpdateCompanyServiceZoneParams) (ServiceZone, error)
 	UpdateCompanySettings(ctx context.Context, arg UpdateCompanySettingsParams) (CompanySetting, error)
 	UpdateCompanyVerification(ctx context.Context, arg UpdateCompanyVerificationParams) (Company, error)
+	UpdateCompanyZoneRoute(ctx context.Context, arg UpdateCompanyZoneRouteParams) (PricingZoneRate, error)
 	UpdateDriverProfile(ctx context.Context, arg UpdateDriverProfileParams) (UpdateDriverProfileRow, error)
 	UpdateInvitationToken(ctx context.Context, arg UpdateInvitationTokenParams) (CompanyInvitation, error)
 	UpdateItemCategoryPolicy(ctx context.Context, arg UpdateItemCategoryPolicyParams) (UpdateItemCategoryPolicyRow, error)
 	UpdateLastMileArea(ctx context.Context, arg UpdateLastMileAreaParams) (LastMileServiceArea, error)
 	UpdateMemberProfile(ctx context.Context, arg UpdateMemberProfileParams) (CompanyMember, error)
 	UpdateMemberStatus(ctx context.Context, arg UpdateMemberStatusParams) error
+	UpdatePricingZoneRate(ctx context.Context, arg UpdatePricingZoneRateParams) (PricingZoneRate, error)
+	UpdateServiceZone(ctx context.Context, arg UpdateServiceZoneParams) (ServiceZone, error)
 	UpdateUserPassword(ctx context.Context, arg UpdateUserPasswordParams) error
 	UpdateUserProfile(ctx context.Context, arg UpdateUserProfileParams) (User, error)
 	UpsertBookingPage(ctx context.Context, arg UpsertBookingPageParams) (BookingPage, error)

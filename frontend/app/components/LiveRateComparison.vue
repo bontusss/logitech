@@ -22,7 +22,18 @@ const props = defineProps<{
   search: MarketplaceSearchPayload | null
 }>()
 
-const visibleQuotes = computed<MarketplaceQuote[]>(() => props.response?.quotes.slice(0, 3) ?? [])
+const sortMode = ref<'cheapest' | 'rating' | 'fastest'>('cheapest')
+const visibleQuotes = computed<MarketplaceQuote[]>(() => {
+  const quotes = [...(props.response?.quotes ?? [])]
+  if (sortMode.value === 'rating') {
+    quotes.sort((a, b) => b.provider_rating - a.provider_rating || a.total_price_minor - b.total_price_minor)
+  } else if (sortMode.value === 'fastest') {
+    quotes.sort((a, b) => a.estimated_duration_days - b.estimated_duration_days || a.total_price_minor - b.total_price_minor)
+  } else {
+    quotes.sort((a, b) => a.total_price_minor - b.total_price_minor)
+  }
+  return quotes.slice(0, 3)
+})
 const totalQuotes = computed(() => props.response?.quotes.length ?? 0)
 
 const categories: Record<string, string> = {
@@ -33,7 +44,6 @@ const categories: Record<string, string> = {
   jewelry: 'Jewelry',
   other: 'Other',
 }
-const isLastMile = computed(() => props.search?.service_type === 'last_mile')
 
 function bookingHref(quote: MarketplaceQuote) {
   return quote.booking_slug ? `/book/${encodeURIComponent(quote.booking_slug)}` : undefined
@@ -79,8 +89,8 @@ function providerInitial(quote: MarketplaceQuote) {
       <Loader2 :size="26" class="animate-spin text-accent-600 dark:text-accent-400" />
       <p class="text-[13px] font-semibold">Checking available providers…</p>
       <p v-if="search" class="max-w-[280px] text-[11.5px] leading-relaxed text-ink-900/50">
-        Contacting {{ isLastMile ? 'last-mile providers covering' : 'providers serving' }}
-        {{ search.origin_city }} → {{ search.destination_city }}.
+        Contacting providers with active routes
+        {{ search.origin_label || 'your pickup zone' }} → {{ search.destination_label || 'your destination zone' }}.
         This usually takes a few seconds.
       </p>
     </div>
@@ -96,14 +106,11 @@ function providerInitial(quote: MarketplaceQuote) {
     <template v-else-if="response && search">
       <div class="mt-4 flex items-center justify-between gap-3 rounded-xl border border-ink-900/8 bg-canvas px-3.5 py-3 dark:border-white/10 dark:bg-white/5">
         <div class="min-w-0">
-          <p class="text-[9px] font-semibold tracking-[0.12em] text-ink-900/60 uppercase">{{ isLastMile ? 'Local route' : 'Route' }}</p>
+          <p class="text-[9px] font-semibold tracking-[0.12em] text-ink-900/60 uppercase">Zone route</p>
           <p class="mt-0.5 truncate text-[13px] font-semibold">
-            {{ search.origin_city }}
+            {{ search.origin_label || 'Pickup zone' }}
             <span class="px-1 text-accent-600 dark:text-accent-400">→</span>
-            {{ search.destination_city }}
-          </p>
-          <p v-if="isLastMile && search.distance_km" class="mt-0.5 text-[10px] text-ink-900/45">
-            {{ search.distance_km.toLocaleString() }} km verified distance
+            {{ search.destination_label || 'Destination zone' }}
           </p>
         </div>
         <div class="shrink-0 text-right">
@@ -114,18 +121,33 @@ function providerInitial(quote: MarketplaceQuote) {
         </div>
       </div>
 
+      <div v-if="totalQuotes" class="mt-4 flex items-center gap-1 rounded-xl border border-ink-900/8 bg-canvas p-1 text-[10.5px] font-semibold">
+        <button
+          v-for="option in ([
+            { id: 'cheapest', label: 'Cheapest' },
+            { id: 'rating', label: 'Top rated' },
+            { id: 'fastest', label: 'Fastest' },
+          ] as const)"
+          :key="option.id"
+          type="button"
+          class="flex-1 rounded-lg px-2 py-1.5 transition"
+          :class="sortMode === option.id ? 'bg-surface text-ink-900 shadow-sm' : 'text-ink-900/50'"
+          @click="sortMode = option.id"
+        >
+          {{ option.label }}
+        </button>
+      </div>
+
       <div v-if="totalQuotes === 0" class="flex flex-col items-center gap-2.5 py-10 text-center">
         <IconTile tone="neutral" rounded="2xl">
           <Truck :size="18" />
         </IconTile>
         <p class="text-[13px] font-semibold">
-          {{ isLastMile ? 'No last-mile providers cover this route yet' : 'No providers found for this route yet' }}
+          No provider routes this lane yet
         </p>
         <p class="max-w-[300px] text-[11.5px] leading-relaxed text-ink-900/50">
           {{ response.meta.providers_considered }} provider(s) were checked.
-          {{ isLastMile
-            ? 'Try another nearby drop-off, or check back after providers activate coverage in this area.'
-            : 'Try a nearby city pair or check back after providers publish this lane.' }}
+          Try a nearby destination zone or check back after providers publish this route.
         </p>
       </div>
 
@@ -229,11 +251,11 @@ function providerInitial(quote: MarketplaceQuote) {
     <p class="mt-4 flex items-start gap-2 border-t border-ink-900/8 pt-3 text-[10px] leading-relaxed text-ink-900/50 dark:border-white/10">
       <ShieldCheck :size="13" class="mt-0.5 shrink-0 text-success-600" />
       <span v-if="response && totalQuotes > 0">
-        {{ isLastMile ? 'Local prices use the Mapbox road distance and each provider’s active coverage.' : 'Prices come from each provider’s published rates.' }}
+        Prices come from each provider’s directional zone route.
         Selecting a provider opens their booking page in a new tab.
       </span>
       <span v-else>
-        {{ isLastMile ? 'Local prices use verified Mapbox addresses and provider coverage, never sample data.' : 'Prices come from each provider’s published rates, never from sample data.' }}
+        Prices come from each provider’s published zone routes, never from sample data.
       </span>
     </p>
   </div>

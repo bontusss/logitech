@@ -14,6 +14,7 @@ var (
 	ErrParcelTooLarge     = errors.New("service: package exceeds the provider's dimension limit")
 	ErrNoRateConfigured   = errors.New("service: no valid rate is configured")
 	ErrCategoryNotAllowed = errors.New("service: provider does not accept this item category")
+	ErrInvalidWeight      = errors.New("service: parcel weight must be greater than zero")
 )
 
 // IntercityRateInput is the single intercity pricing formula used everywhere:

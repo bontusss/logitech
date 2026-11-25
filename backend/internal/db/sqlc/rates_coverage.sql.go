@@ -108,20 +108,20 @@ func (q *Queries) CreateLastMileArea(ctx context.Context, arg CreateLastMileArea
 }
 
 const createPricingZoneRate = `-- name: CreatePricingZoneRate :one
-INSERT INTO pricing_zone_rates (area_id,from_zone_id,to_zone_id,price_minor)
-SELECT $1,$2,$3,$4 WHERE EXISTS (
+INSERT INTO pricing_zone_rates (company_id,area_id,from_zone_id,to_zone_id,price_minor)
+SELECT $5,$1,$2,$3,$4 WHERE EXISTS (
   SELECT 1 FROM last_mile_service_areas a WHERE a.id=$1 AND a.company_id=$5
 ) AND EXISTS (SELECT 1 FROM service_zones z WHERE z.id=$2 AND z.area_id=$1)
 AND EXISTS (SELECT 1 FROM service_zones z WHERE z.id=$3 AND z.area_id=$1)
-RETURNING id, area_id, from_zone_id, to_zone_id, price_minor, created_at, updated_at
+RETURNING id, company_id, area_id, from_zone_id, to_zone_id, price_minor, included_weight_kg, additional_weight_fee_minor, status, created_at, updated_at
 `
 
 type CreatePricingZoneRateParams struct {
-	AreaID     uuid.UUID `json:"area_id"`
-	FromZoneID uuid.UUID `json:"from_zone_id"`
-	ToZoneID   uuid.UUID `json:"to_zone_id"`
-	PriceMinor int64     `json:"price_minor"`
-	CompanyID  uuid.UUID `json:"company_id"`
+	AreaID     *uuid.UUID `json:"area_id"`
+	FromZoneID uuid.UUID  `json:"from_zone_id"`
+	ToZoneID   uuid.UUID  `json:"to_zone_id"`
+	PriceMinor int64      `json:"price_minor"`
+	CompanyID  uuid.UUID  `json:"company_id"`
 }
 
 func (q *Queries) CreatePricingZoneRate(ctx context.Context, arg CreatePricingZoneRateParams) (PricingZoneRate, error) {
@@ -135,10 +135,14 @@ func (q *Queries) CreatePricingZoneRate(ctx context.Context, arg CreatePricingZo
 	var i PricingZoneRate
 	err := row.Scan(
 		&i.ID,
+		&i.CompanyID,
 		&i.AreaID,
 		&i.FromZoneID,
 		&i.ToZoneID,
 		&i.PriceMinor,
+		&i.IncludedWeightKg,
+		&i.AdditionalWeightFeeMinor,
+		&i.Status,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -146,20 +150,21 @@ func (q *Queries) CreatePricingZoneRate(ctx context.Context, arg CreatePricingZo
 }
 
 const createServiceZone = `-- name: CreateServiceZone :one
-INSERT INTO service_zones (area_id,name,neighbourhoods,state,city,lga,custom_location)
-SELECT $1,$2,$3,$4,$5,$6,$7 FROM last_mile_service_areas
-WHERE id=$1 AND company_id=$8 RETURNING id, area_id, name, neighbourhoods, state, city, lga, custom_location, created_at, updated_at
+INSERT INTO service_zones (company_id,area_id,name,neighbourhoods,state,city,lga,custom_location,parent_zone_id)
+SELECT $9,$1,$2,$3,$4,$5,$6,$7,$8 FROM last_mile_service_areas
+WHERE id=$1 AND company_id=$9 RETURNING id, company_id, area_id, geo_zone_id, name, neighbourhoods, state, city, lga, custom_location, parent_zone_id, created_at, updated_at
 `
 
 type CreateServiceZoneParams struct {
-	AreaID         uuid.UUID `json:"area_id"`
-	Name           string    `json:"name"`
-	Neighbourhoods []string  `json:"neighbourhoods"`
-	State          *string   `json:"state"`
-	City           *string   `json:"city"`
-	Lga            *string   `json:"lga"`
-	CustomLocation *string   `json:"custom_location"`
-	CompanyID      uuid.UUID `json:"company_id"`
+	AreaID         *uuid.UUID `json:"area_id"`
+	Name           string     `json:"name"`
+	Neighbourhoods []string   `json:"neighbourhoods"`
+	State          *string    `json:"state"`
+	City           *string    `json:"city"`
+	Lga            *string    `json:"lga"`
+	CustomLocation *string    `json:"custom_location"`
+	ParentZoneID   *uuid.UUID `json:"parent_zone_id"`
+	CompanyID      uuid.UUID  `json:"company_id"`
 }
 
 func (q *Queries) CreateServiceZone(ctx context.Context, arg CreateServiceZoneParams) (ServiceZone, error) {
@@ -171,18 +176,22 @@ func (q *Queries) CreateServiceZone(ctx context.Context, arg CreateServiceZonePa
 		arg.City,
 		arg.Lga,
 		arg.CustomLocation,
+		arg.ParentZoneID,
 		arg.CompanyID,
 	)
 	var i ServiceZone
 	err := row.Scan(
 		&i.ID,
+		&i.CompanyID,
 		&i.AreaID,
+		&i.GeoZoneID,
 		&i.Name,
 		&i.Neighbourhoods,
 		&i.State,
 		&i.City,
 		&i.Lga,
 		&i.CustomLocation,
+		&i.ParentZoneID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -214,6 +223,22 @@ type DeleteLastMileAreaParams struct {
 
 func (q *Queries) DeleteLastMileArea(ctx context.Context, arg DeleteLastMileAreaParams) error {
 	_, err := q.db.Exec(ctx, deleteLastMileArea, arg.CompanyID, arg.ID)
+	return err
+}
+
+const deletePricingZoneRate = `-- name: DeletePricingZoneRate :exec
+DELETE FROM pricing_zone_rates r USING last_mile_service_areas a
+WHERE r.id=$3 AND r.area_id=$2 AND r.area_id=a.id AND a.company_id=$1
+`
+
+type DeletePricingZoneRateParams struct {
+	CompanyID uuid.UUID  `json:"company_id"`
+	AreaID    *uuid.UUID `json:"area_id"`
+	ID        uuid.UUID  `json:"id"`
+}
+
+func (q *Queries) DeletePricingZoneRate(ctx context.Context, arg DeletePricingZoneRateParams) error {
+	_, err := q.db.Exec(ctx, deletePricingZoneRate, arg.CompanyID, arg.AreaID, arg.ID)
 	return err
 }
 
@@ -329,6 +354,68 @@ func (q *Queries) GetLastMileArea(ctx context.Context, arg GetLastMileAreaParams
 	return i, err
 }
 
+const getPricingZoneRate = `-- name: GetPricingZoneRate :one
+SELECT r.id, r.company_id, r.area_id, r.from_zone_id, r.to_zone_id, r.price_minor, r.included_weight_kg, r.additional_weight_fee_minor, r.status, r.created_at, r.updated_at FROM pricing_zone_rates r JOIN last_mile_service_areas a ON a.id=r.area_id
+WHERE a.company_id=$1 AND r.area_id=$2 AND r.id=$3
+`
+
+type GetPricingZoneRateParams struct {
+	CompanyID uuid.UUID  `json:"company_id"`
+	AreaID    *uuid.UUID `json:"area_id"`
+	ID        uuid.UUID  `json:"id"`
+}
+
+func (q *Queries) GetPricingZoneRate(ctx context.Context, arg GetPricingZoneRateParams) (PricingZoneRate, error) {
+	row := q.db.QueryRow(ctx, getPricingZoneRate, arg.CompanyID, arg.AreaID, arg.ID)
+	var i PricingZoneRate
+	err := row.Scan(
+		&i.ID,
+		&i.CompanyID,
+		&i.AreaID,
+		&i.FromZoneID,
+		&i.ToZoneID,
+		&i.PriceMinor,
+		&i.IncludedWeightKg,
+		&i.AdditionalWeightFeeMinor,
+		&i.Status,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getServiceZone = `-- name: GetServiceZone :one
+SELECT z.id, z.company_id, z.area_id, z.geo_zone_id, z.name, z.neighbourhoods, z.state, z.city, z.lga, z.custom_location, z.parent_zone_id, z.created_at, z.updated_at FROM service_zones z JOIN last_mile_service_areas a ON a.id=z.area_id
+WHERE a.company_id=$1 AND z.area_id=$2 AND z.id=$3
+`
+
+type GetServiceZoneParams struct {
+	CompanyID uuid.UUID  `json:"company_id"`
+	AreaID    *uuid.UUID `json:"area_id"`
+	ID        uuid.UUID  `json:"id"`
+}
+
+func (q *Queries) GetServiceZone(ctx context.Context, arg GetServiceZoneParams) (ServiceZone, error) {
+	row := q.db.QueryRow(ctx, getServiceZone, arg.CompanyID, arg.AreaID, arg.ID)
+	var i ServiceZone
+	err := row.Scan(
+		&i.ID,
+		&i.CompanyID,
+		&i.AreaID,
+		&i.GeoZoneID,
+		&i.Name,
+		&i.Neighbourhoods,
+		&i.State,
+		&i.City,
+		&i.Lga,
+		&i.CustomLocation,
+		&i.ParentZoneID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const listLastMileAreas = `-- name: ListLastMileAreas :many
 SELECT id, company_id, name, state, city, coverage_status, pricing_model, flat_price_minor, base_delivery_fee_minor, price_per_km_minor, minimum_fee_minor, maximum_distance_km, maximum_fee_minor, volumetric_divisor, price_is_estimate, max_weight_kg, max_length_cm, max_width_cm, max_height_cm, express_available, pickup_available, delivery_available, operating_hours, supported_parcel_types, created_at, updated_at FROM last_mile_service_areas WHERE company_id = $1 ORDER BY created_at DESC
 `
@@ -381,13 +468,13 @@ func (q *Queries) ListLastMileAreas(ctx context.Context, companyID uuid.UUID) ([
 }
 
 const listServiceZones = `-- name: ListServiceZones :many
-SELECT z.id, z.area_id, z.name, z.neighbourhoods, z.state, z.city, z.lga, z.custom_location, z.created_at, z.updated_at FROM service_zones z JOIN last_mile_service_areas a ON a.id=z.area_id
+SELECT z.id, z.company_id, z.area_id, z.geo_zone_id, z.name, z.neighbourhoods, z.state, z.city, z.lga, z.custom_location, z.parent_zone_id, z.created_at, z.updated_at FROM service_zones z JOIN last_mile_service_areas a ON a.id=z.area_id
 WHERE a.company_id=$1 AND z.area_id=$2 ORDER BY z.created_at
 `
 
 type ListServiceZonesParams struct {
-	CompanyID uuid.UUID `json:"company_id"`
-	AreaID    uuid.UUID `json:"area_id"`
+	CompanyID uuid.UUID  `json:"company_id"`
+	AreaID    *uuid.UUID `json:"area_id"`
 }
 
 func (q *Queries) ListServiceZones(ctx context.Context, arg ListServiceZonesParams) ([]ServiceZone, error) {
@@ -401,13 +488,16 @@ func (q *Queries) ListServiceZones(ctx context.Context, arg ListServiceZonesPara
 		var i ServiceZone
 		if err := rows.Scan(
 			&i.ID,
+			&i.CompanyID,
 			&i.AreaID,
+			&i.GeoZoneID,
 			&i.Name,
 			&i.Neighbourhoods,
 			&i.State,
 			&i.City,
 			&i.Lga,
 			&i.CustomLocation,
+			&i.ParentZoneID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -422,13 +512,13 @@ func (q *Queries) ListServiceZones(ctx context.Context, arg ListServiceZonesPara
 }
 
 const listZoneRates = `-- name: ListZoneRates :many
-SELECT r.id, r.area_id, r.from_zone_id, r.to_zone_id, r.price_minor, r.created_at, r.updated_at FROM pricing_zone_rates r JOIN last_mile_service_areas a ON a.id=r.area_id
+SELECT r.id, r.company_id, r.area_id, r.from_zone_id, r.to_zone_id, r.price_minor, r.included_weight_kg, r.additional_weight_fee_minor, r.status, r.created_at, r.updated_at FROM pricing_zone_rates r JOIN last_mile_service_areas a ON a.id=r.area_id
 WHERE a.company_id=$1 AND r.area_id=$2
 `
 
 type ListZoneRatesParams struct {
-	CompanyID uuid.UUID `json:"company_id"`
-	AreaID    uuid.UUID `json:"area_id"`
+	CompanyID uuid.UUID  `json:"company_id"`
+	AreaID    *uuid.UUID `json:"area_id"`
 }
 
 func (q *Queries) ListZoneRates(ctx context.Context, arg ListZoneRatesParams) ([]PricingZoneRate, error) {
@@ -442,10 +532,14 @@ func (q *Queries) ListZoneRates(ctx context.Context, arg ListZoneRatesParams) ([
 		var i PricingZoneRate
 		if err := rows.Scan(
 			&i.ID,
+			&i.CompanyID,
 			&i.AreaID,
 			&i.FromZoneID,
 			&i.ToZoneID,
 			&i.PriceMinor,
+			&i.IncludedWeightKg,
+			&i.AdditionalWeightFeeMinor,
+			&i.Status,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -465,8 +559,8 @@ WHERE r.area_id=a.id AND a.company_id=$1 AND r.area_id=$2
 `
 
 type ReplacePricingZoneRatesParams struct {
-	CompanyID uuid.UUID `json:"company_id"`
-	AreaID    uuid.UUID `json:"area_id"`
+	CompanyID uuid.UUID  `json:"company_id"`
+	AreaID    *uuid.UUID `json:"area_id"`
 }
 
 func (q *Queries) ReplacePricingZoneRates(ctx context.Context, arg ReplacePricingZoneRatesParams) error {
@@ -564,6 +658,101 @@ func (q *Queries) UpdateLastMileArea(ctx context.Context, arg UpdateLastMileArea
 		&i.DeliveryAvailable,
 		&i.OperatingHours,
 		&i.SupportedParcelTypes,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const updatePricingZoneRate = `-- name: UpdatePricingZoneRate :one
+UPDATE pricing_zone_rates r SET from_zone_id=$4, to_zone_id=$5, price_minor=$6, updated_at=now()
+FROM last_mile_service_areas a
+WHERE r.id=$3 AND r.area_id=$2 AND r.area_id=a.id AND a.company_id=$1
+RETURNING r.id, r.company_id, r.area_id, r.from_zone_id, r.to_zone_id, r.price_minor, r.included_weight_kg, r.additional_weight_fee_minor, r.status, r.created_at, r.updated_at
+`
+
+type UpdatePricingZoneRateParams struct {
+	CompanyID  uuid.UUID  `json:"company_id"`
+	AreaID     *uuid.UUID `json:"area_id"`
+	ID         uuid.UUID  `json:"id"`
+	FromZoneID uuid.UUID  `json:"from_zone_id"`
+	ToZoneID   uuid.UUID  `json:"to_zone_id"`
+	PriceMinor int64      `json:"price_minor"`
+}
+
+func (q *Queries) UpdatePricingZoneRate(ctx context.Context, arg UpdatePricingZoneRateParams) (PricingZoneRate, error) {
+	row := q.db.QueryRow(ctx, updatePricingZoneRate,
+		arg.CompanyID,
+		arg.AreaID,
+		arg.ID,
+		arg.FromZoneID,
+		arg.ToZoneID,
+		arg.PriceMinor,
+	)
+	var i PricingZoneRate
+	err := row.Scan(
+		&i.ID,
+		&i.CompanyID,
+		&i.AreaID,
+		&i.FromZoneID,
+		&i.ToZoneID,
+		&i.PriceMinor,
+		&i.IncludedWeightKg,
+		&i.AdditionalWeightFeeMinor,
+		&i.Status,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const updateServiceZone = `-- name: UpdateServiceZone :one
+UPDATE service_zones z SET name=$4, neighbourhoods=$5, state=$6, city=$7, lga=$8,
+  custom_location=$9, parent_zone_id=$10, updated_at=now()
+FROM last_mile_service_areas a
+WHERE z.id=$3 AND z.area_id=$2 AND z.area_id=a.id AND a.company_id=$1
+RETURNING z.id, z.company_id, z.area_id, z.geo_zone_id, z.name, z.neighbourhoods, z.state, z.city, z.lga, z.custom_location, z.parent_zone_id, z.created_at, z.updated_at
+`
+
+type UpdateServiceZoneParams struct {
+	CompanyID      uuid.UUID  `json:"company_id"`
+	AreaID         *uuid.UUID `json:"area_id"`
+	ID             uuid.UUID  `json:"id"`
+	Name           string     `json:"name"`
+	Neighbourhoods []string   `json:"neighbourhoods"`
+	State          *string    `json:"state"`
+	City           *string    `json:"city"`
+	Lga            *string    `json:"lga"`
+	CustomLocation *string    `json:"custom_location"`
+	ParentZoneID   *uuid.UUID `json:"parent_zone_id"`
+}
+
+func (q *Queries) UpdateServiceZone(ctx context.Context, arg UpdateServiceZoneParams) (ServiceZone, error) {
+	row := q.db.QueryRow(ctx, updateServiceZone,
+		arg.CompanyID,
+		arg.AreaID,
+		arg.ID,
+		arg.Name,
+		arg.Neighbourhoods,
+		arg.State,
+		arg.City,
+		arg.Lga,
+		arg.CustomLocation,
+		arg.ParentZoneID,
+	)
+	var i ServiceZone
+	err := row.Scan(
+		&i.ID,
+		&i.CompanyID,
+		&i.AreaID,
+		&i.GeoZoneID,
+		&i.Name,
+		&i.Neighbourhoods,
+		&i.State,
+		&i.City,
+		&i.Lga,
+		&i.CustomLocation,
+		&i.ParentZoneID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)

@@ -15,7 +15,6 @@ import {
   Users,
 } from 'lucide-vue-next'
 import type { Company } from '~/types/auth'
-import { parseProviderBusinessTypes } from '~/utils/providerBusinessTypes'
 
 definePageMeta({ middleware: 'auth', layout: 'app' })
 useSeoMeta({ title: 'Company profile' })
@@ -28,11 +27,6 @@ const verificationError = ref('')
 
 onMounted(() => load())
 
-const lastMileOnly = computed(() => {
-  const types = parseProviderBusinessTypes(detail.value?.company.business_type ?? '')
-  return types.length === 1 && types[0] === 'lastmile'
-})
-
 const links = computed(() => [
   { label: 'Branches', description: 'Locations, managers and staff assignments', to: '/dashboard/company/branches', icon: MapPin, permission: 'branches.view', iconClass: 'bg-brand-100 text-brand-700 dark:bg-brand-400/15 dark:text-brand-200' },
   { label: 'Staff', description: 'Invite, assign and suspend team members', to: '/dashboard/company/staff', icon: Users, permission: 'staff.view', iconClass: 'bg-brand-100 text-brand-700 dark:bg-brand-400/15 dark:text-brand-200' },
@@ -40,7 +34,7 @@ const links = computed(() => [
   { label: 'Booking page', description: 'A public page where customers can reach you', to: '/dashboard/company/booking', icon: CalendarCheck, permission: 'bookings.manage', iconClass: 'bg-brand-100 text-brand-700 dark:bg-brand-400/15 dark:text-brand-200' },
   { label: 'Branding', description: 'Colours, logo and company subdomain', to: '/dashboard/company/branding', icon: Palette, permission: 'branding.manage', iconClass: 'bg-red-100 text-red-700 dark:bg-red-400/15 dark:text-red-200' },
   { label: 'Settings', description: 'Timezone, currency and notifications', to: '/dashboard/company/settings', icon: Settings, permission: 'company.settings.manage', iconClass: 'bg-accent-100 text-accent-700 dark:bg-accent-400/15 dark:text-accent-200' },
-].filter((link) => can(link.permission) && !(link.label === 'Branches' && lastMileOnly.value)))
+].filter((link) => can(link.permission)))
 
 const statusTone = computed(() => {
   switch (detail.value?.company.status) {
