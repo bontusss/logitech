@@ -79,7 +79,7 @@ const bars = [38, 52, 44, 68, 58, 76, 62, 84, 71, 92, 80, 96]
             type="button"
             tabindex="-1"
             class="flex size-8 items-center justify-center rounded-md"
-            :class="index === 0 ? 'bg-accent-500 text-ink-950 shadow-sm shadow-accent-500/40' : 'text-white/35'"
+            :class="index === 0 ? 'bg-accent-500 text-white shadow-sm shadow-accent-500/40' : 'text-white/35'"
             :aria-label="`Dashboard navigation item ${index + 1} (illustrative)`"
           >
             <component :is="icon" :size="15" />

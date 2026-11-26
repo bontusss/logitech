@@ -9,7 +9,7 @@ import { ArrowRight, PackageSearch } from 'lucide-vue-next'
       <div aria-hidden="true" class="absolute -top-32 right-[-4rem] h-[380px] w-[380px] rounded-full bg-accent-500/30 blur-[100px]" />
       <div aria-hidden="true" class="absolute -bottom-32 left-[-4rem] h-[340px] w-[340px] rounded-full bg-brand-400/20 blur-[100px]" />
       <div class="relative mx-auto max-w-[680px] text-center">
-        <div class="mx-auto flex size-12 items-center justify-center rounded-2xl bg-accent-500 text-ink-950 shadow-lg shadow-accent-500/25">
+        <div class="mx-auto flex size-12 items-center justify-center rounded-2xl bg-accent-500 text-white shadow-lg shadow-accent-500/25">
           <PackageSearch :size="21" />
         </div>
         <h2 class="mt-5 text-[clamp(1.8rem,4vw,2.7rem)] leading-[1.05] font-semibold tracking-[-0.045em] text-balance">

@@ -231,7 +231,9 @@ INSERT INTO marketplace_quotes (
   package_snapshot, chargeable_weight_kg, base_price_minor, additional_charges_minor,
   discount_minor, total_price_minor, currency, price_confirmation_type,
   price_breakdown, rate_snapshot, estimated_delivery, estimated_duration_days,
-  pickup_available, delivery_available, delivery_method, conditions, status, expires_at
+  pickup_available, delivery_available, delivery_method, conditions, status, expires_at,
+  service_mode, estimated_pickup, estimated_pickup_hours, estimated_delivery_hours,
+  origin_zone_name, destination_zone_name, dropoff_branch_name, dropoff_branch_address
 ) VALUES (
   sqlc.arg(quote_reference), sqlc.narg(search_id), sqlc.arg(company_id), sqlc.arg(provider_name), sqlc.arg(provider_logo), sqlc.arg(provider_slug), sqlc.narg(route_id),
   sqlc.arg(origin_state), sqlc.arg(origin_city), sqlc.arg(destination_state), sqlc.arg(destination_city),
@@ -241,7 +243,11 @@ INSERT INTO marketplace_quotes (
   sqlc.arg(currency), sqlc.arg(price_confirmation_type), sqlc.arg(price_breakdown),
   sqlc.arg(rate_snapshot), sqlc.narg(estimated_delivery), sqlc.narg(estimated_duration_days),
   sqlc.arg(pickup_available), sqlc.arg(delivery_available), sqlc.arg(delivery_method),
-  sqlc.narg(conditions), 'active', sqlc.arg(expires_at)
+  sqlc.narg(conditions), 'active', sqlc.arg(expires_at),
+  sqlc.arg(service_mode), sqlc.narg(estimated_pickup),
+  sqlc.narg(estimated_pickup_hours), sqlc.narg(estimated_delivery_hours),
+  sqlc.narg(origin_zone_name), sqlc.narg(destination_zone_name),
+  sqlc.narg(dropoff_branch_name), sqlc.narg(dropoff_branch_address)
 )
 RETURNING *;
 

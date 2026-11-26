@@ -20,21 +20,34 @@ type MarketplacePackage struct {
 }
 
 // MarketplaceRouteRequest is the resolved search request.
+//
+// ServiceMode decides how the parcel enters the network: "pickup" means the
+// provider collects it at the sender's verified pin, while "dropoff" means the
+// sender takes it to the provider's hub for the matched route's origin zone.
 type MarketplaceRouteRequest struct {
-	ServiceType       string            `json:"service_type,omitempty"`
-	OriginZoneID      string            `json:"origin_zone_id,omitempty"`
-	DestinationZoneID string            `json:"destination_zone_id,omitempty"`
-	OriginState      string             `json:"origin_state"`
-	OriginCity       string             `json:"origin_city"`
-	DestinationState string             `json:"destination_state"`
-	DestinationCity  string             `json:"destination_city"`
-	PickupAddress    string             `json:"pickup_address,omitempty"`
-	DropoffAddress   string             `json:"dropoff_address,omitempty"`
-	DistanceKm       float64            `json:"distance_km,omitempty"`
-	Speed            string             `json:"speed,omitempty"`
-	Package          MarketplacePackage `json:"package"`
-	PickupRequired   bool               `json:"pickup_required"`
-	DeliveryRequired bool               `json:"delivery_required"`
+	ServiceType          string             `json:"service_type,omitempty"`
+	ServiceMode          string             `json:"service_mode,omitempty"`
+	OriginZoneID         string             `json:"origin_zone_id,omitempty"`
+	DestinationZoneID    string             `json:"destination_zone_id,omitempty"`
+	OriginState          string             `json:"origin_state"`
+	OriginCity           string             `json:"origin_city"`
+	OriginArea           string             `json:"origin_area,omitempty"`
+	DestinationState     string             `json:"destination_state"`
+	DestinationCity      string             `json:"destination_city"`
+	DestinationArea      string             `json:"destination_area,omitempty"`
+	OriginAddress        string             `json:"origin_address,omitempty"`
+	DestinationAddress   string             `json:"destination_address,omitempty"`
+	OriginLatitude       *float64           `json:"origin_latitude,omitempty"`
+	OriginLongitude      *float64           `json:"origin_longitude,omitempty"`
+	DestinationLatitude  *float64           `json:"destination_latitude,omitempty"`
+	DestinationLongitude *float64           `json:"destination_longitude,omitempty"`
+	PickupAddress        string             `json:"pickup_address,omitempty"`
+	DropoffAddress       string             `json:"dropoff_address,omitempty"`
+	DistanceKm           float64            `json:"distance_km,omitempty"`
+	Speed                string             `json:"speed,omitempty"`
+	Package              MarketplacePackage `json:"package"`
+	PickupRequired       bool               `json:"pickup_required"`
+	DeliveryRequired     bool               `json:"delivery_required"`
 }
 
 // ProviderRate is one provider lane, reduced to the fields needed to quote it.
@@ -85,17 +98,26 @@ type MarketplaceQuote struct {
 	ServiceName            string       `json:"service_name"`
 	OriginState            string       `json:"origin_state"`
 	OriginCity             string       `json:"origin_city"`
+	OriginZoneName         string       `json:"origin_zone_name,omitempty"`
 	DestinationState       string       `json:"destination_state"`
 	DestinationCity        string       `json:"destination_city"`
+	DestinationZoneName    string       `json:"destination_zone_name,omitempty"`
+	DropoffBranchName      string       `json:"dropoff_branch_name,omitempty"`
+	DropoffBranchAddress   string       `json:"dropoff_branch_address,omitempty"`
 	BasePriceMinor         int64        `json:"base_price_minor"`
 	ChargeableWeightKg     float64      `json:"chargeable_weight_kg"`
 	AdditionalChargesMinor int64        `json:"additional_charges_minor"`
 	DiscountMinor          int64        `json:"discount_minor"`
 	TotalPriceMinor        int64        `json:"total_price_minor"`
 	Currency               string       `json:"currency"`
+	ServiceMode            string       `json:"service_mode,omitempty"`
 	EstimatedDelivery      string       `json:"estimated_delivery,omitempty"`
 	EstimatedDurationDays  int          `json:"estimated_duration_days"`
+	EstimatedPickup        string       `json:"estimated_pickup,omitempty"`
+	EstimatedPickupHours   *float64     `json:"estimated_pickup_hours,omitempty"`
+	EstimatedDeliveryHours *float64     `json:"estimated_delivery_hours,omitempty"`
 	PickupAvailable        bool         `json:"pickup_available"`
+	DropoffAvailable       bool         `json:"dropoff_available"`
 	DeliveryAvailable      bool         `json:"delivery_available"`
 	DeliveryMethod         string       `json:"delivery_method"`
 	PriceConfirmationType  string       `json:"price_confirmation_type"`
@@ -232,12 +254,24 @@ func BuildProviderQuotes(provider ProviderRate, req MarketplaceRouteRequest, exp
 
 // SortMarketplaceQuotes applies the user-selected order. "recommended" is a
 // transparent score: confirmed prices first, then faster service, then price.
+// Providers that have not configured a pickup or delivery window sort last so
+// a missing estimate never wins a "soonest" comparison.
 func SortMarketplaceQuotes(quotes []MarketplaceQuote, order string) {
 	switch order {
-	case "fastest":
+	case "pickup":
 		sort.SliceStable(quotes, func(i, j int) bool {
-			if quotes[i].EstimatedDurationDays != quotes[j].EstimatedDurationDays {
-				return quotes[i].EstimatedDurationDays < quotes[j].EstimatedDurationDays
+			if less, decided := compareOptionalHours(quotes[i].EstimatedPickupHours, quotes[j].EstimatedPickupHours); decided {
+				return less
+			}
+			if less, decided := compareOptionalHours(quoteDeliveryHours(quotes[i]), quoteDeliveryHours(quotes[j])); decided {
+				return less
+			}
+			return quotes[i].TotalPriceMinor < quotes[j].TotalPriceMinor
+		})
+	case "fastest", "delivery":
+		sort.SliceStable(quotes, func(i, j int) bool {
+			if less, decided := compareOptionalHours(quoteDeliveryHours(quotes[i]), quoteDeliveryHours(quotes[j])); decided {
+				return less
 			}
 			return quotes[i].TotalPriceMinor < quotes[j].TotalPriceMinor
 		})
@@ -265,6 +299,33 @@ func SortMarketplaceQuotes(quotes []MarketplaceQuote, order string) {
 			return quotes[i].TotalPriceMinor < quotes[j].TotalPriceMinor
 		})
 	}
+}
+
+// quoteDeliveryHours returns the configured delivery window, falling back to
+// the service's nominal duration for quotes created before providers could
+// publish a window.
+func quoteDeliveryHours(q MarketplaceQuote) *float64 {
+	if q.EstimatedDeliveryHours != nil {
+		return q.EstimatedDeliveryHours
+	}
+	days := float64(q.EstimatedDurationDays) * 24
+	return &days
+}
+
+func compareOptionalHours(a, b *float64) (less bool, decided bool) {
+	if a == nil && b == nil {
+		return false, false
+	}
+	if a == nil {
+		return false, true
+	}
+	if b == nil {
+		return true, true
+	}
+	if *a == *b {
+		return false, false
+	}
+	return *a < *b, true
 }
 
 // QuoteMatchesFilters implements the UI filters over normalized quotes.

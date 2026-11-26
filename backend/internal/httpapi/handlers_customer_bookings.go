@@ -14,27 +14,130 @@ import (
 )
 
 type customerBookingDTO struct {
-	ID                 uuid.UUID `json:"id"`
-	Status             string    `json:"status"`
-	RequestStatus      string    `json:"request_status"`
-	TrackingCode       *string   `json:"tracking_code"`
-	TrackingURL        *string   `json:"tracking_url"`
-	PickupAddress      string    `json:"pickup_address"`
-	DropoffAddress     string    `json:"dropoff_address"`
-	PackageCategory    string    `json:"package_category"`
-	ItemDescription    string    `json:"item_description"`
-	WeightKg           float64   `json:"weight_kg"`
-	DeliveryPriceMinor int64     `json:"delivery_price_minor"`
-	DeclaredValueMinor int64     `json:"declared_value_minor"`
-	PriceIsEstimate    bool      `json:"price_is_estimate"`
-	DeliverySpeed      string    `json:"delivery_speed"`
-	DistanceKm         float64   `json:"distance_km"`
-	ProviderID         uuid.UUID `json:"provider_id"`
-	ProviderName       string    `json:"provider_name"`
-	ProviderLogoURL    *string   `json:"provider_logo_url"`
-	Currency           string    `json:"currency"`
-	CreatedAt          time.Time `json:"created_at"`
-	UpdatedAt          time.Time `json:"updated_at"`
+	ID                     uuid.UUID `json:"id"`
+	Status                 string    `json:"status"`
+	RequestStatus          string    `json:"request_status"`
+	TrackingCode           *string   `json:"tracking_code"`
+	TrackingURL            *string   `json:"tracking_url"`
+	PickupAddress          string    `json:"pickup_address"`
+	DropoffAddress         string    `json:"dropoff_address"`
+	PackageCategory        string    `json:"package_category"`
+	ItemDescription        string    `json:"item_description"`
+	WeightKg               float64   `json:"weight_kg"`
+	DeliveryPriceMinor     int64     `json:"delivery_price_minor"`
+	DeclaredValueMinor     int64     `json:"declared_value_minor"`
+	PriceIsEstimate        bool      `json:"price_is_estimate"`
+	DeliverySpeed          string    `json:"delivery_speed"`
+	DistanceKm             float64   `json:"distance_km"`
+	SenderName             string    `json:"sender_name"`
+	SenderPhone            string    `json:"sender_phone"`
+	ReceiverName           string    `json:"receiver_name"`
+	ReceiverPhone          string    `json:"receiver_phone"`
+	Payer                  string    `json:"payer"`
+	IsPaid                 bool      `json:"is_paid"`
+	PaymentMethod          *string   `json:"payment_method"`
+	AdditionalInstructions string    `json:"additional_instructions"`
+	PackagePhotoURL        *string   `json:"package_photo_url"`
+	BookingSource          string    `json:"booking_source"`
+	PickupLatitude         float64   `json:"pickup_latitude"`
+	PickupLongitude        float64   `json:"pickup_longitude"`
+	DropoffLatitude        float64   `json:"dropoff_latitude"`
+	DropoffLongitude       float64   `json:"dropoff_longitude"`
+	ProviderID             uuid.UUID `json:"provider_id"`
+	ProviderSlug           string    `json:"provider_slug"`
+	ProviderPhone          string    `json:"provider_phone"`
+	ProviderName           string    `json:"provider_name"`
+	ProviderLogoURL        *string   `json:"provider_logo_url"`
+	Currency               string    `json:"currency"`
+	CanCancel              bool      `json:"can_cancel"`
+	CreatedAt              time.Time `json:"created_at"`
+	UpdatedAt              time.Time `json:"updated_at"`
+}
+
+func customerBookingDTOFromListRow(row db.ListCustomerBookingsRow, appURL string) customerBookingDTO {
+	return customerBookingDTO{
+		ID:                     row.ID,
+		Status:                 row.Status,
+		RequestStatus:          row.RequestStatus,
+		TrackingCode:           row.TrackingCode,
+		TrackingURL:            customerBookingTrackingURL(row.TrackingCode, appURL),
+		PickupAddress:          row.PickupAddress,
+		DropoffAddress:         row.DropoffAddress,
+		PackageCategory:        row.PackageCategory,
+		ItemDescription:        row.ItemDescription,
+		WeightKg:               numericToFloat64(row.WeightKg),
+		DeliveryPriceMinor:     row.DeliveryPriceMinor,
+		DeclaredValueMinor:     row.DeclaredValueMinor,
+		PriceIsEstimate:        row.PriceIsEstimate,
+		DeliverySpeed:          row.DeliverySpeed,
+		DistanceKm:             numericToFloat64(row.DistanceKm),
+		SenderName:             row.SenderName,
+		SenderPhone:            row.SenderPhone,
+		ReceiverName:           row.ReceiverName,
+		ReceiverPhone:          row.ReceiverPhone,
+		Payer:                  row.Payer,
+		IsPaid:                 row.IsPaid,
+		PaymentMethod:          row.PaymentMethod,
+		AdditionalInstructions: row.AdditionalInstructions,
+		PackagePhotoURL:        row.PackagePhotoUrl,
+		BookingSource:          row.BookingSource,
+		PickupLatitude:         numericToFloat64(row.PickupLatitude),
+		PickupLongitude:        numericToFloat64(row.PickupLongitude),
+		DropoffLatitude:        numericToFloat64(row.DropoffLatitude),
+		DropoffLongitude:       numericToFloat64(row.DropoffLongitude),
+		ProviderID:             row.CompanyID,
+		ProviderSlug:           row.CompanySlug,
+		ProviderPhone:          row.CompanyPhone,
+		ProviderName:           row.CompanyName,
+		ProviderLogoURL:        row.CompanyLogoUrl,
+		Currency:               row.Currency,
+		CanCancel:              row.Status == "requested" || row.Status == "created",
+		CreatedAt:              row.CreatedAt,
+		UpdatedAt:              row.UpdatedAt,
+	}
+}
+
+func customerBookingDTOFromGetRow(row db.GetCustomerBookingRow, appURL string) customerBookingDTO {
+	return customerBookingDTO{
+		ID:                     row.ID,
+		Status:                 row.Status,
+		RequestStatus:          row.RequestStatus,
+		TrackingCode:           row.TrackingCode,
+		TrackingURL:            customerBookingTrackingURL(row.TrackingCode, appURL),
+		PickupAddress:          row.PickupAddress,
+		DropoffAddress:         row.DropoffAddress,
+		PackageCategory:        row.PackageCategory,
+		ItemDescription:        row.ItemDescription,
+		WeightKg:               numericToFloat64(row.WeightKg),
+		DeliveryPriceMinor:     row.DeliveryPriceMinor,
+		DeclaredValueMinor:     row.DeclaredValueMinor,
+		PriceIsEstimate:        row.PriceIsEstimate,
+		DeliverySpeed:          row.DeliverySpeed,
+		DistanceKm:             numericToFloat64(row.DistanceKm),
+		SenderName:             row.SenderName,
+		SenderPhone:            row.SenderPhone,
+		ReceiverName:           row.ReceiverName,
+		ReceiverPhone:          row.ReceiverPhone,
+		Payer:                  row.Payer,
+		IsPaid:                 row.IsPaid,
+		PaymentMethod:          row.PaymentMethod,
+		AdditionalInstructions: row.AdditionalInstructions,
+		PackagePhotoURL:        row.PackagePhotoUrl,
+		BookingSource:          row.BookingSource,
+		PickupLatitude:         numericToFloat64(row.PickupLatitude),
+		PickupLongitude:        numericToFloat64(row.PickupLongitude),
+		DropoffLatitude:        numericToFloat64(row.DropoffLatitude),
+		DropoffLongitude:       numericToFloat64(row.DropoffLongitude),
+		ProviderID:             row.CompanyID,
+		ProviderSlug:           row.CompanySlug,
+		ProviderPhone:          row.CompanyPhone,
+		ProviderName:           row.CompanyName,
+		ProviderLogoURL:        row.CompanyLogoUrl,
+		Currency:               row.Currency,
+		CanCancel:              row.Status == "requested" || row.Status == "created",
+		CreatedAt:              row.CreatedAt,
+		UpdatedAt:              row.UpdatedAt,
+	}
 }
 
 func customerBookingTrackingURL(code *string, appURL string) *string {
@@ -54,31 +157,91 @@ func (a *API) listCustomerBookings(c *gin.Context) {
 	}
 	result := make([]customerBookingDTO, 0, len(rows))
 	for _, row := range rows {
-		result = append(result, customerBookingDTO{
-			ID:                 row.ID,
-			Status:             row.Status,
-			RequestStatus:      row.RequestStatus,
-			TrackingCode:       row.TrackingCode,
-			TrackingURL:        customerBookingTrackingURL(row.TrackingCode, a.cfg.AppURL),
-			PickupAddress:      row.PickupAddress,
-			DropoffAddress:     row.DropoffAddress,
-			PackageCategory:    row.PackageCategory,
-			ItemDescription:    row.ItemDescription,
-			WeightKg:           numericToFloat64(row.WeightKg),
-			DeliveryPriceMinor: row.DeliveryPriceMinor,
-			DeclaredValueMinor: row.DeclaredValueMinor,
-			PriceIsEstimate:    row.PriceIsEstimate,
-			DeliverySpeed:      row.DeliverySpeed,
-			DistanceKm:         numericToFloat64(row.DistanceKm),
-			ProviderID:         row.CompanyID,
-			ProviderName:       row.CompanyName,
-			ProviderLogoURL:    row.CompanyLogoUrl,
-			Currency:           row.Currency,
-			CreatedAt:          row.CreatedAt,
-			UpdatedAt:          row.UpdatedAt,
-		})
+		result = append(result, customerBookingDTOFromListRow(row, a.cfg.AppURL))
 	}
 	c.JSON(http.StatusOK, gin.H{"bookings": result})
+}
+
+func (a *API) getCustomerBooking(c *gin.Context) {
+	user, _ := currentUser(c)
+	bookingID, err := uuid.Parse(strings.TrimSpace(c.Param("id")))
+	if err != nil {
+		fail(c, http.StatusBadRequest, "invalid_booking", "That booking reference is invalid.")
+		return
+	}
+	row, err := a.svc.Q.GetCustomerBooking(c.Request.Context(), db.GetCustomerBookingParams{
+		ID:         bookingID,
+		CustomerID: &user.ID,
+	})
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			fail(c, http.StatusNotFound, "booking_not_found", "That booking was not found.")
+			return
+		}
+		a.handleServiceError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"booking": customerBookingDTOFromGetRow(row, a.cfg.AppURL)})
+}
+
+func (a *API) cancelCustomerBooking(c *gin.Context) {
+	user, _ := currentUser(c)
+	bookingID, err := uuid.Parse(strings.TrimSpace(c.Param("id")))
+	if err != nil {
+		fail(c, http.StatusBadRequest, "invalid_booking", "That booking reference is invalid.")
+		return
+	}
+	ctx := c.Request.Context()
+	tx, err := a.svc.DB.Begin(ctx)
+	if err != nil {
+		a.handleServiceError(c, err)
+		return
+	}
+	defer tx.Rollback(ctx)
+	qtx := a.svc.Q.WithTx(tx)
+	row, err := qtx.CancelCustomerBooking(ctx, db.CancelCustomerBookingParams{
+		ID:         bookingID,
+		CustomerID: &user.ID,
+	})
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			fail(c, http.StatusConflict, "cancellation_not_allowed", "This shipment has already moved and can no longer be cancelled online. Contact the provider for help.")
+			return
+		}
+		a.handleServiceError(c, err)
+		return
+	}
+	_, err = qtx.AddDeliveryTimelineEvent(ctx, db.AddDeliveryTimelineEventParams{
+		DeliveryID: bookingID,
+		CompanyID:  row.CompanyID,
+		Status:     "cancelled",
+		Note:       ptrString("Cancelled by the customer from their dashboard."),
+		CreatedBy:  &user.ID,
+	})
+	if err != nil {
+		a.handleServiceError(c, err)
+		return
+	}
+	if err := tx.Commit(ctx); err != nil {
+		a.handleServiceError(c, err)
+		return
+	}
+	a.svc.Audit(ctx, service.AuditEntry{
+		ActorID:    &user.ID,
+		CompanyID:  &row.CompanyID,
+		Action:     "customer.booking_cancelled",
+		EntityType: "delivery",
+		EntityID:   &bookingID,
+		Metadata:   map[string]any{"tracking_code": row.TrackingCode},
+		IP:         c.ClientIP(),
+		UserAgent:  c.Request.UserAgent(),
+	})
+	c.JSON(http.StatusOK, gin.H{
+		"booking": gin.H{
+			"id":     row.ID,
+			"status": row.Status,
+		},
+	})
 }
 
 func publicBookingSummary(row db.GetBookingForClaimRow, appURL string) gin.H {

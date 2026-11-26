@@ -95,7 +95,7 @@ useSeoMeta({ title: () => section.value ? `${section.value.title} · BOL` : 'Das
         </template>
         <NuxtLink
           to="/dashboard"
-          class="mt-5 inline-flex items-center gap-1.5 rounded-full bg-accent-500 px-3.5 py-2 text-[11.5px] font-semibold text-ink-950 shadow-sm shadow-accent-500/25 transition hover:-translate-x-0.5 hover:bg-accent-400"
+          class="mt-5 inline-flex items-center gap-1.5 rounded-full bg-accent-500 px-3.5 py-2 text-[11.5px] font-semibold text-white shadow-sm shadow-accent-500/25 transition hover:-translate-x-0.5 hover:bg-accent-400"
         >
           <ArrowLeft :size="14" /> Back to overview
         </NuxtLink>

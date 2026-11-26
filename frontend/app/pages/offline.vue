@@ -26,7 +26,7 @@ function retry() {
     <button
       type="button"
       :disabled="retrying"
-      class="mt-6 inline-flex items-center gap-2 rounded-xl bg-accent-500 px-4 py-2.5 text-sm font-semibold text-ink-950 shadow-[0_12px_24px_-16px_rgba(255,122,0,0.75)] transition hover:bg-accent-400 disabled:opacity-60"
+      class="mt-6 inline-flex items-center gap-2 rounded-xl bg-accent-500 px-4 py-2.5 text-sm font-semibold text-white shadow-[0_12px_24px_-16px_rgba(255,122,0,0.75)] transition hover:bg-accent-400 disabled:opacity-60"
       @click="retry"
     >
       <RefreshCw :size="15" :class="retrying ? 'animate-spin' : ''" />

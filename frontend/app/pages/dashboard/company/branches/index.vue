@@ -122,7 +122,7 @@ async function toggleBranch(branch: Branch) {
           <button
             v-if="can('branches.create')"
             type="button"
-            class="inline-flex min-h-10 items-center gap-1.5 rounded-xl bg-accent-500 px-4 py-2.5 text-[12px] font-semibold text-ink-950 shadow-sm shadow-accent-500/20 transition hover:-translate-y-0.5 hover:bg-accent-400"
+            class="inline-flex min-h-10 items-center gap-1.5 rounded-xl bg-accent-500 px-4 py-2.5 text-[12px] font-semibold text-white shadow-sm shadow-accent-500/20 transition hover:-translate-y-0.5 hover:bg-accent-400"
             @click="formOpen = true"
           >
             <Plus :size="14" /> Add branch

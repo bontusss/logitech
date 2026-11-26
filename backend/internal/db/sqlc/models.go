@@ -221,6 +221,32 @@ type Country struct {
 	DeletedAt   *time.Time `json:"deleted_at"`
 }
 
+type CustomerAddress struct {
+	ID              uuid.UUID      `json:"id"`
+	CustomerID      uuid.UUID      `json:"customer_id"`
+	Label           string         `json:"label"`
+	AddressType     string         `json:"address_type"`
+	ContactName     string         `json:"contact_name"`
+	Phone           string         `json:"phone"`
+	State           string         `json:"state"`
+	City            string         `json:"city"`
+	Area            string         `json:"area"`
+	StreetAddress   string         `json:"street_address"`
+	Directions      string         `json:"directions"`
+	Latitude        pgtype.Numeric `json:"latitude"`
+	Longitude       pgtype.Numeric `json:"longitude"`
+	DefaultPickup   bool           `json:"default_pickup"`
+	DefaultDelivery bool           `json:"default_delivery"`
+	CreatedAt       time.Time      `json:"created_at"`
+	UpdatedAt       time.Time      `json:"updated_at"`
+}
+
+type CustomerFavouriteProvider struct {
+	CustomerID uuid.UUID `json:"customer_id"`
+	CompanyID  uuid.UUID `json:"company_id"`
+	CreatedAt  time.Time `json:"created_at"`
+}
+
 type CustomerSavedQuote struct {
 	ID              uuid.UUID  `json:"id"`
 	CustomerID      *uuid.UUID `json:"customer_id"`
@@ -270,6 +296,16 @@ type Delivery struct {
 	DeclinedAt             *time.Time     `json:"declined_at"`
 	AcceptedAt             *time.Time     `json:"accepted_at"`
 	CustomerID             *uuid.UUID     `json:"customer_id"`
+}
+
+type DeliveryIssue struct {
+	ID          uuid.UUID `json:"id"`
+	DeliveryID  uuid.UUID `json:"delivery_id"`
+	CustomerID  uuid.UUID `json:"customer_id"`
+	IssueType   string    `json:"issue_type"`
+	Description string    `json:"description"`
+	Status      string    `json:"status"`
+	CreatedAt   time.Time `json:"created_at"`
 }
 
 type DeliveryTimelineEvent struct {
@@ -411,6 +447,14 @@ type MarketplaceQuote struct {
 	Status                 string         `json:"status"`
 	ExpiresAt              time.Time      `json:"expires_at"`
 	CreatedAt              time.Time      `json:"created_at"`
+	ServiceMode            string         `json:"service_mode"`
+	EstimatedPickup        *string        `json:"estimated_pickup"`
+	EstimatedPickupHours   pgtype.Numeric `json:"estimated_pickup_hours"`
+	EstimatedDeliveryHours pgtype.Numeric `json:"estimated_delivery_hours"`
+	OriginZoneName         *string        `json:"origin_zone_name"`
+	DestinationZoneName    *string        `json:"destination_zone_name"`
+	DropoffBranchName      *string        `json:"dropoff_branch_name"`
+	DropoffBranchAddress   *string        `json:"dropoff_branch_address"`
 }
 
 type MarketplaceSearchLog struct {
@@ -469,6 +513,11 @@ type PricingZoneRate struct {
 	Status                   string         `json:"status"`
 	CreatedAt                time.Time      `json:"created_at"`
 	UpdatedAt                time.Time      `json:"updated_at"`
+	PickupAvailable          bool           `json:"pickup_available"`
+	DropoffAvailable         bool           `json:"dropoff_available"`
+	EstimatedPickupHours     pgtype.Numeric `json:"estimated_pickup_hours"`
+	EstimatedDeliveryHours   pgtype.Numeric `json:"estimated_delivery_hours"`
+	DropoffBranchID          *uuid.UUID     `json:"dropoff_branch_id"`
 }
 
 type RefreshToken struct {

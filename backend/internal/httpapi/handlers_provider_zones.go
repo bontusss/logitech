@@ -41,6 +41,13 @@ func providerZoneRouteDTO(row db.ListCompanyZoneRoutesRow) gin.H {
 		"price_minor":                 row.PriceMinor,
 		"included_weight_kg":          numericToFloat64(row.IncludedWeightKg),
 		"additional_weight_fee_minor": row.AdditionalWeightFeeMinor,
+		"pickup_available":            row.PickupAvailable,
+		"dropoff_available":           row.DropoffAvailable,
+		"estimated_pickup_hours":      numericPointer(row.EstimatedPickupHours),
+		"estimated_delivery_hours":    numericPointer(row.EstimatedDeliveryHours),
+		"dropoff_branch_id":           row.DropoffBranchID,
+		"dropoff_branch_name":         row.DropoffBranchName,
+		"dropoff_branch_address":      row.DropoffBranchAddress,
 		"status":                      row.Status,
 		"created_at":                  row.CreatedAt,
 		"updated_at":                  row.UpdatedAt,
@@ -96,17 +103,43 @@ func (a *API) listGeoZones(c *gin.Context) {
 func (a *API) listReachableZones(c *gin.Context) {
 	originID, err := uuid.Parse(c.Query("origin_zone_id"))
 	if err != nil {
-		fail(c, http.StatusBadRequest, "invalid_zone", "Choose a pickup zone.")
+		fail(c, http.StatusBadRequest, "invalid_zone", "Choose a pickup or drop-off zone.")
 		return
 	}
-	rows, err := a.svc.Q.ListReachableDestinationZones(c.Request.Context(), originID)
+	serviceMode := strings.TrimSpace(c.Query("service_mode"))
+	if serviceMode == "" {
+		serviceMode = "pickup"
+	}
+	if serviceMode != "pickup" && serviceMode != "dropoff" {
+		fail(c, http.StatusBadRequest, "invalid_service_mode", "Choose pickup or drop-off.")
+		return
+	}
+	rows, err := a.svc.Q.ListReachableDestinationZones(c.Request.Context(), db.ListReachableDestinationZonesParams{
+		ServiceMode:  serviceMode,
+		OriginZoneID: originID,
+	})
 	if err != nil {
 		a.handleServiceError(c, err)
 		return
 	}
 	zones := make([]gin.H, 0, len(rows))
 	for _, row := range rows {
-		zones = append(zones, gin.H{"id": row.ID, "state": row.State, "lga": row.Lga, "name": row.Name})
+		zones = append(zones, gin.H{"id": row.ID, "state": row.State, "lga": row.Lga, "name": row.Name, "parent_id": row.ParentID})
+	}
+	c.JSON(http.StatusOK, gin.H{"zones": zones})
+}
+
+// listDropoffDestinationZones returns the destination zones a customer can
+// reach by dropping a parcel at a provider hub, regardless of where they live.
+func (a *API) listDropoffDestinationZones(c *gin.Context) {
+	rows, err := a.svc.Q.ListDropoffDestinationZones(c.Request.Context())
+	if err != nil {
+		a.handleServiceError(c, err)
+		return
+	}
+	zones := make([]gin.H, 0, len(rows))
+	for _, row := range rows {
+		zones = append(zones, gin.H{"id": row.ID, "state": row.State, "lga": row.Lga, "name": row.Name, "parent_id": row.ParentID})
 	}
 	c.JSON(http.StatusOK, gin.H{"zones": zones})
 }
@@ -130,15 +163,23 @@ func (a *API) createProviderServiceZone(c *gin.Context) {
 	var req struct {
 		GeoZoneID    string  `json:"geo_zone_id" binding:"required,uuid"`
 		ParentZoneID *string `json:"parent_zone_id"`
+		AreaName     string  `json:"area_name" binding:"omitempty,max=120"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		fail(c, http.StatusBadRequest, "invalid_service_zone", "Choose a state and LGA for this zone.")
+		fail(c, http.StatusBadRequest, "invalid_service_zone", "Choose a state, LGA or area for this zone.")
 		return
 	}
 	geoZoneID, err := uuid.Parse(req.GeoZoneID)
 	if err != nil {
 		fail(c, http.StatusBadRequest, "invalid_service_zone", "Choose a valid state and LGA.")
 		return
+	}
+	if areaName := strings.TrimSpace(req.AreaName); areaName != "" {
+		areaID, areaErr := a.resolveAreaZone(c, geoZoneID, areaName)
+		if areaErr != nil {
+			return
+		}
+		geoZoneID = areaID
 	}
 	var parentID *uuid.UUID
 	if req.ParentZoneID != nil && strings.TrimSpace(*req.ParentZoneID) != "" {
@@ -173,6 +214,53 @@ func (a *API) createProviderServiceZone(c *gin.Context) {
 	}})
 }
 
+// resolveAreaZone finds or seeds the shared neighbourhood catalogue row under
+// an LGA. The first provider to use a name creates it for everyone.
+func (a *API) resolveAreaZone(c *gin.Context, lgaID uuid.UUID, name string) (uuid.UUID, error) {
+	ctx := c.Request.Context()
+	lga, err := a.svc.Q.GetGeoZone(ctx, lgaID)
+	if err == pgx.ErrNoRows {
+		fail(c, http.StatusUnprocessableEntity, "invalid_service_zone", "That LGA is not available.")
+		return uuid.Nil, err
+	}
+	if err != nil {
+		a.handleServiceError(c, err)
+		return uuid.Nil, err
+	}
+	if lga.ParentID != nil {
+		fail(c, http.StatusUnprocessableEntity, "invalid_service_zone", "Areas can only be added under an LGA.")
+		return uuid.Nil, pgx.ErrNoRows
+	}
+	area, err := a.svc.Q.GetGeoAreaZoneByName(ctx, db.GetGeoAreaZoneByNameParams{ParentID: &lgaID, Name: name})
+	if err == pgx.ErrNoRows {
+		area, err = a.svc.Q.CreateGeoAreaZone(ctx, db.CreateGeoAreaZoneParams{Name: name, ParentID: lgaID})
+		if isUniqueViolation(err) {
+			area, err = a.svc.Q.GetGeoAreaZoneByName(ctx, db.GetGeoAreaZoneByNameParams{ParentID: &lgaID, Name: name})
+		}
+	}
+	if err != nil {
+		a.handleServiceError(c, err)
+		return uuid.Nil, err
+	}
+	return area.ID, nil
+}
+
+func (a *API) listZoneRouteBranches(c *gin.Context) {
+	tenant, _ := currentTenant(c)
+	rows, err := a.svc.Q.ListCompanyActiveBranches(c.Request.Context(), tenant.CompanyID)
+	if err != nil {
+		a.handleServiceError(c, err)
+		return
+	}
+	branches := make([]gin.H, 0, len(rows))
+	for _, row := range rows {
+		branches = append(branches, gin.H{
+			"id": row.ID, "name": row.Name, "address": row.Address, "city": row.City, "state": row.State,
+		})
+	}
+	c.JSON(http.StatusOK, gin.H{"branches": branches})
+}
+
 func (a *API) deleteProviderServiceZone(c *gin.Context) {
 	tenant, _ := currentTenant(c)
 	id, err := uuid.Parse(c.Param("id"))
@@ -204,12 +292,38 @@ func (a *API) listProviderZoneRoutes(c *gin.Context) {
 }
 
 type providerZoneRouteInput struct {
-	FromZoneID               string  `json:"from_zone_id" binding:"required,uuid"`
-	ToZoneID                 string  `json:"to_zone_id" binding:"required,uuid"`
-	PriceMinor               int64   `json:"price_minor" binding:"gte=0"`
-	IncludedWeightKg         float64 `json:"included_weight_kg" binding:"gte=0,lte=500"`
-	AdditionalWeightFeeMinor int64   `json:"additional_weight_fee_minor" binding:"gte=0"`
-	Status                   string  `json:"status" binding:"omitempty,oneof=active inactive"`
+	FromZoneID               string   `json:"from_zone_id" binding:"required,uuid"`
+	ToZoneID                 string   `json:"to_zone_id" binding:"required,uuid"`
+	PriceMinor               int64    `json:"price_minor" binding:"gte=0"`
+	IncludedWeightKg         float64  `json:"included_weight_kg" binding:"gte=0,lte=500"`
+	AdditionalWeightFeeMinor int64    `json:"additional_weight_fee_minor" binding:"gte=0"`
+	PickupAvailable          *bool    `json:"pickup_available"`
+	DropoffAvailable         *bool    `json:"dropoff_available"`
+	EstimatedPickupHours     *float64 `json:"estimated_pickup_hours" binding:"omitempty,gte=0,lte=720"`
+	EstimatedDeliveryHours   *float64 `json:"estimated_delivery_hours" binding:"omitempty,gte=0,lte=2160"`
+	DropoffBranchID          *string  `json:"dropoff_branch_id"`
+	Status                   string   `json:"status" binding:"omitempty,oneof=active inactive"`
+}
+
+func (r providerZoneRouteInput) dropoffBranchID() (*uuid.UUID, bool) {
+	if r.DropoffBranchID == nil || strings.TrimSpace(*r.DropoffBranchID) == "" {
+		return nil, true
+	}
+	parsed, err := uuid.Parse(strings.TrimSpace(*r.DropoffBranchID))
+	if err != nil {
+		return nil, false
+	}
+	return &parsed, true
+}
+
+// pickupFlag defaults to true so routes keep a working pickup option when the
+// caller does not send the flag.
+func (r providerZoneRouteInput) pickupFlag() bool {
+	return r.PickupAvailable == nil || *r.PickupAvailable
+}
+
+func (r providerZoneRouteInput) dropoffFlag() bool {
+	return r.DropoffAvailable == nil || *r.DropoffAvailable
 }
 
 func (r providerZoneRouteInput) valid() bool {
@@ -232,6 +346,11 @@ func (a *API) createProviderZoneRoute(c *gin.Context) {
 	if req.Status == "" {
 		req.Status = "active"
 	}
+	branchID, branchOK := req.dropoffBranchID()
+	if !branchOK {
+		fail(c, http.StatusBadRequest, "invalid_zone_route", "Choose a valid drop-off branch.")
+		return
+	}
 	route, err := a.svc.Q.CreateCompanyZoneRoute(c.Request.Context(), db.CreateCompanyZoneRouteParams{
 		CompanyID:                tenant.CompanyID,
 		FromZoneID:               fromID,
@@ -240,10 +359,15 @@ func (a *API) createProviderZoneRoute(c *gin.Context) {
 		IncludedWeightKg:         float64ToNumeric(req.IncludedWeightKg),
 		AdditionalWeightFeeMinor: req.AdditionalWeightFeeMinor,
 		Status:                   req.Status,
+		PickupAvailable:          req.pickupFlag(),
+		DropoffAvailable:         req.dropoffFlag(),
+		EstimatedPickupHours:     optionalNumeric(req.EstimatedPickupHours),
+		EstimatedDeliveryHours:   optionalNumeric(req.EstimatedDeliveryHours),
+		DropoffBranchID:          branchID,
 	})
 	if err != nil {
 		if err == pgx.ErrNoRows {
-			fail(c, http.StatusUnprocessableEntity, "invalid_zone_route", "Both zones must belong to your company.")
+			fail(c, http.StatusUnprocessableEntity, "invalid_zone_route", "Both zones and the drop-off branch must belong to your company.")
 			return
 		}
 		if isUniqueViolation(err) {
@@ -257,6 +381,10 @@ func (a *API) createProviderZoneRoute(c *gin.Context) {
 		"id": route.ID, "from_zone_id": route.FromZoneID, "to_zone_id": route.ToZoneID,
 		"price_minor": route.PriceMinor, "included_weight_kg": numericToFloat64(route.IncludedWeightKg),
 		"additional_weight_fee_minor": route.AdditionalWeightFeeMinor, "status": route.Status,
+		"pickup_available": route.PickupAvailable, "dropoff_available": route.DropoffAvailable,
+		"estimated_pickup_hours":   numericPointer(route.EstimatedPickupHours),
+		"estimated_delivery_hours": numericPointer(route.EstimatedDeliveryHours),
+		"dropoff_branch_id":        route.DropoffBranchID,
 	}})
 }
 
@@ -281,6 +409,11 @@ func (a *API) updateProviderZoneRoute(c *gin.Context) {
 	if req.Status == "" {
 		req.Status = "active"
 	}
+	branchID, branchOK := req.dropoffBranchID()
+	if !branchOK {
+		fail(c, http.StatusBadRequest, "invalid_zone_route", "Choose a valid drop-off branch.")
+		return
+	}
 	route, err := a.svc.Q.UpdateCompanyZoneRoute(c.Request.Context(), db.UpdateCompanyZoneRouteParams{
 		CompanyID:                tenant.CompanyID,
 		ID:                       id,
@@ -290,10 +423,15 @@ func (a *API) updateProviderZoneRoute(c *gin.Context) {
 		IncludedWeightKg:         float64ToNumeric(req.IncludedWeightKg),
 		AdditionalWeightFeeMinor: req.AdditionalWeightFeeMinor,
 		Status:                   req.Status,
+		PickupAvailable:          req.pickupFlag(),
+		DropoffAvailable:         req.dropoffFlag(),
+		EstimatedPickupHours:     optionalNumeric(req.EstimatedPickupHours),
+		EstimatedDeliveryHours:   optionalNumeric(req.EstimatedDeliveryHours),
+		DropoffBranchID:          branchID,
 	})
 	if err != nil {
 		if err == pgx.ErrNoRows {
-			fail(c, http.StatusNotFound, "zone_route_not_found", "That route was not found.")
+			fail(c, http.StatusNotFound, "zone_route_not_found", "That route was not found, or the drop-off branch is not yours.")
 			return
 		}
 		if isUniqueViolation(err) {
@@ -307,6 +445,10 @@ func (a *API) updateProviderZoneRoute(c *gin.Context) {
 		"id": route.ID, "from_zone_id": route.FromZoneID, "to_zone_id": route.ToZoneID,
 		"price_minor": route.PriceMinor, "included_weight_kg": numericToFloat64(route.IncludedWeightKg),
 		"additional_weight_fee_minor": route.AdditionalWeightFeeMinor, "status": route.Status,
+		"pickup_available": route.PickupAvailable, "dropoff_available": route.DropoffAvailable,
+		"estimated_pickup_hours":   numericPointer(route.EstimatedPickupHours),
+		"estimated_delivery_hours": numericPointer(route.EstimatedDeliveryHours),
+		"dropoff_branch_id":        route.DropoffBranchID,
 	}})
 }
 

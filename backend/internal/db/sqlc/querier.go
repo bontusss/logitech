@@ -13,6 +13,7 @@ import (
 type Querier interface {
 	AcceptBookingRequest(ctx context.Context, arg AcceptBookingRequestParams) (Delivery, error)
 	AddBranchMember(ctx context.Context, arg AddBranchMemberParams) error
+	AddCustomerFavourite(ctx context.Context, arg AddCustomerFavouriteParams) (int64, error)
 	AddDeliveryTimelineEvent(ctx context.Context, arg AddDeliveryTimelineEventParams) (DeliveryTimelineEvent, error)
 	AddInvitationBranch(ctx context.Context, arg AddInvitationBranchParams) error
 	AddMemberBranch(ctx context.Context, arg AddMemberBranchParams) error
@@ -21,8 +22,11 @@ type Querier interface {
 	ApproveCompany(ctx context.Context, id uuid.UUID) (Company, error)
 	AssignDeliveryDriver(ctx context.Context, arg AssignDeliveryDriverParams) (Delivery, error)
 	BookingPageSlugExists(ctx context.Context, slug string) (bool, error)
+	CancelCustomerBooking(ctx context.Context, arg CancelCustomerBookingParams) (CancelCustomerBookingRow, error)
 	ClaimBookingForCustomer(ctx context.Context, arg ClaimBookingForCustomerParams) (int64, error)
 	ClaimInvitation(ctx context.Context, arg ClaimInvitationParams) (CompanyInvitation, error)
+	ClearCustomerDeliveryDefault(ctx context.Context, customerID uuid.UUID) error
+	ClearCustomerPickupDefault(ctx context.Context, customerID uuid.UUID) error
 	ConsumeEmailVerification(ctx context.Context, id uuid.UUID) error
 	ConsumePasswordReset(ctx context.Context, id uuid.UUID) error
 	CountActiveMemberships(ctx context.Context, userID uuid.UUID) (int64, error)
@@ -41,9 +45,12 @@ type Querier interface {
 	CreateCompanyServiceZone(ctx context.Context, arg CreateCompanyServiceZoneParams) (ServiceZone, error)
 	CreateCompanySettings(ctx context.Context, companyID uuid.UUID) (CompanySetting, error)
 	CreateCompanyZoneRoute(ctx context.Context, arg CreateCompanyZoneRouteParams) (PricingZoneRate, error)
+	CreateCustomerAddress(ctx context.Context, arg CreateCustomerAddressParams) (CustomerAddress, error)
 	CreateDelivery(ctx context.Context, arg CreateDeliveryParams) (Delivery, error)
+	CreateDeliveryIssue(ctx context.Context, arg CreateDeliveryIssueParams) (DeliveryIssue, error)
 	CreateDriverProfile(ctx context.Context, arg CreateDriverProfileParams) (DriverProfile, error)
 	CreateEmailVerification(ctx context.Context, arg CreateEmailVerificationParams) (EmailVerification, error)
+	CreateGeoAreaZone(ctx context.Context, arg CreateGeoAreaZoneParams) (GeoZone, error)
 	CreateGoogleUser(ctx context.Context, arg CreateGoogleUserParams) (User, error)
 	CreateInvitation(ctx context.Context, arg CreateInvitationParams) (CompanyInvitation, error)
 	CreateLastMileArea(ctx context.Context, arg CreateLastMileAreaParams) (LastMileServiceArea, error)
@@ -60,6 +67,7 @@ type Querier interface {
 	DeleteCompanyRole(ctx context.Context, arg DeleteCompanyRoleParams) error
 	DeleteCompanyServiceZone(ctx context.Context, arg DeleteCompanyServiceZoneParams) error
 	DeleteCompanyZoneRoute(ctx context.Context, arg DeleteCompanyZoneRouteParams) error
+	DeleteCustomerAddress(ctx context.Context, arg DeleteCustomerAddressParams) (int64, error)
 	DeleteLastMileArea(ctx context.Context, arg DeleteLastMileAreaParams) error
 	DeleteMemberBranches(ctx context.Context, memberID uuid.UUID) error
 	DeleteMemberRoles(ctx context.Context, memberID uuid.UUID) error
@@ -85,11 +93,14 @@ type Querier interface {
 	GetCompanyServiceZone(ctx context.Context, arg GetCompanyServiceZoneParams) (GetCompanyServiceZoneRow, error)
 	GetCompanySettings(ctx context.Context, companyID uuid.UUID) (CompanySetting, error)
 	GetCompanyZoneRoute(ctx context.Context, arg GetCompanyZoneRouteParams) (PricingZoneRate, error)
+	GetCustomerAddress(ctx context.Context, arg GetCustomerAddressParams) (CustomerAddress, error)
+	GetCustomerBooking(ctx context.Context, arg GetCustomerBookingParams) (GetCustomerBookingRow, error)
 	GetCustomerSavedQuoteByReference(ctx context.Context, arg GetCustomerSavedQuoteByReferenceParams) (GetCustomerSavedQuoteByReferenceRow, error)
 	GetDriverActiveAssignment(ctx context.Context, arg GetDriverActiveAssignmentParams) (GetDriverActiveAssignmentRow, error)
 	GetDriverProfileForPortal(ctx context.Context, portalTokenHash string) (GetDriverProfileForPortalRow, error)
 	GetDriverProfileForPortalByID(ctx context.Context, id uuid.UUID) (GetDriverProfileForPortalByIDRow, error)
 	GetEmailVerificationByHash(ctx context.Context, tokenHash string) (EmailVerification, error)
+	GetGeoAreaZoneByName(ctx context.Context, arg GetGeoAreaZoneByNameParams) (GeoZone, error)
 	GetGeoZone(ctx context.Context, id uuid.UUID) (GeoZone, error)
 	GetInvitationByToken(ctx context.Context, tokenHash string) (CompanyInvitation, error)
 	GetInvitationDetails(ctx context.Context, tokenHash string) (GetInvitationDetailsRow, error)
@@ -120,6 +131,7 @@ type Querier interface {
 	ListBranchStaff(ctx context.Context, arg ListBranchStaffParams) ([]ListBranchStaffRow, error)
 	ListBranches(ctx context.Context, arg ListBranchesParams) ([]Branch, error)
 	ListBranchesForMember(ctx context.Context, arg ListBranchesForMemberParams) ([]Branch, error)
+	ListCompanyActiveBranches(ctx context.Context, companyID uuid.UUID) ([]ListCompanyActiveBranchesRow, error)
 	ListCompanyBookingRoutes(ctx context.Context, companyID uuid.UUID) ([]CompanyBookingRoute, error)
 	ListCompanyCustomerDeliveries(ctx context.Context, arg ListCompanyCustomerDeliveriesParams) ([]ListCompanyCustomerDeliveriesRow, error)
 	ListCompanyCustomers(ctx context.Context, companyID uuid.UUID) ([]ListCompanyCustomersRow, error)
@@ -131,11 +143,15 @@ type Querier interface {
 	ListCompanyServiceZones(ctx context.Context, companyID uuid.UUID) ([]ListCompanyServiceZonesRow, error)
 	ListCompanyZoneRoutes(ctx context.Context, companyID uuid.UUID) ([]ListCompanyZoneRoutesRow, error)
 	ListCustomerAccounts(ctx context.Context) ([]ListCustomerAccountsRow, error)
+	ListCustomerAddresses(ctx context.Context, customerID uuid.UUID) ([]CustomerAddress, error)
 	ListCustomerBookings(ctx context.Context, customerID *uuid.UUID) ([]ListCustomerBookingsRow, error)
+	ListCustomerDeliveryIssues(ctx context.Context, customerID uuid.UUID) ([]ListCustomerDeliveryIssuesRow, error)
+	ListCustomerFavourites(ctx context.Context, customerID uuid.UUID) ([]ListCustomerFavouritesRow, error)
 	ListCustomerSavedQuotes(ctx context.Context, customerID *uuid.UUID) ([]ListCustomerSavedQuotesRow, error)
 	ListDeliveryTimeline(ctx context.Context, arg ListDeliveryTimelineParams) ([]DeliveryTimelineEvent, error)
 	ListDriverProfiles(ctx context.Context, companyID uuid.UUID) ([]ListDriverProfilesRow, error)
 	ListDriversOnRoad(ctx context.Context, companyID uuid.UUID) ([]ListDriversOnRoadRow, error)
+	ListDropoffDestinationZones(ctx context.Context) ([]ListDropoffDestinationZonesRow, error)
 	ListGeoLgas(ctx context.Context, state string) ([]string, error)
 	ListGeoStates(ctx context.Context) ([]string, error)
 	ListGeoZones(ctx context.Context, arg ListGeoZonesParams) ([]GeoZone, error)
@@ -156,7 +172,7 @@ type Querier interface {
 	ListPublicBookingRoutes(ctx context.Context, companyID uuid.UUID) ([]ListPublicBookingRoutesRow, error)
 	ListPublicBookingZoneRoutes(ctx context.Context, companyID uuid.UUID) ([]ListPublicBookingZoneRoutesRow, error)
 	ListPublicCompanyBranches(ctx context.Context, companyID uuid.UUID) ([]ListPublicCompanyBranchesRow, error)
-	ListReachableDestinationZones(ctx context.Context, originZoneID uuid.UUID) ([]ListReachableDestinationZonesRow, error)
+	ListReachableDestinationZones(ctx context.Context, arg ListReachableDestinationZonesParams) ([]ListReachableDestinationZonesRow, error)
 	ListRolePermissionKeys(ctx context.Context, roleID uuid.UUID) ([]string, error)
 	ListRolesForCompany(ctx context.Context, companyID *uuid.UUID) ([]ListRolesForCompanyRow, error)
 	ListServiceZones(ctx context.Context, arg ListServiceZonesParams) ([]ServiceZone, error)
@@ -168,6 +184,7 @@ type Querier interface {
 	MarkMarketplaceQuoteSelected(ctx context.Context, id uuid.UUID) error
 	MemberHasBranchAccess(ctx context.Context, arg MemberHasBranchAccessParams) (bool, error)
 	ReactivateCompanyMember(ctx context.Context, id uuid.UUID) (CompanyMember, error)
+	RemoveCustomerFavourite(ctx context.Context, arg RemoveCustomerFavouriteParams) (int64, error)
 	ReplacePricingZoneRates(ctx context.Context, arg ReplacePricingZoneRatesParams) error
 	RevokeInvitation(ctx context.Context, arg RevokeInvitationParams) error
 	RevokePendingInvitations(ctx context.Context, arg RevokePendingInvitationsParams) error
@@ -196,6 +213,7 @@ type Querier interface {
 	UpdateCompanySettings(ctx context.Context, arg UpdateCompanySettingsParams) (CompanySetting, error)
 	UpdateCompanyVerification(ctx context.Context, arg UpdateCompanyVerificationParams) (Company, error)
 	UpdateCompanyZoneRoute(ctx context.Context, arg UpdateCompanyZoneRouteParams) (PricingZoneRate, error)
+	UpdateCustomerAddress(ctx context.Context, arg UpdateCustomerAddressParams) (CustomerAddress, error)
 	UpdateDriverProfile(ctx context.Context, arg UpdateDriverProfileParams) (UpdateDriverProfileRow, error)
 	UpdateInvitationToken(ctx context.Context, arg UpdateInvitationTokenParams) (CompanyInvitation, error)
 	UpdateItemCategoryPolicy(ctx context.Context, arg UpdateItemCategoryPolicyParams) (UpdateItemCategoryPolicyRow, error)

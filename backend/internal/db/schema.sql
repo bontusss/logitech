@@ -819,3 +819,99 @@ ALTER TABLE users
 CREATE UNIQUE INDEX users_google_subject_unique
   ON users (google_subject)
   WHERE google_subject IS NOT NULL AND deleted_at IS NULL;
+
+-- Directional zone routes declare the origin service mode and leg durations.
+ALTER TABLE pricing_zone_rates
+  ADD COLUMN pickup_available boolean NOT NULL DEFAULT true,
+  ADD COLUMN dropoff_available boolean NOT NULL DEFAULT true,
+  ADD COLUMN estimated_pickup_hours numeric(6,2),
+  ADD COLUMN estimated_delivery_hours numeric(6,2),
+  ADD CONSTRAINT pricing_zone_rates_pickup_hours_check
+    CHECK (estimated_pickup_hours IS NULL OR estimated_pickup_hours >= 0),
+  ADD CONSTRAINT pricing_zone_rates_delivery_hours_check
+    CHECK (estimated_delivery_hours IS NULL OR estimated_delivery_hours >= 0);
+
+-- Quotes snapshot the service mode and configured pickup/delivery windows.
+ALTER TABLE marketplace_quotes
+  ADD COLUMN service_mode text NOT NULL DEFAULT 'pickup'
+    CHECK (service_mode IN ('pickup', 'dropoff')),
+  ADD COLUMN estimated_pickup text,
+  ADD COLUMN estimated_pickup_hours numeric(6,2),
+  ADD COLUMN estimated_delivery_hours numeric(6,2);
+
+-- Neighbourhood-level geo zones: unique names within an LGA parent.
+CREATE UNIQUE INDEX geo_zones_area_name_unique
+  ON geo_zones (parent_id, lower(name))
+  WHERE parent_id IS NOT NULL;
+
+ALTER TABLE pricing_zone_rates
+  ADD COLUMN dropoff_branch_id uuid REFERENCES branches (id) ON DELETE SET NULL;
+
+CREATE INDEX pricing_zone_rates_dropoff_branch_idx
+  ON pricing_zone_rates (dropoff_branch_id);
+
+ALTER TABLE marketplace_quotes
+  ADD COLUMN origin_zone_name text,
+  ADD COLUMN destination_zone_name text,
+  ADD COLUMN dropoff_branch_name text,
+  ADD COLUMN dropoff_branch_address text;
+
+-- Customer-owned saved addresses and provider favourites.
+CREATE TABLE customer_addresses (
+  id                uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  customer_id       uuid NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+  label             text NOT NULL,
+  address_type      text NOT NULL DEFAULT 'residential'
+                    CHECK (address_type IN ('residential', 'business', 'warehouse', 'other')),
+  contact_name      text NOT NULL DEFAULT '',
+  phone             text NOT NULL DEFAULT '',
+  state             text NOT NULL,
+  city              text NOT NULL,
+  area              text NOT NULL DEFAULT '',
+  street_address    text NOT NULL,
+  directions        text NOT NULL DEFAULT '',
+  latitude          numeric(10, 7),
+  longitude         numeric(10, 7),
+  default_pickup    boolean NOT NULL DEFAULT false,
+  default_delivery  boolean NOT NULL DEFAULT false,
+  created_at        timestamptz NOT NULL DEFAULT now(),
+  updated_at        timestamptz NOT NULL DEFAULT now(),
+  CHECK ((latitude IS NULL AND longitude IS NULL)
+    OR (latitude BETWEEN -90 AND 90 AND longitude BETWEEN -180 AND 180))
+);
+
+CREATE INDEX customer_addresses_customer_idx
+  ON customer_addresses (customer_id, created_at DESC);
+CREATE UNIQUE INDEX customer_addresses_default_pickup_unique
+  ON customer_addresses (customer_id) WHERE default_pickup;
+CREATE UNIQUE INDEX customer_addresses_default_delivery_unique
+  ON customer_addresses (customer_id) WHERE default_delivery;
+
+CREATE TRIGGER customer_addresses_set_updated_at
+BEFORE UPDATE ON customer_addresses
+FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+CREATE TABLE customer_favourite_providers (
+  customer_id uuid NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+  company_id  uuid NOT NULL REFERENCES companies (id) ON DELETE CASCADE,
+  created_at  timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (customer_id, company_id)
+);
+
+CREATE INDEX customer_favourite_providers_company_idx
+  ON customer_favourite_providers (company_id);
+
+CREATE TABLE delivery_issues (
+  id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  delivery_id uuid NOT NULL REFERENCES deliveries (id) ON DELETE CASCADE,
+  customer_id uuid NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+  issue_type  text NOT NULL CHECK (issue_type IN ('delayed', 'missing', 'damaged', 'other')),
+  description text NOT NULL DEFAULT '',
+  status      text NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'resolved')),
+  created_at  timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE INDEX delivery_issues_customer_created_idx
+  ON delivery_issues (customer_id, created_at DESC);
+CREATE INDEX delivery_issues_delivery_idx
+  ON delivery_issues (delivery_id);

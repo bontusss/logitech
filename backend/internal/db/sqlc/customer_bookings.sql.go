@@ -13,6 +13,40 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const cancelCustomerBooking = `-- name: CancelCustomerBooking :one
+UPDATE deliveries
+SET status = 'cancelled', updated_at = now()
+WHERE id = $1
+  AND customer_id = $2
+  AND status IN ('requested', 'created')
+  AND request_status IN ('pending', 'accepted')
+RETURNING id, company_id, tracking_code, status
+`
+
+type CancelCustomerBookingParams struct {
+	ID         uuid.UUID  `json:"id"`
+	CustomerID *uuid.UUID `json:"customer_id"`
+}
+
+type CancelCustomerBookingRow struct {
+	ID           uuid.UUID `json:"id"`
+	CompanyID    uuid.UUID `json:"company_id"`
+	TrackingCode *string   `json:"tracking_code"`
+	Status       string    `json:"status"`
+}
+
+func (q *Queries) CancelCustomerBooking(ctx context.Context, arg CancelCustomerBookingParams) (CancelCustomerBookingRow, error) {
+	row := q.db.QueryRow(ctx, cancelCustomerBooking, arg.ID, arg.CustomerID)
+	var i CancelCustomerBookingRow
+	err := row.Scan(
+		&i.ID,
+		&i.CompanyID,
+		&i.TrackingCode,
+		&i.Status,
+	)
+	return i, err
+}
+
 const claimBookingForCustomer = `-- name: ClaimBookingForCustomer :execrows
 UPDATE deliveries
 SET customer_id = $2, updated_at = now()
@@ -57,6 +91,139 @@ func (q *Queries) GetBookingForClaim(ctx context.Context, id uuid.UUID) (GetBook
 		&i.CustomerID,
 		&i.TrackingCode,
 		&i.RequestStatus,
+	)
+	return i, err
+}
+
+const getCustomerBooking = `-- name: GetCustomerBooking :one
+SELECT
+  d.id,
+  d.status,
+  d.request_status,
+  d.tracking_code,
+  d.pickup_address,
+  d.dropoff_address,
+  d.package_category,
+  d.item_description,
+  d.weight_kg,
+  d.delivery_price_minor,
+  d.declared_value_minor,
+  d.price_is_estimate,
+  d.delivery_speed,
+  d.distance_km,
+  d.sender_name,
+  d.sender_phone,
+  d.receiver_name,
+  d.receiver_phone,
+  d.payer,
+  d.is_paid,
+  d.payment_method,
+  d.additional_instructions,
+  d.package_photo_url,
+  d.booking_source,
+  d.pickup_latitude,
+  d.pickup_longitude,
+  d.dropoff_latitude,
+  d.dropoff_longitude,
+  d.created_at,
+  d.updated_at,
+  c.id AS company_id,
+  c.slug AS company_slug,
+  c.phone AS company_phone,
+  COALESCE(b.public_name, c.name) AS company_name,
+  b.logo_url AS company_logo_url,
+  COALESCE(cs.currency, 'NGN') AS currency
+FROM deliveries d
+JOIN companies c ON c.id = d.company_id AND c.deleted_at IS NULL
+LEFT JOIN company_branding b ON b.company_id = c.id
+LEFT JOIN company_settings cs ON cs.company_id = c.id
+WHERE d.id = $1 AND d.customer_id = $2
+`
+
+type GetCustomerBookingParams struct {
+	ID         uuid.UUID  `json:"id"`
+	CustomerID *uuid.UUID `json:"customer_id"`
+}
+
+type GetCustomerBookingRow struct {
+	ID                     uuid.UUID      `json:"id"`
+	Status                 string         `json:"status"`
+	RequestStatus          string         `json:"request_status"`
+	TrackingCode           *string        `json:"tracking_code"`
+	PickupAddress          string         `json:"pickup_address"`
+	DropoffAddress         string         `json:"dropoff_address"`
+	PackageCategory        string         `json:"package_category"`
+	ItemDescription        string         `json:"item_description"`
+	WeightKg               pgtype.Numeric `json:"weight_kg"`
+	DeliveryPriceMinor     int64          `json:"delivery_price_minor"`
+	DeclaredValueMinor     int64          `json:"declared_value_minor"`
+	PriceIsEstimate        bool           `json:"price_is_estimate"`
+	DeliverySpeed          string         `json:"delivery_speed"`
+	DistanceKm             pgtype.Numeric `json:"distance_km"`
+	SenderName             string         `json:"sender_name"`
+	SenderPhone            string         `json:"sender_phone"`
+	ReceiverName           string         `json:"receiver_name"`
+	ReceiverPhone          string         `json:"receiver_phone"`
+	Payer                  string         `json:"payer"`
+	IsPaid                 bool           `json:"is_paid"`
+	PaymentMethod          *string        `json:"payment_method"`
+	AdditionalInstructions string         `json:"additional_instructions"`
+	PackagePhotoUrl        *string        `json:"package_photo_url"`
+	BookingSource          string         `json:"booking_source"`
+	PickupLatitude         pgtype.Numeric `json:"pickup_latitude"`
+	PickupLongitude        pgtype.Numeric `json:"pickup_longitude"`
+	DropoffLatitude        pgtype.Numeric `json:"dropoff_latitude"`
+	DropoffLongitude       pgtype.Numeric `json:"dropoff_longitude"`
+	CreatedAt              time.Time      `json:"created_at"`
+	UpdatedAt              time.Time      `json:"updated_at"`
+	CompanyID              uuid.UUID      `json:"company_id"`
+	CompanySlug            string         `json:"company_slug"`
+	CompanyPhone           string         `json:"company_phone"`
+	CompanyName            string         `json:"company_name"`
+	CompanyLogoUrl         *string        `json:"company_logo_url"`
+	Currency               string         `json:"currency"`
+}
+
+func (q *Queries) GetCustomerBooking(ctx context.Context, arg GetCustomerBookingParams) (GetCustomerBookingRow, error) {
+	row := q.db.QueryRow(ctx, getCustomerBooking, arg.ID, arg.CustomerID)
+	var i GetCustomerBookingRow
+	err := row.Scan(
+		&i.ID,
+		&i.Status,
+		&i.RequestStatus,
+		&i.TrackingCode,
+		&i.PickupAddress,
+		&i.DropoffAddress,
+		&i.PackageCategory,
+		&i.ItemDescription,
+		&i.WeightKg,
+		&i.DeliveryPriceMinor,
+		&i.DeclaredValueMinor,
+		&i.PriceIsEstimate,
+		&i.DeliverySpeed,
+		&i.DistanceKm,
+		&i.SenderName,
+		&i.SenderPhone,
+		&i.ReceiverName,
+		&i.ReceiverPhone,
+		&i.Payer,
+		&i.IsPaid,
+		&i.PaymentMethod,
+		&i.AdditionalInstructions,
+		&i.PackagePhotoUrl,
+		&i.BookingSource,
+		&i.PickupLatitude,
+		&i.PickupLongitude,
+		&i.DropoffLatitude,
+		&i.DropoffLongitude,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.CompanyID,
+		&i.CompanySlug,
+		&i.CompanyPhone,
+		&i.CompanyName,
+		&i.CompanyLogoUrl,
+		&i.Currency,
 	)
 	return i, err
 }
@@ -258,9 +425,25 @@ SELECT
   d.price_is_estimate,
   d.delivery_speed,
   d.distance_km,
+  d.sender_name,
+  d.sender_phone,
+  d.receiver_name,
+  d.receiver_phone,
+  d.payer,
+  d.is_paid,
+  d.payment_method,
+  d.additional_instructions,
+  d.package_photo_url,
+  d.booking_source,
+  d.pickup_latitude,
+  d.pickup_longitude,
+  d.dropoff_latitude,
+  d.dropoff_longitude,
   d.created_at,
   d.updated_at,
   c.id AS company_id,
+  c.slug AS company_slug,
+  c.phone AS company_phone,
   COALESCE(b.public_name, c.name) AS company_name,
   b.logo_url AS company_logo_url,
   COALESCE(cs.currency, 'NGN') AS currency
@@ -274,26 +457,42 @@ LIMIT 200
 `
 
 type ListCustomerBookingsRow struct {
-	ID                 uuid.UUID      `json:"id"`
-	Status             string         `json:"status"`
-	RequestStatus      string         `json:"request_status"`
-	TrackingCode       *string        `json:"tracking_code"`
-	PickupAddress      string         `json:"pickup_address"`
-	DropoffAddress     string         `json:"dropoff_address"`
-	PackageCategory    string         `json:"package_category"`
-	ItemDescription    string         `json:"item_description"`
-	WeightKg           pgtype.Numeric `json:"weight_kg"`
-	DeliveryPriceMinor int64          `json:"delivery_price_minor"`
-	DeclaredValueMinor int64          `json:"declared_value_minor"`
-	PriceIsEstimate    bool           `json:"price_is_estimate"`
-	DeliverySpeed      string         `json:"delivery_speed"`
-	DistanceKm         pgtype.Numeric `json:"distance_km"`
-	CreatedAt          time.Time      `json:"created_at"`
-	UpdatedAt          time.Time      `json:"updated_at"`
-	CompanyID          uuid.UUID      `json:"company_id"`
-	CompanyName        string         `json:"company_name"`
-	CompanyLogoUrl     *string        `json:"company_logo_url"`
-	Currency           string         `json:"currency"`
+	ID                     uuid.UUID      `json:"id"`
+	Status                 string         `json:"status"`
+	RequestStatus          string         `json:"request_status"`
+	TrackingCode           *string        `json:"tracking_code"`
+	PickupAddress          string         `json:"pickup_address"`
+	DropoffAddress         string         `json:"dropoff_address"`
+	PackageCategory        string         `json:"package_category"`
+	ItemDescription        string         `json:"item_description"`
+	WeightKg               pgtype.Numeric `json:"weight_kg"`
+	DeliveryPriceMinor     int64          `json:"delivery_price_minor"`
+	DeclaredValueMinor     int64          `json:"declared_value_minor"`
+	PriceIsEstimate        bool           `json:"price_is_estimate"`
+	DeliverySpeed          string         `json:"delivery_speed"`
+	DistanceKm             pgtype.Numeric `json:"distance_km"`
+	SenderName             string         `json:"sender_name"`
+	SenderPhone            string         `json:"sender_phone"`
+	ReceiverName           string         `json:"receiver_name"`
+	ReceiverPhone          string         `json:"receiver_phone"`
+	Payer                  string         `json:"payer"`
+	IsPaid                 bool           `json:"is_paid"`
+	PaymentMethod          *string        `json:"payment_method"`
+	AdditionalInstructions string         `json:"additional_instructions"`
+	PackagePhotoUrl        *string        `json:"package_photo_url"`
+	BookingSource          string         `json:"booking_source"`
+	PickupLatitude         pgtype.Numeric `json:"pickup_latitude"`
+	PickupLongitude        pgtype.Numeric `json:"pickup_longitude"`
+	DropoffLatitude        pgtype.Numeric `json:"dropoff_latitude"`
+	DropoffLongitude       pgtype.Numeric `json:"dropoff_longitude"`
+	CreatedAt              time.Time      `json:"created_at"`
+	UpdatedAt              time.Time      `json:"updated_at"`
+	CompanyID              uuid.UUID      `json:"company_id"`
+	CompanySlug            string         `json:"company_slug"`
+	CompanyPhone           string         `json:"company_phone"`
+	CompanyName            string         `json:"company_name"`
+	CompanyLogoUrl         *string        `json:"company_logo_url"`
+	Currency               string         `json:"currency"`
 }
 
 func (q *Queries) ListCustomerBookings(ctx context.Context, customerID *uuid.UUID) ([]ListCustomerBookingsRow, error) {
@@ -320,9 +519,25 @@ func (q *Queries) ListCustomerBookings(ctx context.Context, customerID *uuid.UUI
 			&i.PriceIsEstimate,
 			&i.DeliverySpeed,
 			&i.DistanceKm,
+			&i.SenderName,
+			&i.SenderPhone,
+			&i.ReceiverName,
+			&i.ReceiverPhone,
+			&i.Payer,
+			&i.IsPaid,
+			&i.PaymentMethod,
+			&i.AdditionalInstructions,
+			&i.PackagePhotoUrl,
+			&i.BookingSource,
+			&i.PickupLatitude,
+			&i.PickupLongitude,
+			&i.DropoffLatitude,
+			&i.DropoffLongitude,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.CompanyID,
+			&i.CompanySlug,
+			&i.CompanyPhone,
 			&i.CompanyName,
 			&i.CompanyLogoUrl,
 			&i.Currency,

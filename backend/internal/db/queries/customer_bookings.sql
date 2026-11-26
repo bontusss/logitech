@@ -26,9 +26,25 @@ SELECT
   d.price_is_estimate,
   d.delivery_speed,
   d.distance_km,
+  d.sender_name,
+  d.sender_phone,
+  d.receiver_name,
+  d.receiver_phone,
+  d.payer,
+  d.is_paid,
+  d.payment_method,
+  d.additional_instructions,
+  d.package_photo_url,
+  d.booking_source,
+  d.pickup_latitude,
+  d.pickup_longitude,
+  d.dropoff_latitude,
+  d.dropoff_longitude,
   d.created_at,
   d.updated_at,
   c.id AS company_id,
+  c.slug AS company_slug,
+  c.phone AS company_phone,
   COALESCE(b.public_name, c.name) AS company_name,
   b.logo_url AS company_logo_url,
   COALESCE(cs.currency, 'NGN') AS currency
@@ -39,6 +55,59 @@ LEFT JOIN company_settings cs ON cs.company_id = c.id
 WHERE d.customer_id = $1
 ORDER BY d.created_at DESC
 LIMIT 200;
+
+-- name: GetCustomerBooking :one
+SELECT
+  d.id,
+  d.status,
+  d.request_status,
+  d.tracking_code,
+  d.pickup_address,
+  d.dropoff_address,
+  d.package_category,
+  d.item_description,
+  d.weight_kg,
+  d.delivery_price_minor,
+  d.declared_value_minor,
+  d.price_is_estimate,
+  d.delivery_speed,
+  d.distance_km,
+  d.sender_name,
+  d.sender_phone,
+  d.receiver_name,
+  d.receiver_phone,
+  d.payer,
+  d.is_paid,
+  d.payment_method,
+  d.additional_instructions,
+  d.package_photo_url,
+  d.booking_source,
+  d.pickup_latitude,
+  d.pickup_longitude,
+  d.dropoff_latitude,
+  d.dropoff_longitude,
+  d.created_at,
+  d.updated_at,
+  c.id AS company_id,
+  c.slug AS company_slug,
+  c.phone AS company_phone,
+  COALESCE(b.public_name, c.name) AS company_name,
+  b.logo_url AS company_logo_url,
+  COALESCE(cs.currency, 'NGN') AS currency
+FROM deliveries d
+JOIN companies c ON c.id = d.company_id AND c.deleted_at IS NULL
+LEFT JOIN company_branding b ON b.company_id = c.id
+LEFT JOIN company_settings cs ON cs.company_id = c.id
+WHERE d.id = $1 AND d.customer_id = $2;
+
+-- name: CancelCustomerBooking :one
+UPDATE deliveries
+SET status = 'cancelled', updated_at = now()
+WHERE id = $1
+  AND customer_id = $2
+  AND status IN ('requested', 'created')
+  AND request_status IN ('pending', 'accepted')
+RETURNING id, company_id, tracking_code, status;
 
 -- name: ListCompanyCustomers :many
 SELECT

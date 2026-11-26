@@ -232,7 +232,7 @@ async function revoke(invitation: CompanyInvitation) {
           <button
             v-if="can('staff.invite')"
             type="button"
-            class="inline-flex min-h-10 items-center gap-1.5 rounded-xl bg-accent-500 px-4 py-2.5 text-[12px] font-semibold text-ink-950 shadow-sm shadow-accent-500/20 transition hover:-translate-y-0.5 hover:bg-accent-400"
+            class="inline-flex min-h-10 items-center gap-1.5 rounded-xl bg-accent-500 px-4 py-2.5 text-[12px] font-semibold text-white shadow-sm shadow-accent-500/20 transition hover:-translate-y-0.5 hover:bg-accent-400"
             @click="inviteOpen = true"
           >
             <UserPlus :size="14" /> Invite staff
@@ -443,7 +443,7 @@ async function revoke(invitation: CompanyInvitation) {
 
           <div class="mt-5 flex justify-end gap-2">
             <button type="button" class="rounded-lg border border-slate-300 px-3.5 py-2 text-[12.5px] font-medium transition hover:bg-slate-50" @click="editing = null">Cancel</button>
-            <button type="submit" :disabled="editingSaving" class="inline-flex items-center gap-1.5 rounded-lg bg-accent-500 px-4 py-2.5 text-[12.5px] font-semibold text-ink-950 transition hover:bg-accent-400 disabled:opacity-60">
+            <button type="submit" :disabled="editingSaving" class="inline-flex items-center gap-1.5 rounded-lg bg-accent-500 px-4 py-2.5 text-[12.5px] font-semibold text-white transition hover:bg-accent-400 disabled:opacity-60">
               <Loader2 v-if="editingSaving" :size="14" class="animate-spin" />
               <Send v-else :size="14" />
               Save changes

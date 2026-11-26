@@ -20,6 +20,15 @@ interface GeoZone {
   state: string
   lga: string
   name: string
+  parent_id?: string | null
+}
+
+interface RouteBranch {
+  id: string
+  name: string
+  address: string
+  city: string
+  state: string
 }
 
 interface ServiceZone {
@@ -45,6 +54,13 @@ interface ZoneRoute {
   price_minor: number
   included_weight_kg: number
   additional_weight_fee_minor: number
+  pickup_available: boolean
+  dropoff_available: boolean
+  estimated_pickup_hours: number | null
+  estimated_delivery_hours: number | null
+  dropoff_branch_id: string | null
+  dropoff_branch_name: string | null
+  dropoff_branch_address: string | null
   status: 'active' | 'inactive'
 }
 
@@ -61,8 +77,9 @@ const lgas = ref<string[]>([])
 const geoZones = ref<GeoZone[]>([])
 const zones = ref<ServiceZone[]>([])
 const routes = ref<ZoneRoute[]>([])
+const branches = ref<RouteBranch[]>([])
 
-const zoneForm = reactive({ state: '', lga: '', geoZoneId: '' })
+const zoneForm = reactive({ state: '', lga: '', geoZoneId: '', areaName: '' })
 const routeForm = reactive({
   id: '',
   from: '',
@@ -70,6 +87,11 @@ const routeForm = reactive({
   basePrice: '',
   includedWeight: '5',
   additionalFee: '',
+  pickupAvailable: true,
+  dropoffAvailable: true,
+  pickupHours: '',
+  deliveryHours: '',
+  branchId: '',
   status: 'active' as 'active' | 'inactive',
 })
 
@@ -84,7 +106,12 @@ const sortedRoutes = computed(() =>
   ),
 )
 const zoneOptions = computed(() =>
-  [...zones.value].sort((a, b) => `${a.state} ${a.lga}`.localeCompare(`${b.state} ${b.lga}`)),
+  [...zones.value].sort((a, b) => zoneLabel(a).localeCompare(zoneLabel(b))),
+)
+const areaSuggestions = computed(() =>
+  geoZones.value
+    .filter((zone) => zone.parent_id === zoneForm.geoZoneId)
+    .sort((a, b) => a.name.localeCompare(b.name)),
 )
 
 const labelClass = 'mb-1.5 block text-[11px] font-semibold text-ink-900/60'
@@ -92,7 +119,12 @@ const fieldClass =
   'w-full rounded-xl border border-ink-900/12 bg-canvas px-3.5 py-2.5 text-[13px] font-medium text-ink-900 transition placeholder:text-ink-900/35 hover:border-ink-900/25 focus:border-accent-500 disabled:cursor-not-allowed disabled:opacity-60'
 
 function zoneLabel(zone: ServiceZone) {
-  return `${zone.lga}, ${zone.state}`
+  const place = zone.geo_name && zone.geo_name !== zone.lga ? `${zone.geo_name} (${zone.lga})` : zone.lga
+  return `${place}, ${zone.state}`
+}
+
+function routePlace(name: string, lga: string) {
+  return name && name !== lga ? `${name} (${lga})` : lga
 }
 
 function nairaToMinor(value: string | number) {
@@ -105,19 +137,28 @@ function minorToNaira(value: number) {
   return (value / 100).toFixed(2).replace(/\.00$/, '')
 }
 
+function hoursLabel(hours: number | null) {
+  if (!hours) return ''
+  if (hours < 24) return `~${Math.round(hours)}h`
+  const days = Math.ceil(hours / 24)
+  return `~${days} day${days === 1 ? '' : 's'}`
+}
+
 async function load() {
   loading.value = true
   error.value = ''
   try {
-    const [statesResponse, zonesResponse, routesResponse] = await Promise.all([
+    const [statesResponse, zonesResponse, routesResponse, branchesResponse] = await Promise.all([
       api<{ states: string[] }>('/companies/me/geo/states'),
       api<{ zones: ServiceZone[] }>('/companies/me/service-zones'),
       api<{ routes: ZoneRoute[] }>('/companies/me/zone-routes'),
+      api<{ branches: RouteBranch[] }>('/companies/me/zone-routes/branches'),
     ])
     states.value = statesResponse.states ?? []
     zoneForm.state = zoneForm.state || states.value[0] || ''
     zones.value = zonesResponse.zones ?? []
     routes.value = routesResponse.routes ?? []
+    branches.value = branchesResponse.branches ?? []
     if (zoneForm.state) await loadLgas(zoneForm.state)
     if (!routeForm.from) routeForm.from = zones.value[0]?.id ?? ''
     if (!routeForm.to) routeForm.to = zones.value[1]?.id ?? zones.value[0]?.id ?? ''
@@ -133,12 +174,15 @@ async function loadLgas(state: string) {
   geoZones.value = []
   zoneForm.lga = ''
   zoneForm.geoZoneId = ''
+  zoneForm.areaName = ''
   if (!state) return
   try {
     const params = new URLSearchParams({ state })
     const response = await api<{ zones: GeoZone[] }>(`/companies/me/geo/zones?${params}`)
     geoZones.value = response.zones ?? []
-    lgas.value = [...new Set(geoZones.value.map((zone) => zone.lga))]
+    lgas.value = [
+      ...new Set(geoZones.value.filter((zone) => !zone.parent_id).map((zone) => zone.lga)),
+    ]
   } catch (cause) {
     error.value = apiErrorMessage(cause, 'Could not load LGAs for that state.')
   }
@@ -146,7 +190,8 @@ async function loadLgas(state: string) {
 
 function selectLga(lga: string) {
   zoneForm.lga = lga
-  zoneForm.geoZoneId = geoZones.value.find((zone) => zone.lga === lga)?.id ?? ''
+  zoneForm.geoZoneId = geoZones.value.find((zone) => !zone.parent_id && zone.lga === lga)?.id ?? ''
+  zoneForm.areaName = ''
 }
 
 async function addZone() {
@@ -158,14 +203,16 @@ async function addZone() {
   }
   savingZone.value = true
   try {
+    const areaName = zoneForm.areaName.trim()
     await api('/companies/me/service-zones', {
       method: 'POST',
-      body: { geo_zone_id: zoneForm.geoZoneId },
+      body: { geo_zone_id: zoneForm.geoZoneId, ...(areaName ? { area_name: areaName } : {}) },
     })
-    notice.value = 'Service zone added.'
+    notice.value = areaName ? `${areaName} added as a service area.` : 'Service zone added.'
     const lga = zoneForm.lga
     zoneForm.lga = ''
     zoneForm.geoZoneId = ''
+    zoneForm.areaName = ''
     const response = await api<{ zones: ServiceZone[] }>('/companies/me/service-zones')
     zones.value = response.zones ?? []
     if (!routeForm.from) routeForm.from = zones.value[0]?.id ?? ''
@@ -207,6 +254,11 @@ function resetRouteForm() {
     basePrice: '',
     includedWeight: '5',
     additionalFee: '',
+    pickupAvailable: true,
+    dropoffAvailable: true,
+    pickupHours: '',
+    deliveryHours: '',
+    branchId: '',
     status: 'active',
   })
 }
@@ -219,6 +271,11 @@ function editRoute(route: ZoneRoute) {
     basePrice: minorToNaira(route.price_minor),
     includedWeight: String(route.included_weight_kg),
     additionalFee: minorToNaira(route.additional_weight_fee_minor),
+    pickupAvailable: route.pickup_available,
+    dropoffAvailable: route.dropoff_available,
+    pickupHours: route.estimated_pickup_hours ? String(route.estimated_pickup_hours) : '',
+    deliveryHours: route.estimated_delivery_hours ? String(route.estimated_delivery_hours) : '',
+    branchId: route.dropoff_branch_id ?? '',
     status: route.status,
   })
   notice.value = ''
@@ -231,12 +288,25 @@ async function saveRoute() {
   const price = nairaToMinor(routeForm.basePrice)
   const additional = nairaToMinor(routeForm.additionalFee || 0)
   const included = Number(routeForm.includedWeight)
+  const pickupHours = routeForm.pickupHours.trim() === '' ? null : Number(routeForm.pickupHours)
+  const deliveryHours = routeForm.deliveryHours.trim() === '' ? null : Number(routeForm.deliveryHours)
   if (!routeForm.from || !routeForm.to) {
     error.value = 'Choose both the from and to zones.'
     return
   }
   if (price === null || additional === null || !Number.isFinite(included) || included < 0) {
     error.value = 'Enter a valid route price, included weight and additional weight fee.'
+    return
+  }
+  if (!routeForm.pickupAvailable && !routeForm.dropoffAvailable) {
+    error.value = 'Enable pickup, drop-off, or both for this route.'
+    return
+  }
+  if (
+    (pickupHours !== null && (!Number.isFinite(pickupHours) || pickupHours < 0)) ||
+    (deliveryHours !== null && (!Number.isFinite(deliveryHours) || deliveryHours < 0))
+  ) {
+    error.value = 'Pickup and delivery windows must be zero or more hours.'
     return
   }
   savingRoute.value = true
@@ -247,6 +317,11 @@ async function saveRoute() {
       price_minor: price,
       included_weight_kg: included,
       additional_weight_fee_minor: additional,
+      pickup_available: routeForm.pickupAvailable,
+      dropoff_available: routeForm.dropoffAvailable,
+      estimated_pickup_hours: pickupHours,
+      estimated_delivery_hours: deliveryHours,
+      dropoff_branch_id: routeForm.branchId || null,
       status: routeForm.status,
     }
     if (routeForm.id) {
@@ -353,9 +428,26 @@ onMounted(load)
             </select>
           </label>
         </div>
+        <label class="mt-2 block">
+          <span :class="labelClass">Neighbourhood (optional)</span>
+          <input
+            v-model="zoneForm.areaName"
+            :class="fieldClass"
+            list="provider-area-options"
+            maxlength="120"
+            placeholder="e.g. Ariaria"
+            :disabled="!zoneForm.geoZoneId"
+          />
+          <datalist id="provider-area-options">
+            <option v-for="area in areaSuggestions" :key="area.id" :value="area.name" />
+          </datalist>
+          <span class="mt-1 block text-[10px] leading-snug text-ink-900/40">
+            Leave blank to cover the whole LGA, or add a neighbourhood to price only that area.
+          </span>
+        </label>
         <button
           type="button"
-          class="mt-3 inline-flex w-full items-center justify-center gap-1.5 rounded-xl bg-ink-900 px-3.5 py-2.5 text-[12px] font-semibold text-white transition hover:bg-ink-900/90 disabled:opacity-50"
+          class="mt-3 inline-flex w-full items-center justify-center gap-1.5 rounded-xl bg-accent-500 px-3.5 py-2.5 text-[12px] font-semibold text-white transition hover:bg-accent-400 disabled:opacity-50"
           :disabled="!canCreate || savingZone || !zoneForm.geoZoneId"
           @click="addZone"
         >
@@ -370,8 +462,10 @@ onMounted(load)
         <ul v-else class="mt-4 space-y-2">
           <li v-for="zone in zoneOptions" :key="zone.id" class="flex items-center justify-between gap-2 rounded-xl border border-ink-900/8 bg-canvas/60 px-3 py-2.5">
             <div class="min-w-0">
-              <p class="truncate text-[12.5px] font-semibold">{{ zone.lga }}</p>
-              <p class="text-[10.5px] text-ink-900/45">{{ zone.state }}</p>
+              <p class="truncate text-[12.5px] font-semibold">{{ zone.geo_name || zone.lga }}</p>
+              <p class="text-[10.5px] text-ink-900/45">
+                {{ zone.geo_name && zone.geo_name !== zone.lga ? `${zone.lga} · ` : '' }}{{ zone.state }}
+              </p>
             </div>
             <button
               type="button"
@@ -433,6 +527,50 @@ onMounted(load)
           </label>
         </div>
 
+        <div class="mt-2.5 grid gap-2 rounded-xl border border-ink-900/8 bg-canvas/60 p-2.5 sm:grid-cols-2">
+          <label class="flex cursor-pointer items-start gap-2">
+            <input v-model="routeForm.pickupAvailable" type="checkbox" class="mt-0.5 size-3.5 accent-accent-500" />
+            <span>
+              <span class="block text-[11px] font-semibold text-ink-900">Pick up from customer</span>
+              <span class="block text-[10px] leading-snug text-ink-900/45">Rider collects at the sender’s verified pin.</span>
+            </span>
+          </label>
+          <label class="flex cursor-pointer items-start gap-2">
+            <input v-model="routeForm.dropoffAvailable" type="checkbox" class="mt-0.5 size-3.5 accent-accent-500" />
+            <span>
+              <span class="block text-[11px] font-semibold text-ink-900">Accept drop-off at hub</span>
+              <span class="block text-[10px] leading-snug text-ink-900/45">Sender brings it to this zone’s hub.</span>
+            </span>
+          </label>
+        </div>
+
+        <div class="mt-2.5 grid gap-2.5 sm:grid-cols-2">
+          <label>
+            <span :class="labelClass">Pickup window (hours)</span>
+            <input v-model="routeForm.pickupHours" :class="fieldClass" type="number" min="0" max="720" step="0.5" placeholder="e.g. 2" />
+          </label>
+          <label>
+            <span :class="labelClass">Delivery window (hours)</span>
+            <input v-model="routeForm.deliveryHours" :class="fieldClass" type="number" min="0" max="2160" step="0.5" placeholder="e.g. 48" />
+          </label>
+        </div>
+        <p class="mt-1 text-[10px] leading-relaxed text-ink-900/40">
+          These windows power the “pickup soonest” and “fastest delivery” sorts. Leave blank if you do not want to promise one.
+        </p>
+
+        <label v-if="branches.length" class="mt-2.5 block">
+          <span :class="labelClass">Drop-off branch (optional)</span>
+          <select v-model="routeForm.branchId" :class="fieldClass">
+            <option value="">No specific branch</option>
+            <option v-for="branch in branches" :key="branch.id" :value="branch.id">
+              {{ branch.name }} — {{ branch.address }}, {{ branch.city }}
+            </option>
+          </select>
+          <span class="mt-1 block text-[10px] leading-snug text-ink-900/40">
+            Shown to customers on drop-off quotes as the exact hub where they hand the parcel over.
+          </span>
+        </label>
+
         <div class="mt-2.5 flex flex-wrap items-end gap-2.5">
           <label class="min-w-[140px] flex-1">
             <span :class="labelClass">Status</span>
@@ -443,7 +581,7 @@ onMounted(load)
           </label>
           <button
             type="button"
-            class="inline-flex items-center justify-center gap-1.5 rounded-xl bg-accent-500 px-4 py-2.5 text-[12px] font-semibold text-ink-950 transition hover:bg-accent-400 disabled:opacity-50"
+            class="inline-flex items-center justify-center gap-1.5 rounded-xl bg-accent-500 px-4 py-2.5 text-[12px] font-semibold text-white transition hover:bg-accent-400 disabled:opacity-50"
             :disabled="!canCreate || savingRoute"
             @click="saveRoute"
           >
@@ -481,8 +619,19 @@ onMounted(load)
           <tbody class="divide-y divide-ink-900/6">
             <tr v-for="route in sortedRoutes" :key="route.id" class="align-middle">
               <td class="px-4 py-3">
-                <p class="font-semibold">{{ route.from_lga }} <span class="px-1 text-ink-900/30">→</span> {{ route.to_lga }}</p>
+                <p class="font-semibold">{{ routePlace(route.from_zone_name, route.from_lga) }} <span class="px-1 text-ink-900/30">→</span> {{ routePlace(route.to_zone_name, route.to_lga) }}</p>
                 <p class="text-[10.5px] text-ink-900/45">{{ route.from_state }} → {{ route.to_state }}</p>
+                <p v-if="route.dropoff_branch_name" class="mt-0.5 text-[9.5px] text-ink-900/40">
+                  Drop-off hub: {{ route.dropoff_branch_name }}<template v-if="route.dropoff_branch_address"> — {{ route.dropoff_branch_address }}</template>
+                </p>
+                <p class="mt-1 flex flex-wrap items-center gap-1 text-[9.5px] font-semibold">
+                  <span v-if="route.pickup_available" class="rounded-full bg-success-50 px-1.5 py-0.5 text-success-700">Pickup</span>
+                  <span v-if="route.dropoff_available" class="rounded-full bg-brand-50 px-1.5 py-0.5 text-brand-700">Drop-off</span>
+                  <span v-if="!route.pickup_available && !route.dropoff_available" class="text-red-600">No service mode</span>
+                </p>
+                <p v-if="route.estimated_pickup_hours || route.estimated_delivery_hours" class="mt-0.5 text-[9.5px] text-ink-900/40">
+                  {{ [hoursLabel(route.estimated_pickup_hours) && `${hoursLabel(route.estimated_pickup_hours)} pickup`, hoursLabel(route.estimated_delivery_hours) && `${hoursLabel(route.estimated_delivery_hours)} delivery`].filter(Boolean).join(' · ') }}
+                </p>
               </td>
               <td class="px-4 py-3 font-semibold tabular-nums">{{ formatMinor(route.price_minor) }}</td>
               <td class="px-4 py-3 text-ink-900/65">

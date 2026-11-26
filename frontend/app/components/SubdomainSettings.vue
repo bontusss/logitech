@@ -122,7 +122,7 @@ async function save() {
         v-if="canManage"
         type="button"
         :disabled="checking || saving"
-        class="inline-flex items-center gap-1.5 rounded-lg bg-accent-500 px-3.5 py-2.5 text-[12px] font-semibold text-ink-950 shadow-sm shadow-accent-500/20 transition hover:bg-accent-400 disabled:opacity-60"
+        class="inline-flex items-center gap-1.5 rounded-lg bg-accent-500 px-3.5 py-2.5 text-[12px] font-semibold text-white shadow-sm shadow-accent-500/20 transition hover:bg-accent-400 disabled:opacity-60"
         @click="save"
       >
         <Loader2 v-if="saving || checking" :size="14" class="animate-spin" />

@@ -1,4 +1,4 @@
-import type { CustomerAddress, CustomerBooking, DeliveryStatus } from '~/types/customer'
+import type { CustomerBooking, CustomerRecentAddress, DeliveryStatus } from '~/types/customer'
 
 export interface BookingStateMeta {
   label: string
@@ -133,11 +133,29 @@ export function useCustomerDashboard() {
     })
   })
 
-  const addresses = computed<CustomerAddress[]>(() => {
+  const pendingBookings = computed(() =>
+    bookings.value.filter(
+      (booking) => booking.request_status === 'pending' || booking.status === 'requested',
+    ),
+  )
+
+  const cancelledBookings = computed(() =>
+    bookings.value.filter(
+      (booking) => booking.status === 'cancelled' || booking.request_status === 'declined',
+    ),
+  )
+
+  const recentBookings = computed(() =>
+    [...bookings.value]
+      .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
+      .slice(0, 5),
+  )
+
+  const addresses = computed<CustomerRecentAddress[]>(() => {
     const seen = new Set<string>()
-    const result: CustomerAddress[] = []
+    const result: CustomerRecentAddress[] = []
     for (const booking of bookings.value) {
-      const entries: { address: string; role: CustomerAddress['role'] }[] = [
+      const entries: { address: string; role: CustomerRecentAddress['role'] }[] = [
         { address: booking.pickup_address, role: 'pickup' },
         { address: booking.dropoff_address, role: 'dropoff' },
       ]
@@ -176,6 +194,9 @@ export function useCustomerDashboard() {
     loaded,
     load,
     activeBookings,
+    pendingBookings,
+    cancelledBookings,
+    recentBookings,
     inTransitCount,
     deliveredBookings,
     providers,

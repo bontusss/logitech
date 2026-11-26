@@ -11,7 +11,7 @@ withDefaults(
 const tones: Record<string, string> = {
   brand: 'bg-brand-50 text-ink-900 dark:bg-white/5',
   accent: 'bg-accent-50 text-accent-700 dark:bg-accent-500/10 dark:text-accent-300',
-  'accent-solid': 'bg-accent-500 text-ink-950 shadow-accent-500/25',
+  'accent-solid': 'bg-accent-500 text-white shadow-accent-500/25',
   success: 'bg-success-50 text-success-700 dark:bg-success-500/10',
   neutral: 'bg-canvas text-ink-900/55 dark:bg-white/5',
   'on-dark': 'bg-white/10 text-accent-300',

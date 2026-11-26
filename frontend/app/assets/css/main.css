@@ -1296,3 +1296,9 @@ html.dark .grid-paper {
     animation: none;
   }
 }
+
+/* Platform wordmark: navy on light surfaces, white when the app theme is dark. */
+.brand-logo-light { display: inline-block; }
+.brand-logo-dark { display: none; }
+html.dark .brand-logo-light { display: none; }
+html.dark .brand-logo-dark { display: inline-block; }

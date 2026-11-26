@@ -22,7 +22,7 @@ async function installApp() {
     <div aria-hidden="true" class="pointer-events-none absolute -top-16 right-[-2rem] size-40 rounded-full bg-accent-500/25 blur-2xl" />
 
     <div class="relative flex items-start gap-3">
-      <span class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-accent-500 text-ink-950">
+      <span class="flex size-10 shrink-0 items-center justify-center rounded-xl bg-accent-500 text-white">
         <Download :size="18" />
       </span>
       <div class="min-w-0 flex-1">
@@ -46,7 +46,7 @@ async function installApp() {
     <div class="relative mt-3 flex gap-2">
       <button
         type="button"
-        class="inline-flex min-h-9 flex-1 items-center justify-center gap-1.5 rounded-lg bg-accent-500 px-3 py-2 text-[11.5px] font-semibold text-ink-950 transition hover:bg-accent-400"
+        class="inline-flex min-h-9 flex-1 items-center justify-center gap-1.5 rounded-lg bg-accent-500 px-3 py-2 text-[11.5px] font-semibold text-white transition hover:bg-accent-400"
         @click="installApp"
       >
         <Download :size="14" />

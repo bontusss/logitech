@@ -226,7 +226,7 @@ async function setDriverStatus(driver: Driver, nextStatus: Driver['status']) {
       <button
         v-if="can('staff.invite')"
         type="button"
-        class="inline-flex min-h-10 items-center gap-1.5 rounded-xl bg-accent-500 px-4 py-2.5 text-[12px] font-semibold text-ink-950 shadow-sm shadow-accent-500/20 transition hover:-translate-y-0.5 hover:bg-accent-400"
+        class="inline-flex min-h-10 items-center gap-1.5 rounded-xl bg-accent-500 px-4 py-2.5 text-[12px] font-semibold text-white shadow-sm shadow-accent-500/20 transition hover:-translate-y-0.5 hover:bg-accent-400"
         @click="openCreateForm"
       >
         <Plus :size="14" />
@@ -352,7 +352,7 @@ async function setDriverStatus(driver: Driver, nextStatus: Driver['status']) {
           <button
             type="submit"
             :disabled="saving"
-            class="inline-flex items-center gap-1.5 rounded-lg bg-accent-500 px-4 py-2.5 text-[11px] font-semibold text-ink-950 shadow-sm transition hover:bg-accent-400 disabled:opacity-50"
+            class="inline-flex items-center gap-1.5 rounded-lg bg-accent-500 px-4 py-2.5 text-[11px] font-semibold text-white shadow-sm transition hover:bg-accent-400 disabled:opacity-50"
           >
             <Loader2 v-if="saving" :size="14" class="animate-spin" />
             <UserRound v-else :size="14" />

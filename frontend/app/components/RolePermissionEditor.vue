@@ -119,7 +119,7 @@ function permissionLabel(key: string) {
       <button
         v-if="canManage"
         type="button"
-        class="inline-flex items-center gap-1.5 rounded-lg bg-accent-500 px-3.5 py-2 text-[12px] font-semibold text-ink-950 shadow-sm shadow-accent-500/20 transition hover:bg-accent-400"
+        class="inline-flex items-center gap-1.5 rounded-lg bg-accent-500 px-3.5 py-2 text-[12px] font-semibold text-white shadow-sm shadow-accent-500/20 transition hover:bg-accent-400"
         @click="startCreate"
       >
         <Plus :size="14" /> New role
@@ -188,7 +188,7 @@ function permissionLabel(key: string) {
         <button type="button" class="rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-[12px] font-medium transition hover:bg-slate-50" @click="reset">
           Cancel
         </button>
-        <button type="submit" class="rounded-lg bg-accent-500 px-4 py-2 text-[12px] font-semibold text-ink-950 transition hover:bg-accent-500">
+        <button type="submit" class="rounded-lg bg-accent-500 px-4 py-2 text-[12px] font-semibold text-white transition hover:bg-accent-500">
           {{ editing ? 'Save role' : 'Create role' }}
         </button>
       </div>

@@ -28,7 +28,7 @@ const initials = computed(() => {
         <NuxtLink to="/admin" class="rounded-lg" aria-label="BOL platform administration">
           <AppLogo :size="32" />
         </NuxtLink>
-        <span class="hidden items-center gap-1.5 rounded-full bg-accent-500 px-2.5 py-1 text-[10px] font-semibold tracking-[0.06em] text-ink-950 uppercase shadow-sm shadow-accent-500/25 sm:inline-flex">
+        <span class="hidden items-center gap-1.5 rounded-full bg-accent-500 px-2.5 py-1 text-[10px] font-semibold tracking-[0.06em] text-white uppercase shadow-sm shadow-accent-500/25 sm:inline-flex">
           <ShieldCheck :size="12" />
           Platform admin
         </span>
@@ -40,7 +40,7 @@ const initials = computed(() => {
               {{ user?.platform_role?.replace('_', ' ') }}
             </p>
           </div>
-          <span class="flex size-8 items-center justify-center rounded-xl bg-accent-500 text-[10px] font-semibold text-ink-950 shadow-sm shadow-accent-500/25">
+          <span class="flex size-8 items-center justify-center rounded-xl bg-accent-500 text-[10px] font-semibold text-white shadow-sm shadow-accent-500/25">
             {{ initials }}
           </span>
           <ThemeToggle />

@@ -225,7 +225,7 @@ async function stopSharing(notifyServer = true) {
               v-if="!sharing"
               type="button"
               :disabled="starting"
-              class="mt-3 inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-xl bg-accent-500 px-4 py-2.5 text-[12.5px] font-semibold text-ink-950 transition hover:bg-accent-400 disabled:opacity-60"
+              class="mt-3 inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-xl bg-accent-500 px-4 py-2.5 text-[12.5px] font-semibold text-white transition hover:bg-accent-400 disabled:opacity-60"
               @click="startSharing"
             >
               <Navigation :size="15" />

@@ -26,7 +26,7 @@ const { confirmState, resolveConfirm } = useWorkspace()
           <button
             type="button"
             class="rounded-lg px-3.5 py-2 text-[12.5px] font-semibold transition"
-            :class="confirmState.danger ? 'bg-red-600 text-white hover:bg-red-700' : 'bg-accent-500 text-ink-950 hover:bg-accent-400'"
+            :class="confirmState.danger ? 'bg-red-600 text-white hover:bg-red-700' : 'bg-accent-500 text-white hover:bg-accent-400'"
             @click="resolveConfirm(true)"
           >
             {{ confirmState.confirmLabel }}

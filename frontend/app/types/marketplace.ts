@@ -7,10 +7,23 @@ export interface MarketplacePackage {
 }
 
 export interface MarketplaceSearchPayload {
-  origin_zone_id: string
+  service_mode?: 'pickup' | 'dropoff'
+  origin_zone_id?: string
   destination_zone_id: string
   origin_label?: string
+  origin_lga?: string
+  origin_state?: string
   destination_label?: string
+  destination_lga?: string
+  destination_state?: string
+  origin_area?: string
+  destination_area?: string
+  origin_address?: string
+  destination_address?: string
+  origin_latitude?: number
+  origin_longitude?: number
+  destination_latitude?: number
+  destination_longitude?: number
   pickup_address?: string
   dropoff_address?: string
   weight_kg: number
@@ -20,7 +33,7 @@ export interface MarketplaceSearchPayload {
   category?: string
   pickup_required?: boolean
   delivery_required?: boolean
-  sort?: 'cheapest' | 'fastest' | 'recommended' | 'rating'
+  sort?: 'cheapest' | 'fastest' | 'recommended' | 'rating' | 'pickup' | 'delivery'
 }
 
 export interface MarketplaceQuote {
@@ -31,12 +44,17 @@ export interface MarketplaceQuote {
   provider_slug: string
   booking_slug?: string
   provider_rating: number
+  service_mode?: 'pickup' | 'dropoff'
   service_key: 'zone_route'
   service_name: string
   origin_state: string
   origin_city: string
+  origin_zone_name?: string
   destination_state: string
   destination_city: string
+  destination_zone_name?: string
+  dropoff_branch_name?: string
+  dropoff_branch_address?: string
   base_price_minor: number
   chargeable_weight_kg: number
   additional_charges_minor: number
@@ -45,7 +63,11 @@ export interface MarketplaceQuote {
   currency: string
   estimated_delivery?: string
   estimated_duration_days: number
+  estimated_pickup?: string
+  estimated_pickup_hours?: number
+  estimated_delivery_hours?: number
   pickup_available: boolean
+  dropoff_available?: boolean
   delivery_available: boolean
   delivery_method: string
   price_confirmation_type: 'confirmed' | 'estimated'

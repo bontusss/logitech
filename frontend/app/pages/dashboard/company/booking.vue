@@ -358,7 +358,7 @@ function downloadQrCode() {
             <button
               type="submit"
               :disabled="!isVerified || saving"
-              class="inline-flex items-center gap-2 rounded-lg bg-ink-900 px-4 py-2.5 text-[12.5px] font-semibold text-white transition hover:bg-ink-900/90 disabled:cursor-not-allowed disabled:opacity-40"
+              class="inline-flex items-center gap-2 rounded-lg bg-accent-500 px-4 py-2.5 text-[12.5px] font-semibold text-white transition hover:bg-accent-400 disabled:cursor-not-allowed disabled:opacity-40"
             >
               <Loader2 v-if="saving" :size="15" class="animate-spin" />
               <Save v-else :size="15" />

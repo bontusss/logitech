@@ -48,7 +48,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
         <AppButton to="/login" variant="ghost">Sign in</AppButton>
         <NuxtLink
           to="/#rate-search"
-          class="inline-flex items-center gap-2 rounded-full bg-accent-500 px-4 py-2.5 text-[14px] font-semibold text-ink-950 shadow-[0_12px_26px_-16px_rgba(255,122,0,0.8)] transition hover:-translate-y-0.5 hover:bg-accent-400 hover:shadow-[0_16px_30px_-16px_rgba(255,122,0,0.9)]"
+          class="inline-flex items-center gap-2 rounded-full bg-accent-500 px-4 py-2.5 text-[14px] font-semibold text-white shadow-[0_12px_26px_-16px_rgba(255,122,0,0.8)] transition hover:-translate-y-0.5 hover:bg-accent-400 hover:shadow-[0_16px_30px_-16px_rgba(255,122,0,0.9)]"
         >
           Compare rates
           <ArrowRight :size="15" />

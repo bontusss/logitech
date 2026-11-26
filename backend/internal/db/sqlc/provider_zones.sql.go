@@ -51,17 +51,28 @@ func (q *Queries) CreateCompanyServiceZone(ctx context.Context, arg CreateCompan
 const createCompanyZoneRoute = `-- name: CreateCompanyZoneRoute :one
 INSERT INTO pricing_zone_rates (
   company_id, area_id, from_zone_id, to_zone_id, price_minor,
-  included_weight_kg, additional_weight_fee_minor, status
+  included_weight_kg, additional_weight_fee_minor, status,
+  pickup_available, dropoff_available,
+  estimated_pickup_hours, estimated_delivery_hours, dropoff_branch_id
 )
 SELECT $1, NULL, $2, $3,
-  $4, $5, $6, $7
+  $4, $5, $6, $7,
+  $8, $9,
+  $10, $11, $12
 WHERE EXISTS (
   SELECT 1 FROM service_zones WHERE id = $2 AND company_id = $1
 )
 AND EXISTS (
   SELECT 1 FROM service_zones WHERE id = $3 AND company_id = $1
 )
-RETURNING id, company_id, area_id, from_zone_id, to_zone_id, price_minor, included_weight_kg, additional_weight_fee_minor, status, created_at, updated_at
+AND (
+  $12::uuid IS NULL
+  OR EXISTS (
+    SELECT 1 FROM branches b
+    WHERE b.id = $12 AND b.company_id = $1 AND b.deleted_at IS NULL
+  )
+)
+RETURNING id, company_id, area_id, from_zone_id, to_zone_id, price_minor, included_weight_kg, additional_weight_fee_minor, status, created_at, updated_at, pickup_available, dropoff_available, estimated_pickup_hours, estimated_delivery_hours, dropoff_branch_id
 `
 
 type CreateCompanyZoneRouteParams struct {
@@ -72,6 +83,11 @@ type CreateCompanyZoneRouteParams struct {
 	IncludedWeightKg         pgtype.Numeric `json:"included_weight_kg"`
 	AdditionalWeightFeeMinor int64          `json:"additional_weight_fee_minor"`
 	Status                   string         `json:"status"`
+	PickupAvailable          bool           `json:"pickup_available"`
+	DropoffAvailable         bool           `json:"dropoff_available"`
+	EstimatedPickupHours     pgtype.Numeric `json:"estimated_pickup_hours"`
+	EstimatedDeliveryHours   pgtype.Numeric `json:"estimated_delivery_hours"`
+	DropoffBranchID          *uuid.UUID     `json:"dropoff_branch_id"`
 }
 
 func (q *Queries) CreateCompanyZoneRoute(ctx context.Context, arg CreateCompanyZoneRouteParams) (PricingZoneRate, error) {
@@ -83,6 +99,11 @@ func (q *Queries) CreateCompanyZoneRoute(ctx context.Context, arg CreateCompanyZ
 		arg.IncludedWeightKg,
 		arg.AdditionalWeightFeeMinor,
 		arg.Status,
+		arg.PickupAvailable,
+		arg.DropoffAvailable,
+		arg.EstimatedPickupHours,
+		arg.EstimatedDeliveryHours,
+		arg.DropoffBranchID,
 	)
 	var i PricingZoneRate
 	err := row.Scan(
@@ -97,6 +118,42 @@ func (q *Queries) CreateCompanyZoneRoute(ctx context.Context, arg CreateCompanyZ
 		&i.Status,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.PickupAvailable,
+		&i.DropoffAvailable,
+		&i.EstimatedPickupHours,
+		&i.EstimatedDeliveryHours,
+		&i.DropoffBranchID,
+	)
+	return i, err
+}
+
+const createGeoAreaZone = `-- name: CreateGeoAreaZone :one
+INSERT INTO geo_zones (country_code, state, lga, name, parent_id)
+SELECT g.country_code, g.state, g.lga, $1, g.id
+FROM geo_zones g
+WHERE g.id = $2
+  AND g.status = 'active'
+  AND g.parent_id IS NULL
+RETURNING id, country_code, state, lga, name, parent_id, status, created_at
+`
+
+type CreateGeoAreaZoneParams struct {
+	Name     string    `json:"name"`
+	ParentID uuid.UUID `json:"parent_id"`
+}
+
+func (q *Queries) CreateGeoAreaZone(ctx context.Context, arg CreateGeoAreaZoneParams) (GeoZone, error) {
+	row := q.db.QueryRow(ctx, createGeoAreaZone, arg.Name, arg.ParentID)
+	var i GeoZone
+	err := row.Scan(
+		&i.ID,
+		&i.CountryCode,
+		&i.State,
+		&i.Lga,
+		&i.Name,
+		&i.ParentID,
+		&i.Status,
+		&i.CreatedAt,
 	)
 	return i, err
 }
@@ -176,7 +233,7 @@ func (q *Queries) GetCompanyServiceZone(ctx context.Context, arg GetCompanyServi
 }
 
 const getCompanyZoneRoute = `-- name: GetCompanyZoneRoute :one
-SELECT id, company_id, area_id, from_zone_id, to_zone_id, price_minor, included_weight_kg, additional_weight_fee_minor, status, created_at, updated_at FROM pricing_zone_rates
+SELECT id, company_id, area_id, from_zone_id, to_zone_id, price_minor, included_weight_kg, additional_weight_fee_minor, status, created_at, updated_at, pickup_available, dropoff_available, estimated_pickup_hours, estimated_delivery_hours, dropoff_branch_id FROM pricing_zone_rates
 WHERE company_id = $1 AND id = $2
 `
 
@@ -200,6 +257,39 @@ func (q *Queries) GetCompanyZoneRoute(ctx context.Context, arg GetCompanyZoneRou
 		&i.Status,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.PickupAvailable,
+		&i.DropoffAvailable,
+		&i.EstimatedPickupHours,
+		&i.EstimatedDeliveryHours,
+		&i.DropoffBranchID,
+	)
+	return i, err
+}
+
+const getGeoAreaZoneByName = `-- name: GetGeoAreaZoneByName :one
+SELECT id, country_code, state, lga, name, parent_id, status, created_at FROM geo_zones
+WHERE parent_id = $1
+  AND lower(name) = lower($2)
+  AND status = 'active'
+`
+
+type GetGeoAreaZoneByNameParams struct {
+	ParentID *uuid.UUID `json:"parent_id"`
+	Name     string     `json:"name"`
+}
+
+func (q *Queries) GetGeoAreaZoneByName(ctx context.Context, arg GetGeoAreaZoneByNameParams) (GeoZone, error) {
+	row := q.db.QueryRow(ctx, getGeoAreaZoneByName, arg.ParentID, arg.Name)
+	var i GeoZone
+	err := row.Scan(
+		&i.ID,
+		&i.CountryCode,
+		&i.State,
+		&i.Lga,
+		&i.Name,
+		&i.ParentID,
+		&i.Status,
+		&i.CreatedAt,
 	)
 	return i, err
 }
@@ -227,13 +317,19 @@ func (q *Queries) GetGeoZone(ctx context.Context, id uuid.UUID) (GeoZone, error)
 const getPublicBookingZoneRoute = `-- name: GetPublicBookingZoneRoute :one
 SELECT
   r.id, r.price_minor, r.included_weight_kg, r.additional_weight_fee_minor,
-  fz.id AS from_zone_id, fz.name AS from_zone_name, fg.state AS from_state, fg.lga AS from_lga,
-  tz.id AS to_zone_id, tz.name AS to_zone_name, tg.state AS to_state, tg.lga AS to_lga
+  r.pickup_available, r.dropoff_available,
+  r.estimated_pickup_hours, r.estimated_delivery_hours,
+  fz.id AS from_zone_id, fz.name AS from_zone_name, fz.geo_zone_id AS from_geo_zone_id,
+  fg.state AS from_state, fg.lga AS from_lga,
+  tz.id AS to_zone_id, tz.name AS to_zone_name, tz.geo_zone_id AS to_geo_zone_id,
+  tg.state AS to_state, tg.lga AS to_lga,
+  r.dropoff_branch_id, b.name AS dropoff_branch_name, b.address AS dropoff_branch_address
 FROM pricing_zone_rates r
 JOIN service_zones fz ON fz.id = r.from_zone_id
 JOIN service_zones tz ON tz.id = r.to_zone_id
 JOIN geo_zones fg ON fg.id = fz.geo_zone_id
 JOIN geo_zones tg ON tg.id = tz.geo_zone_id
+LEFT JOIN branches b ON b.id = r.dropoff_branch_id AND b.company_id = r.company_id AND b.deleted_at IS NULL
 WHERE r.company_id = $1 AND r.id = $2 AND r.status = 'active'
 `
 
@@ -247,14 +343,23 @@ type GetPublicBookingZoneRouteRow struct {
 	PriceMinor               int64          `json:"price_minor"`
 	IncludedWeightKg         pgtype.Numeric `json:"included_weight_kg"`
 	AdditionalWeightFeeMinor int64          `json:"additional_weight_fee_minor"`
+	PickupAvailable          bool           `json:"pickup_available"`
+	DropoffAvailable         bool           `json:"dropoff_available"`
+	EstimatedPickupHours     pgtype.Numeric `json:"estimated_pickup_hours"`
+	EstimatedDeliveryHours   pgtype.Numeric `json:"estimated_delivery_hours"`
 	FromZoneID               uuid.UUID      `json:"from_zone_id"`
 	FromZoneName             string         `json:"from_zone_name"`
+	FromGeoZoneID            *uuid.UUID     `json:"from_geo_zone_id"`
 	FromState                string         `json:"from_state"`
 	FromLga                  string         `json:"from_lga"`
 	ToZoneID                 uuid.UUID      `json:"to_zone_id"`
 	ToZoneName               string         `json:"to_zone_name"`
+	ToGeoZoneID              *uuid.UUID     `json:"to_geo_zone_id"`
 	ToState                  string         `json:"to_state"`
 	ToLga                    string         `json:"to_lga"`
+	DropoffBranchID          *uuid.UUID     `json:"dropoff_branch_id"`
+	DropoffBranchName        *string        `json:"dropoff_branch_name"`
+	DropoffBranchAddress     *string        `json:"dropoff_branch_address"`
 }
 
 func (q *Queries) GetPublicBookingZoneRoute(ctx context.Context, arg GetPublicBookingZoneRouteParams) (GetPublicBookingZoneRouteRow, error) {
@@ -265,16 +370,68 @@ func (q *Queries) GetPublicBookingZoneRoute(ctx context.Context, arg GetPublicBo
 		&i.PriceMinor,
 		&i.IncludedWeightKg,
 		&i.AdditionalWeightFeeMinor,
+		&i.PickupAvailable,
+		&i.DropoffAvailable,
+		&i.EstimatedPickupHours,
+		&i.EstimatedDeliveryHours,
 		&i.FromZoneID,
 		&i.FromZoneName,
+		&i.FromGeoZoneID,
 		&i.FromState,
 		&i.FromLga,
 		&i.ToZoneID,
 		&i.ToZoneName,
+		&i.ToGeoZoneID,
 		&i.ToState,
 		&i.ToLga,
+		&i.DropoffBranchID,
+		&i.DropoffBranchName,
+		&i.DropoffBranchAddress,
 	)
 	return i, err
+}
+
+const listCompanyActiveBranches = `-- name: ListCompanyActiveBranches :many
+SELECT id, name, address, city, state
+FROM branches
+WHERE company_id = $1
+  AND status = 'active'
+  AND deleted_at IS NULL
+ORDER BY name
+`
+
+type ListCompanyActiveBranchesRow struct {
+	ID      uuid.UUID `json:"id"`
+	Name    string    `json:"name"`
+	Address string    `json:"address"`
+	City    string    `json:"city"`
+	State   string    `json:"state"`
+}
+
+func (q *Queries) ListCompanyActiveBranches(ctx context.Context, companyID uuid.UUID) ([]ListCompanyActiveBranchesRow, error) {
+	rows, err := q.db.Query(ctx, listCompanyActiveBranches, companyID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListCompanyActiveBranchesRow{}
+	for rows.Next() {
+		var i ListCompanyActiveBranchesRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Address,
+			&i.City,
+			&i.State,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const listCompanyServiceZones = `-- name: ListCompanyServiceZones :many
@@ -336,14 +493,18 @@ const listCompanyZoneRoutes = `-- name: ListCompanyZoneRoutes :many
 SELECT
   r.id, r.company_id, r.from_zone_id, r.to_zone_id, r.price_minor,
   r.included_weight_kg, r.additional_weight_fee_minor, r.status,
+  r.pickup_available, r.dropoff_available,
+  r.estimated_pickup_hours, r.estimated_delivery_hours,
   fz.name AS from_zone_name, fg.state AS from_state, fg.lga AS from_lga,
   tz.name AS to_zone_name, tg.state AS to_state, tg.lga AS to_lga,
+  r.dropoff_branch_id, b.name AS dropoff_branch_name, b.address AS dropoff_branch_address,
   r.created_at, r.updated_at
 FROM pricing_zone_rates r
 JOIN service_zones fz ON fz.id = r.from_zone_id
 JOIN service_zones tz ON tz.id = r.to_zone_id
 JOIN geo_zones fg ON fg.id = fz.geo_zone_id
 JOIN geo_zones tg ON tg.id = tz.geo_zone_id
+LEFT JOIN branches b ON b.id = r.dropoff_branch_id AND b.company_id = r.company_id AND b.deleted_at IS NULL
 WHERE r.company_id = $1
 ORDER BY fg.state, fg.lga, tg.state, tg.lga
 `
@@ -357,12 +518,19 @@ type ListCompanyZoneRoutesRow struct {
 	IncludedWeightKg         pgtype.Numeric `json:"included_weight_kg"`
 	AdditionalWeightFeeMinor int64          `json:"additional_weight_fee_minor"`
 	Status                   string         `json:"status"`
+	PickupAvailable          bool           `json:"pickup_available"`
+	DropoffAvailable         bool           `json:"dropoff_available"`
+	EstimatedPickupHours     pgtype.Numeric `json:"estimated_pickup_hours"`
+	EstimatedDeliveryHours   pgtype.Numeric `json:"estimated_delivery_hours"`
 	FromZoneName             string         `json:"from_zone_name"`
 	FromState                string         `json:"from_state"`
 	FromLga                  string         `json:"from_lga"`
 	ToZoneName               string         `json:"to_zone_name"`
 	ToState                  string         `json:"to_state"`
 	ToLga                    string         `json:"to_lga"`
+	DropoffBranchID          *uuid.UUID     `json:"dropoff_branch_id"`
+	DropoffBranchName        *string        `json:"dropoff_branch_name"`
+	DropoffBranchAddress     *string        `json:"dropoff_branch_address"`
 	CreatedAt                time.Time      `json:"created_at"`
 	UpdatedAt                time.Time      `json:"updated_at"`
 }
@@ -385,14 +553,68 @@ func (q *Queries) ListCompanyZoneRoutes(ctx context.Context, companyID uuid.UUID
 			&i.IncludedWeightKg,
 			&i.AdditionalWeightFeeMinor,
 			&i.Status,
+			&i.PickupAvailable,
+			&i.DropoffAvailable,
+			&i.EstimatedPickupHours,
+			&i.EstimatedDeliveryHours,
 			&i.FromZoneName,
 			&i.FromState,
 			&i.FromLga,
 			&i.ToZoneName,
 			&i.ToState,
 			&i.ToLga,
+			&i.DropoffBranchID,
+			&i.DropoffBranchName,
+			&i.DropoffBranchAddress,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listDropoffDestinationZones = `-- name: ListDropoffDestinationZones :many
+SELECT DISTINCT g.id, g.state, g.lga, g.name, g.parent_id
+FROM pricing_zone_rates r
+JOIN companies c ON c.id = r.company_id AND c.deleted_at IS NULL AND c.status = 'verified'
+JOIN service_zones tz ON tz.id = r.to_zone_id AND tz.company_id = c.id
+JOIN geo_zones g ON g.id = tz.geo_zone_id
+LEFT JOIN marketplace_settings ms ON ms.company_id = c.id
+WHERE r.status = 'active'
+  AND r.dropoff_available
+  AND (ms.company_id IS NULL OR (ms.is_listed AND ms.visibility_status = 'listed'))
+ORDER BY g.state, g.lga, g.name
+`
+
+type ListDropoffDestinationZonesRow struct {
+	ID       uuid.UUID  `json:"id"`
+	State    string     `json:"state"`
+	Lga      string     `json:"lga"`
+	Name     string     `json:"name"`
+	ParentID *uuid.UUID `json:"parent_id"`
+}
+
+func (q *Queries) ListDropoffDestinationZones(ctx context.Context) ([]ListDropoffDestinationZonesRow, error) {
+	rows, err := q.db.Query(ctx, listDropoffDestinationZones)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListDropoffDestinationZonesRow{}
+	for rows.Next() {
+		var i ListDropoffDestinationZonesRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.State,
+			&i.Lga,
+			&i.Name,
+			&i.ParentID,
 		); err != nil {
 			return nil, err
 		}
@@ -504,13 +726,19 @@ func (q *Queries) ListGeoZones(ctx context.Context, arg ListGeoZonesParams) ([]G
 
 const listMarketplaceZoneRoutesForLane = `-- name: ListMarketplaceZoneRoutesForLane :many
 WITH RECURSIVE origin_ancestors AS (
-  SELECT gz.id FROM geo_zones gz WHERE gz.id = $1
+  SELECT gz.id FROM geo_zones gz WHERE gz.id = $2
   UNION ALL
   SELECT g.parent_id FROM geo_zones g
   JOIN origin_ancestors a ON g.id = a.id
   WHERE g.parent_id IS NOT NULL
-), destination_ancestors AS (
+), origin_descendants AS (
   SELECT gz.id FROM geo_zones gz WHERE gz.id = $2
+  UNION ALL
+  SELECT g.id FROM geo_zones g
+  JOIN origin_descendants d ON g.parent_id = d.id
+  WHERE g.status = 'active'
+), destination_ancestors AS (
+  SELECT gz.id FROM geo_zones gz WHERE gz.id = $3
   UNION ALL
   SELECT g.parent_id FROM geo_zones g
   JOIN destination_ancestors a ON g.id = a.id
@@ -527,6 +755,13 @@ SELECT
   r.price_minor,
   r.included_weight_kg,
   r.additional_weight_fee_minor,
+  r.pickup_available,
+  r.dropoff_available,
+  r.estimated_pickup_hours,
+  r.estimated_delivery_hours,
+  r.dropoff_branch_id,
+  hub.name AS dropoff_branch_name,
+  hub.address AS dropoff_branch_address,
   fz.id AS from_zone_id,
   fz.name AS from_zone_name,
   fg.state AS from_state,
@@ -553,14 +788,24 @@ JOIN geo_zones tg ON tg.id = tz.geo_zone_id
 LEFT JOIN marketplace_settings ms ON ms.company_id = c.id
 LEFT JOIN company_branding b ON b.company_id = c.id
 LEFT JOIN booking_pages bp ON bp.company_id = c.id AND bp.is_published
+LEFT JOIN branches hub ON hub.id = r.dropoff_branch_id AND hub.company_id = c.id AND hub.deleted_at IS NULL
 WHERE r.status = 'active'
+  AND (
+    ($1::text = 'dropoff' AND r.dropoff_available)
+    OR ($1::text <> 'dropoff' AND r.pickup_available)
+  )
   AND (ms.company_id IS NULL OR (ms.is_listed AND ms.visibility_status = 'listed'))
-  AND fz.geo_zone_id IN (SELECT id FROM origin_ancestors)
+  AND fz.geo_zone_id IN (
+    SELECT id FROM origin_ancestors
+    UNION
+    SELECT id FROM origin_descendants WHERE $1::text = 'dropoff'
+  )
   AND tz.geo_zone_id IN (SELECT id FROM destination_ancestors)
 ORDER BY c.name
 `
 
 type ListMarketplaceZoneRoutesForLaneParams struct {
+	ServiceMode       string    `json:"service_mode"`
 	OriginZoneID      uuid.UUID `json:"origin_zone_id"`
 	DestinationZoneID uuid.UUID `json:"destination_zone_id"`
 }
@@ -576,6 +821,13 @@ type ListMarketplaceZoneRoutesForLaneRow struct {
 	PriceMinor               int64          `json:"price_minor"`
 	IncludedWeightKg         pgtype.Numeric `json:"included_weight_kg"`
 	AdditionalWeightFeeMinor int64          `json:"additional_weight_fee_minor"`
+	PickupAvailable          bool           `json:"pickup_available"`
+	DropoffAvailable         bool           `json:"dropoff_available"`
+	EstimatedPickupHours     pgtype.Numeric `json:"estimated_pickup_hours"`
+	EstimatedDeliveryHours   pgtype.Numeric `json:"estimated_delivery_hours"`
+	DropoffBranchID          *uuid.UUID     `json:"dropoff_branch_id"`
+	DropoffBranchName        *string        `json:"dropoff_branch_name"`
+	DropoffBranchAddress     *string        `json:"dropoff_branch_address"`
 	FromZoneID               uuid.UUID      `json:"from_zone_id"`
 	FromZoneName             string         `json:"from_zone_name"`
 	FromState                string         `json:"from_state"`
@@ -590,7 +842,7 @@ type ListMarketplaceZoneRoutesForLaneRow struct {
 }
 
 func (q *Queries) ListMarketplaceZoneRoutesForLane(ctx context.Context, arg ListMarketplaceZoneRoutesForLaneParams) ([]ListMarketplaceZoneRoutesForLaneRow, error) {
-	rows, err := q.db.Query(ctx, listMarketplaceZoneRoutesForLane, arg.OriginZoneID, arg.DestinationZoneID)
+	rows, err := q.db.Query(ctx, listMarketplaceZoneRoutesForLane, arg.ServiceMode, arg.OriginZoneID, arg.DestinationZoneID)
 	if err != nil {
 		return nil, err
 	}
@@ -609,6 +861,13 @@ func (q *Queries) ListMarketplaceZoneRoutesForLane(ctx context.Context, arg List
 			&i.PriceMinor,
 			&i.IncludedWeightKg,
 			&i.AdditionalWeightFeeMinor,
+			&i.PickupAvailable,
+			&i.DropoffAvailable,
+			&i.EstimatedPickupHours,
+			&i.EstimatedDeliveryHours,
+			&i.DropoffBranchID,
+			&i.DropoffBranchName,
+			&i.DropoffBranchAddress,
 			&i.FromZoneID,
 			&i.FromZoneName,
 			&i.FromState,
@@ -634,13 +893,19 @@ func (q *Queries) ListMarketplaceZoneRoutesForLane(ctx context.Context, arg List
 const listPublicBookingZoneRoutes = `-- name: ListPublicBookingZoneRoutes :many
 SELECT
   r.id, r.price_minor, r.included_weight_kg, r.additional_weight_fee_minor,
-  fz.id AS from_zone_id, fz.name AS from_zone_name, fg.state AS from_state, fg.lga AS from_lga,
-  tz.id AS to_zone_id, tz.name AS to_zone_name, tg.state AS to_state, tg.lga AS to_lga
+  r.pickup_available, r.dropoff_available,
+  r.estimated_pickup_hours, r.estimated_delivery_hours,
+  fz.id AS from_zone_id, fz.name AS from_zone_name, fz.geo_zone_id AS from_geo_zone_id,
+  fg.state AS from_state, fg.lga AS from_lga,
+  tz.id AS to_zone_id, tz.name AS to_zone_name, tz.geo_zone_id AS to_geo_zone_id,
+  tg.state AS to_state, tg.lga AS to_lga,
+  r.dropoff_branch_id, b.name AS dropoff_branch_name, b.address AS dropoff_branch_address
 FROM pricing_zone_rates r
 JOIN service_zones fz ON fz.id = r.from_zone_id
 JOIN service_zones tz ON tz.id = r.to_zone_id
 JOIN geo_zones fg ON fg.id = fz.geo_zone_id
 JOIN geo_zones tg ON tg.id = tz.geo_zone_id
+LEFT JOIN branches b ON b.id = r.dropoff_branch_id AND b.company_id = r.company_id AND b.deleted_at IS NULL
 WHERE r.company_id = $1 AND r.status = 'active'
 ORDER BY fg.state, fg.lga, tg.state, tg.lga
 `
@@ -650,14 +915,23 @@ type ListPublicBookingZoneRoutesRow struct {
 	PriceMinor               int64          `json:"price_minor"`
 	IncludedWeightKg         pgtype.Numeric `json:"included_weight_kg"`
 	AdditionalWeightFeeMinor int64          `json:"additional_weight_fee_minor"`
+	PickupAvailable          bool           `json:"pickup_available"`
+	DropoffAvailable         bool           `json:"dropoff_available"`
+	EstimatedPickupHours     pgtype.Numeric `json:"estimated_pickup_hours"`
+	EstimatedDeliveryHours   pgtype.Numeric `json:"estimated_delivery_hours"`
 	FromZoneID               uuid.UUID      `json:"from_zone_id"`
 	FromZoneName             string         `json:"from_zone_name"`
+	FromGeoZoneID            *uuid.UUID     `json:"from_geo_zone_id"`
 	FromState                string         `json:"from_state"`
 	FromLga                  string         `json:"from_lga"`
 	ToZoneID                 uuid.UUID      `json:"to_zone_id"`
 	ToZoneName               string         `json:"to_zone_name"`
+	ToGeoZoneID              *uuid.UUID     `json:"to_geo_zone_id"`
 	ToState                  string         `json:"to_state"`
 	ToLga                    string         `json:"to_lga"`
+	DropoffBranchID          *uuid.UUID     `json:"dropoff_branch_id"`
+	DropoffBranchName        *string        `json:"dropoff_branch_name"`
+	DropoffBranchAddress     *string        `json:"dropoff_branch_address"`
 }
 
 func (q *Queries) ListPublicBookingZoneRoutes(ctx context.Context, companyID uuid.UUID) ([]ListPublicBookingZoneRoutesRow, error) {
@@ -674,14 +948,23 @@ func (q *Queries) ListPublicBookingZoneRoutes(ctx context.Context, companyID uui
 			&i.PriceMinor,
 			&i.IncludedWeightKg,
 			&i.AdditionalWeightFeeMinor,
+			&i.PickupAvailable,
+			&i.DropoffAvailable,
+			&i.EstimatedPickupHours,
+			&i.EstimatedDeliveryHours,
 			&i.FromZoneID,
 			&i.FromZoneName,
+			&i.FromGeoZoneID,
 			&i.FromState,
 			&i.FromLga,
 			&i.ToZoneID,
 			&i.ToZoneName,
+			&i.ToGeoZoneID,
 			&i.ToState,
 			&i.ToLga,
+			&i.DropoffBranchID,
+			&i.DropoffBranchName,
+			&i.DropoffBranchAddress,
 		); err != nil {
 			return nil, err
 		}
@@ -695,13 +978,19 @@ func (q *Queries) ListPublicBookingZoneRoutes(ctx context.Context, companyID uui
 
 const listReachableDestinationZones = `-- name: ListReachableDestinationZones :many
 WITH RECURSIVE origin_ancestors AS (
-  SELECT gz.id FROM geo_zones gz WHERE gz.id = $1
+  SELECT gz.id FROM geo_zones gz WHERE gz.id = $2
   UNION ALL
   SELECT g.parent_id FROM geo_zones g
   JOIN origin_ancestors a ON g.id = a.id
   WHERE g.parent_id IS NOT NULL
+), origin_descendants AS (
+  SELECT gz.id FROM geo_zones gz WHERE gz.id = $2
+  UNION ALL
+  SELECT g.id FROM geo_zones g
+  JOIN origin_descendants d ON g.parent_id = d.id
+  WHERE g.status = 'active'
 )
-SELECT DISTINCT g.id, g.state, g.lga, g.name
+SELECT DISTINCT g.id, g.state, g.lga, g.name, g.parent_id
 FROM pricing_zone_rates r
 JOIN companies c ON c.id = r.company_id AND c.deleted_at IS NULL AND c.status = 'verified'
 JOIN service_zones fz ON fz.id = r.from_zone_id AND fz.company_id = c.id
@@ -709,20 +998,34 @@ JOIN service_zones tz ON tz.id = r.to_zone_id AND tz.company_id = c.id
 JOIN geo_zones g ON g.id = tz.geo_zone_id
 LEFT JOIN marketplace_settings ms ON ms.company_id = c.id
 WHERE r.status = 'active'
+  AND (
+    ($1::text = 'dropoff' AND r.dropoff_available)
+    OR ($1::text <> 'dropoff' AND r.pickup_available)
+  )
   AND (ms.company_id IS NULL OR (ms.is_listed AND ms.visibility_status = 'listed'))
-  AND fz.geo_zone_id IN (SELECT id FROM origin_ancestors)
-ORDER BY g.state, g.lga
+  AND fz.geo_zone_id IN (
+    SELECT id FROM origin_ancestors
+    UNION
+    SELECT id FROM origin_descendants WHERE $1::text = 'dropoff'
+  )
+ORDER BY g.state, g.lga, g.name
 `
 
-type ListReachableDestinationZonesRow struct {
-	ID    uuid.UUID `json:"id"`
-	State string    `json:"state"`
-	Lga   string    `json:"lga"`
-	Name  string    `json:"name"`
+type ListReachableDestinationZonesParams struct {
+	ServiceMode  string    `json:"service_mode"`
+	OriginZoneID uuid.UUID `json:"origin_zone_id"`
 }
 
-func (q *Queries) ListReachableDestinationZones(ctx context.Context, originZoneID uuid.UUID) ([]ListReachableDestinationZonesRow, error) {
-	rows, err := q.db.Query(ctx, listReachableDestinationZones, originZoneID)
+type ListReachableDestinationZonesRow struct {
+	ID       uuid.UUID  `json:"id"`
+	State    string     `json:"state"`
+	Lga      string     `json:"lga"`
+	Name     string     `json:"name"`
+	ParentID *uuid.UUID `json:"parent_id"`
+}
+
+func (q *Queries) ListReachableDestinationZones(ctx context.Context, arg ListReachableDestinationZonesParams) ([]ListReachableDestinationZonesRow, error) {
+	rows, err := q.db.Query(ctx, listReachableDestinationZones, arg.ServiceMode, arg.OriginZoneID)
 	if err != nil {
 		return nil, err
 	}
@@ -735,6 +1038,7 @@ func (q *Queries) ListReachableDestinationZones(ctx context.Context, originZoneI
 			&i.State,
 			&i.Lga,
 			&i.Name,
+			&i.ParentID,
 		); err != nil {
 			return nil, err
 		}
@@ -750,7 +1054,7 @@ const setCompanyZoneRouteStatus = `-- name: SetCompanyZoneRouteStatus :one
 UPDATE pricing_zone_rates
 SET status = $1, updated_at = now()
 WHERE company_id = $2 AND id = $3
-RETURNING id, company_id, area_id, from_zone_id, to_zone_id, price_minor, included_weight_kg, additional_weight_fee_minor, status, created_at, updated_at
+RETURNING id, company_id, area_id, from_zone_id, to_zone_id, price_minor, included_weight_kg, additional_weight_fee_minor, status, created_at, updated_at, pickup_available, dropoff_available, estimated_pickup_hours, estimated_delivery_hours, dropoff_branch_id
 `
 
 type SetCompanyZoneRouteStatusParams struct {
@@ -774,6 +1078,11 @@ func (q *Queries) SetCompanyZoneRouteStatus(ctx context.Context, arg SetCompanyZ
 		&i.Status,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.PickupAvailable,
+		&i.DropoffAvailable,
+		&i.EstimatedPickupHours,
+		&i.EstimatedDeliveryHours,
+		&i.DropoffBranchID,
 	)
 	return i, err
 }
@@ -820,15 +1129,27 @@ SET from_zone_id = $1,
     included_weight_kg = $4,
     additional_weight_fee_minor = $5,
     status = $6,
+    pickup_available = $7,
+    dropoff_available = $8,
+    estimated_pickup_hours = $9,
+    estimated_delivery_hours = $10,
+    dropoff_branch_id = $11,
     updated_at = now()
-WHERE r.company_id = $7 AND r.id = $8
+WHERE r.company_id = $12 AND r.id = $13
   AND EXISTS (
-    SELECT 1 FROM service_zones sz WHERE sz.id = $1 AND sz.company_id = $7
+    SELECT 1 FROM service_zones sz WHERE sz.id = $1 AND sz.company_id = $12
   )
   AND EXISTS (
-    SELECT 1 FROM service_zones sz WHERE sz.id = $2 AND sz.company_id = $7
+    SELECT 1 FROM service_zones sz WHERE sz.id = $2 AND sz.company_id = $12
   )
-RETURNING id, company_id, area_id, from_zone_id, to_zone_id, price_minor, included_weight_kg, additional_weight_fee_minor, status, created_at, updated_at
+  AND (
+    $11::uuid IS NULL
+    OR EXISTS (
+      SELECT 1 FROM branches b
+      WHERE b.id = $11 AND b.company_id = $12 AND b.deleted_at IS NULL
+    )
+  )
+RETURNING id, company_id, area_id, from_zone_id, to_zone_id, price_minor, included_weight_kg, additional_weight_fee_minor, status, created_at, updated_at, pickup_available, dropoff_available, estimated_pickup_hours, estimated_delivery_hours, dropoff_branch_id
 `
 
 type UpdateCompanyZoneRouteParams struct {
@@ -838,6 +1159,11 @@ type UpdateCompanyZoneRouteParams struct {
 	IncludedWeightKg         pgtype.Numeric `json:"included_weight_kg"`
 	AdditionalWeightFeeMinor int64          `json:"additional_weight_fee_minor"`
 	Status                   string         `json:"status"`
+	PickupAvailable          bool           `json:"pickup_available"`
+	DropoffAvailable         bool           `json:"dropoff_available"`
+	EstimatedPickupHours     pgtype.Numeric `json:"estimated_pickup_hours"`
+	EstimatedDeliveryHours   pgtype.Numeric `json:"estimated_delivery_hours"`
+	DropoffBranchID          *uuid.UUID     `json:"dropoff_branch_id"`
 	CompanyID                uuid.UUID      `json:"company_id"`
 	ID                       uuid.UUID      `json:"id"`
 }
@@ -850,6 +1176,11 @@ func (q *Queries) UpdateCompanyZoneRoute(ctx context.Context, arg UpdateCompanyZ
 		arg.IncludedWeightKg,
 		arg.AdditionalWeightFeeMinor,
 		arg.Status,
+		arg.PickupAvailable,
+		arg.DropoffAvailable,
+		arg.EstimatedPickupHours,
+		arg.EstimatedDeliveryHours,
+		arg.DropoffBranchID,
 		arg.CompanyID,
 		arg.ID,
 	)
@@ -866,6 +1197,11 @@ func (q *Queries) UpdateCompanyZoneRoute(ctx context.Context, arg UpdateCompanyZ
 		&i.Status,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.PickupAvailable,
+		&i.DropoffAvailable,
+		&i.EstimatedPickupHours,
+		&i.EstimatedDeliveryHours,
+		&i.DropoffBranchID,
 	)
 	return i, err
 }

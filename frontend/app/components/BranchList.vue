@@ -43,7 +43,7 @@ function managerName(branch: Branch) {
       <button
         v-if="canCreate"
         type="button"
-        class="inline-flex items-center gap-1.5 rounded-lg bg-accent-500 px-3 py-2 text-[12px] font-semibold text-ink-950 shadow-sm shadow-accent-500/20 transition hover:bg-accent-400"
+        class="inline-flex items-center gap-1.5 rounded-lg bg-accent-500 px-3 py-2 text-[12px] font-semibold text-white shadow-sm shadow-accent-500/20 transition hover:bg-accent-400"
         @click="$emit('create')"
       >
         <Plus :size="14" /> Add branch

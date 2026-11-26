@@ -7,70 +7,42 @@ withDefaults(
   }>(),
   { size: 36, tone: 'dark', wordmark: true },
 )
-
-// The mark appears more than once per page, so gradient ids must be unique.
-const uid = useId()
 </script>
 
 <template>
-  <span class="inline-flex items-center gap-2.5 select-none">
-    <svg
+  <span
+    class="inline-flex shrink-0 items-center select-none"
+    role="img"
+    aria-label="based on logistics (BOL)"
+  >
+    <img
+      v-if="!wordmark"
+      src="/brand/mark.png"
       :width="size"
       :height="size"
-      viewBox="0 0 40 40"
-      fill="none"
-      role="img"
-      aria-label="based on logistics"
-      class="shrink-0"
-    >
-      <defs>
-        <linearGradient
-          :id="`bol-tile-${uid}`"
-          x1="4"
-          y1="0"
-          x2="36"
-          y2="40"
-          gradientUnits="userSpaceOnUse"
-        >
-          <stop stop-color="#17335c" />
-          <stop offset="1" stop-color="#0b1f44" />
-        </linearGradient>
-      </defs>
-
-      <rect width="40" height="40" rx="10" :fill="`url(#bol-tile-${uid})`" />
-      <rect
-        x="0.6"
-        y="0.6"
-        width="38.8"
-        height="38.8"
-        rx="9.4"
-        stroke="#ffffff"
-        stroke-opacity="0.14"
+      alt=""
+      class="shrink-0 rounded-full"
+    />
+    <img
+      v-else-if="tone === 'light'"
+      src="/brand/logo-white.png"
+      alt="BOL"
+      class="w-auto shrink-0"
+      :style="{ height: `${size}px` }"
+    />
+    <template v-else>
+      <img
+        src="/brand/logo-navy.png"
+        alt="BOL"
+        class="brand-logo-light w-auto shrink-0"
+        :style="{ height: `${size}px` }"
       />
-
-      <g stroke="#ffffff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M12.2 11v18" />
-        <path d="M12.2 11h6.4a3.6 3.6 0 0 1 0 7.2h-6.4" />
-        <path d="M12.2 18.2h7.1a4.5 4.5 0 0 1 0 9h-7.1" />
-      </g>
-
-      <circle cx="29.4" cy="11.6" r="2.6" fill="#ff7a00" />
-      <path d="M18.6 33.4h8.2" stroke="#ffae5c" stroke-width="2" stroke-linecap="round" />
-    </svg>
-
-    <span v-if="wordmark" class="flex flex-col leading-none">
-      <span
-        class="text-[15px] font-semibold tracking-[-0.02em]"
-        :class="tone === 'light' ? 'text-white' : 'text-ink-900'"
-      >
-        based on logistics
-      </span>
-      <span
-        class="mt-1.5 text-[9px] font-semibold tracking-[0.32em] uppercase"
-        :class="tone === 'light' ? 'text-accent-300' : 'text-accent-600 dark:text-accent-400'"
-      >
-        BOL
-      </span>
-    </span>
+      <img
+        src="/brand/logo-white.png"
+        alt="BOL"
+        class="brand-logo-dark w-auto shrink-0"
+        :style="{ height: `${size}px` }"
+      />
+    </template>
   </span>
 </template>

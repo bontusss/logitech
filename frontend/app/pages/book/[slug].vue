@@ -108,21 +108,38 @@ interface RawZoneRoute {
   price_minor: number
   included_weight_kg: number
   additional_weight_fee_minor: number
-  from_zone: { id: string; name: string; state: string; lga: string }
-  to_zone: { id: string; name: string; state: string; lga: string }
+  pickup_available: boolean
+  dropoff_available: boolean
+  estimated_pickup_hours: number | null
+  estimated_delivery_hours: number | null
+  from_zone: { id: string; geo_zone_id?: string | null; name: string; state: string; lga: string }
+  to_zone: { id: string; geo_zone_id?: string | null; name: string; state: string; lga: string }
+  dropoff_branch_id?: string | null
+  dropoff_branch_name?: string | null
+  dropoff_branch_address?: string | null
 }
 
 interface PublicRoute {
   id: string
   origin_state: string
   origin_city: string
+  origin_zone_name: string
+  origin_geo_zone_id: string
   destination_state: string
   destination_city: string
+  destination_zone_name: string
+  destination_geo_zone_id: string
   origin_zone_id: string
   destination_zone_id: string
+  dropoff_branch_name: string
+  dropoff_branch_address: string
   price_minor: number
   included_weight_kg: number
   additional_weight_fee_minor: number
+  pickup_available: boolean
+  dropoff_available: boolean
+  estimated_pickup_hours: number | null
+  estimated_delivery_hours: number | null
   currency: string
 }
 
@@ -134,6 +151,25 @@ const config = useRuntimeConfig()
 const origin = useRequestURL().origin
 const slug = computed(() => String(route.params.slug ?? ''))
 const apiBase = (config.public.apiBase as string) || '/api/v1'
+
+function queryString(value: unknown) {
+  const raw = Array.isArray(value) ? value[0] : value
+  return typeof raw === 'string' ? raw.trim() : ''
+}
+
+// A quote from the landing search carries the matched zone and package so the
+// booking page opens on the same route instead of starting from scratch.
+const prefill = {
+  destinationZoneId: queryString(route.query.destination_zone_id),
+  destinationLga: queryString(route.query.destination_lga),
+  destinationState: queryString(route.query.destination_state),
+  originZoneId: queryString(route.query.origin_zone_id),
+  originLga: queryString(route.query.origin_lga),
+  originState: queryString(route.query.origin_state),
+  weightKg: queryString(route.query.weight_kg),
+  category: queryString(route.query.category),
+  serviceMode: queryString(route.query.service_mode),
+}
 
 const { data, error: pageLoadError, status } = await useAsyncData(
   () => `booking-page:${slug.value}`,
@@ -178,13 +214,23 @@ const routes = computed<PublicRoute[]>(() =>
     id: route.id,
     origin_state: route.from_zone.state,
     origin_city: route.from_zone.lga,
+    origin_zone_name: route.from_zone.name,
+    origin_geo_zone_id: route.from_zone.geo_zone_id ?? '',
     destination_state: route.to_zone.state,
     destination_city: route.to_zone.lga,
+    destination_zone_name: route.to_zone.name,
+    destination_geo_zone_id: route.to_zone.geo_zone_id ?? '',
     origin_zone_id: route.from_zone.id,
     destination_zone_id: route.to_zone.id,
+    dropoff_branch_name: route.dropoff_branch_name ?? '',
+    dropoff_branch_address: route.dropoff_branch_address ?? '',
     price_minor: route.price_minor,
     included_weight_kg: route.included_weight_kg,
     additional_weight_fee_minor: route.additional_weight_fee_minor,
+    pickup_available: route.pickup_available ?? true,
+    dropoff_available: route.dropoff_available ?? true,
+    estimated_pickup_hours: route.estimated_pickup_hours ?? null,
+    estimated_delivery_hours: route.estimated_delivery_hours ?? null,
     currency: 'NGN',
   })),
 )
@@ -202,6 +248,7 @@ watch(
 const providerDescription = computed(() => company.value?.description || '')
 const websiteHref = computed(() => company.value?.website_url || '')
 const companyPhotos = computed(() => (company.value?.photo_urls ?? []).filter(Boolean))
+const bannerImage = computed(() => branding.value?.cover_image_url || companyPhotos.value[0] || '')
 const averageRating = computed(() =>
   reviewSummary.value.review_count > 0
     ? reviewSummary.value.average_rating.toFixed(1)
@@ -326,7 +373,6 @@ async function submitReview() {
 }
 
 const currency = computed(() => company.value?.currency || 'NGN')
-const routeMode = ref<'route' | 'map'>('route')
 const currentStep = ref<BookingStep>(0)
 const trackingCode = ref('')
 const trackingUrl = ref('')
@@ -381,6 +427,7 @@ watch(availableCategoryOptions, (options) => {
 })
 
 const form = reactive({
+  destinationZoneId: '',
   selectedRouteId: '',
   deliverySpeed: 'standard' as 'standard' | 'express' | 'same_day',
   pickup: null as BookingLocation | null,
@@ -396,7 +443,132 @@ const form = reactive({
   receiverPhone: '',
 })
 
+const prefillWeight = Number(prefill.weightKg)
+if (Number.isFinite(prefillWeight) && prefillWeight > 0 && prefillWeight <= 500) {
+  form.weightKg = String(prefillWeight)
+}
+if (
+  prefill.category &&
+  availableCategoryOptions.value.some((option) => option.value === prefill.category)
+) {
+  form.category = prefill.category as PackageCategory
+}
+
 const routeSelected = computed(() => routes.value.find((item) => item.id === form.selectedRouteId) ?? null)
+
+// The sender first picks a destination zone the provider actively serves. Each
+// destination may be reachable from more than one hub, so the matching routes
+// stay available as explicit options.
+const destinationZones = computed(() => {
+  const seen = new Map<string, { id: string; name: string; lga: string; state: string; geoZoneId: string }>()
+  for (const providerRoute of routes.value) {
+    if (seen.has(providerRoute.destination_zone_id)) continue
+    seen.set(providerRoute.destination_zone_id, {
+      id: providerRoute.destination_zone_id,
+      name: providerRoute.destination_zone_name,
+      lga: providerRoute.destination_city,
+      state: providerRoute.destination_state,
+      geoZoneId: providerRoute.destination_geo_zone_id,
+    })
+  }
+  return [...seen.values()].sort(
+    (a, b) => `${a.state} ${a.lga} ${a.name}`.localeCompare(`${b.state} ${b.lga} ${b.name}`),
+  )
+})
+
+function destinationZoneLabel(zone: { name: string; lga: string; state: string }) {
+  const place = zone.name && zone.name !== zone.lga ? `${zone.name} · ${zone.lga}` : zone.lga
+  return `${place}, ${zone.state}`
+}
+
+function hubLabel(providerRoute: PublicRoute) {
+  const place = providerRoute.origin_zone_name && providerRoute.origin_zone_name !== providerRoute.origin_city
+    ? `${providerRoute.origin_zone_name}, ${providerRoute.origin_city}`
+    : providerRoute.origin_city
+  return `${place}, ${providerRoute.origin_state}`
+}
+
+let prefillDestinationApplied = false
+
+function prefillDestinationMatch(zones: typeof destinationZones.value) {
+  return zones.find((zone) => zone.geoZoneId && zone.geoZoneId === prefill.destinationZoneId)
+    ?? (prefill.destinationLga
+      ? zones.find(
+          (zone) =>
+            zone.lga.toLowerCase() === prefill.destinationLga.toLowerCase() &&
+            zone.state.toLowerCase() === prefill.destinationState.toLowerCase(),
+        )
+      : undefined)
+}
+
+function prefillRouteMatch(candidates: PublicRoute[]) {
+  const exact = candidates.find(
+    (item) =>
+      item.origin_geo_zone_id === prefill.originZoneId &&
+      item.destination_geo_zone_id === prefill.destinationZoneId,
+  )
+  if (exact) return exact
+  if (!prefill.originLga) return undefined
+  return candidates.find(
+    (item) =>
+      item.origin_city.toLowerCase() === prefill.originLga.toLowerCase() &&
+      item.origin_state.toLowerCase() === prefill.originState.toLowerCase(),
+  )
+}
+
+const zoneRoutes = computed(() =>
+  routes.value.filter((item) => item.destination_zone_id === form.destinationZoneId),
+)
+
+function selectCheapestRoute(candidates: PublicRoute[]) {
+  return [...candidates].sort((a, b) => a.price_minor - b.price_minor)[0]?.id ?? ''
+}
+
+watch(
+  destinationZones,
+  (availableZones) => {
+    if (!availableZones.length) {
+      form.destinationZoneId = ''
+      form.selectedRouteId = ''
+      return
+    }
+    if (!prefillDestinationApplied) {
+      prefillDestinationApplied = true
+      const match = prefillDestinationMatch(availableZones)
+      if (match) form.destinationZoneId = match.id
+    }
+    if (!availableZones.some((zone) => zone.id === form.destinationZoneId)) {
+      form.destinationZoneId = availableZones[0]!.id
+    }
+  },
+  { immediate: true },
+)
+
+watch(
+  () => form.destinationZoneId,
+  () => {
+    const candidates = zoneRoutes.value
+    if (!form.selectedRouteId) {
+      const preferred = prefillRouteMatch(candidates)
+      if (preferred) {
+        form.selectedRouteId = preferred.id
+        return
+      }
+    }
+    if (!candidates.some((item) => item.id === form.selectedRouteId)) {
+      form.selectedRouteId = selectCheapestRoute(candidates)
+    }
+  },
+  { immediate: true },
+)
+
+function hoursLabel(hours: number | null) {
+  if (!hours) return ''
+  if (hours < 1) return 'under 1h'
+  if (hours < 24) return `~${Math.round(hours)}h`
+  const days = Math.ceil(hours / 24)
+  return `~${days} day${days === 1 ? '' : 's'}`
+}
 
 watch(
   [signedIn, () => user.value?.full_name, () => form.senderName],
@@ -404,14 +576,6 @@ watch(
     if (!reviewForm.reviewerName) {
       reviewForm.reviewerName = user.value?.full_name || form.senderName || ''
     }
-  },
-  { immediate: true },
-)
-
-watch(
-  routes,
-  (availableRoutes) => {
-    routeMode.value = availableRoutes.length ? 'route' : 'map'
   },
   { immediate: true },
 )
@@ -452,13 +616,11 @@ const declaredValueMinor = computed(() => {
   const amount = Number(form.declaredValue)
   return Number.isFinite(amount) && amount >= 0 ? Math.round(amount * 100) : 0
 })
-const pickedRoute = computed(() => routeMode.value === 'route' ? routeSelected.value : null)
-const pickupText = computed(() => pickedRoute.value
-  ? `${pickedRoute.value.origin_city}, ${pickedRoute.value.origin_state}`
-  : form.pickup?.address || '')
-const dropoffText = computed(() => pickedRoute.value
-  ? `${pickedRoute.value.destination_city}, ${pickedRoute.value.destination_state}`
-  : form.dropoff?.address || '')
+const pickedRoute = computed(() => routeSelected.value)
+const pickupText = computed(() => form.pickup?.address
+  || (pickedRoute.value ? `${pickedRoute.value.origin_city}, ${pickedRoute.value.origin_state}` : ''))
+const dropoffText = computed(() => form.dropoff?.address
+  || (pickedRoute.value ? `${pickedRoute.value.destination_city}, ${pickedRoute.value.destination_state}` : ''))
 const estimatedDeliveryPrice = computed(() => {
   const providerRoute = routeSelected.value
   if (!providerRoute) return null
@@ -476,12 +638,16 @@ const serviceLabels = {
 function nextStep() {
   error.value = ''
   if (currentStep.value === 0) {
-    if (routeMode.value === 'route' && !form.selectedRouteId) {
-      error.value = 'Choose one of the available routes, or enter pickup and drop-off locations.'
+    if (routes.value.length && !form.destinationZoneId) {
+      error.value = 'Choose one of the destination zones this provider serves.'
       return
     }
-    if (routeMode.value === 'map' && (!form.pickup || !form.dropoff)) {
-      error.value = 'Choose both locations from the Mapbox suggestions to confirm their pins.'
+    if (routes.value.length && !form.selectedRouteId) {
+      error.value = 'Choose the hub option for this destination zone.'
+      return
+    }
+    if (!form.pickup || !form.dropoff) {
+      error.value = 'Choose both the pickup and delivery addresses from the map suggestions to confirm their pins.'
       return
     }
   } else if (currentStep.value === 1) {
@@ -586,13 +752,13 @@ async function createBooking() {
           weight_kg: Number(form.weightKg),
           additional_instructions: form.instructions.trim(),
           package_photo_url: form.photoUrl,
-          pickup_latitude: routeMode.value === 'map' ? form.pickup?.latitude : null,
-          pickup_longitude: routeMode.value === 'map' ? form.pickup?.longitude : null,
-          dropoff_latitude: routeMode.value === 'map' ? form.dropoff?.latitude : null,
-          dropoff_longitude: routeMode.value === 'map' ? form.dropoff?.longitude : null,
-          selected_zone_route_id: routeMode.value === 'route' ? form.selectedRouteId : null,
-          origin_zone_id: routeMode.value === 'route' ? routeSelected.value?.origin_zone_id : null,
-          destination_zone_id: routeMode.value === 'route' ? routeSelected.value?.destination_zone_id : null,
+          pickup_latitude: form.pickup?.latitude ?? null,
+          pickup_longitude: form.pickup?.longitude ?? null,
+          dropoff_latitude: form.dropoff?.latitude ?? null,
+          dropoff_longitude: form.dropoff?.longitude ?? null,
+          selected_zone_route_id: routes.value.length ? form.selectedRouteId : null,
+          origin_zone_id: routes.value.length ? routeSelected.value?.origin_zone_id ?? null : null,
+          destination_zone_id: routes.value.length ? routeSelected.value?.destination_zone_id ?? null : null,
           delivery_speed: form.deliverySpeed,
         },
       },
@@ -693,12 +859,15 @@ const bookingCode = computed(() => bookingReference.value
   >
     <header class="relative isolate overflow-hidden" :style="{ backgroundColor: secondary }">
       <img
-        v-if="branding?.cover_image_url"
-        :src="branding.cover_image_url"
+        v-if="bannerImage"
+        :src="bannerImage"
         alt=""
-        class="absolute inset-0 -z-20 h-full w-full object-cover opacity-30"
+        class="absolute inset-0 -z-20 h-full w-full object-cover opacity-70"
       />
-      <div class="absolute inset-0 -z-10" :style="{ background: `linear-gradient(115deg, ${secondary} 5%, ${primary} 145%)`, opacity: 0.96 }" />
+      <div
+        class="absolute inset-0 -z-10"
+        :style="{ background: `linear-gradient(115deg, ${secondary}e6 0%, ${secondary}b8 38%, ${primary}a8 100%)` }"
+      />
       <div class="pointer-events-none absolute -top-24 right-16 -z-10 size-56 rounded-full bg-white/15 blur-3xl" />
       <div class="pointer-events-none absolute -bottom-28 -left-10 -z-10 size-60 rounded-full bg-brand-300/20 blur-3xl" />
       <div class="mx-auto flex max-w-6xl items-center justify-between gap-4 px-5 py-5 sm:px-8 sm:py-6">
@@ -1066,8 +1235,8 @@ const bookingCode = computed(() => bookingReference.value
                 <div class="flex items-start gap-3">
                   <span class="booking-icon-tile flex size-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-brand-100 to-brand-50 text-brand-700 dark:from-brand-400/15 dark:to-brand-400/10 dark:text-brand-200"><MapPin :size="18" /></span>
                   <div>
-                    <h2 class="text-[16px] font-bold tracking-tight">Where are we going?</h2>
-                    <p class="mt-1 text-[11.5px] leading-5 text-slate-500">Choose a provider route or pin exact pickup and drop-off places.</p>
+                    <h2 class="text-[16px] font-bold tracking-tight">Where is it going?</h2>
+                    <p class="mt-1 text-[11.5px] leading-5 text-slate-500">Pick a destination zone this provider serves, then pin the actual pickup and delivery addresses.</p>
                   </div>
                 </div>
                 <span class="hidden shrink-0 rounded-full bg-slate-100 px-2 py-1 text-[9px] font-semibold tracking-wide text-slate-500 uppercase sm:inline dark:bg-white/10 dark:text-slate-300">Step 1 of 5</span>
@@ -1076,61 +1245,91 @@ const bookingCode = computed(() => bookingReference.value
               <div v-if="routeLoadError" role="status" class="mt-4 rounded-xl bg-accent-50 px-3 py-2.5 text-[11px] text-accent-800">
                 We couldn’t load the provider’s routes. You can still enter the locations manually.
               </div>
-              <div v-if="routes.length" class="booking-soft mt-5 grid grid-cols-2 gap-1 rounded-xl border p-1">
-                <button
-                  type="button"
-                  class="rounded-lg px-3 py-2.5 text-[11px] font-semibold transition"
-                  :class="routeMode === 'route' ? 'bg-white text-slate-900 shadow-sm dark:bg-white/10 dark:text-white' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'"
-                  @click="routeMode = 'route'"
-                >
-                  Provider routes <span class="ml-1 text-slate-400">{{ routes.length }}</span>
-                </button>
-                <button
-                  type="button"
-                  class="rounded-lg px-3 py-2.5 text-[11px] font-semibold transition"
-                  :class="routeMode === 'map' ? 'bg-white text-slate-900 shadow-sm dark:bg-white/10 dark:text-white' : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'"
-                  @click="routeMode = 'map'"
-                >
-                  Enter locations
-                </button>
-              </div>
 
-              <div v-if="routeMode === 'route' && routes.length" class="mt-4 space-y-2.5">
-                <button
-                  v-for="providerRoute in routes"
-                  :key="providerRoute.id"
-                  type="button"
-                  class="flex w-full items-center gap-3 rounded-2xl border p-3.5 text-left transition hover:-translate-y-0.5 hover:shadow-md sm:p-4"
-                  :style="form.selectedRouteId === providerRoute.id ? { borderColor: primary, backgroundColor: `${primary}08`, boxShadow: `0 0 0 1px ${primary}` } : {}"
-                  @click="selectRoute(providerRoute)"
-                >
-                  <span class="flex size-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-brand-100 to-brand-50 text-brand-700 dark:from-brand-400/15 dark:to-brand-400/10 dark:text-brand-200"><MapPin :size="16" /></span>
-                  <span class="min-w-0 flex-1">
-                    <span class="block text-[12px] font-bold">{{ providerRoute.origin_city }}, {{ providerRoute.origin_state }} <span class="mx-1 text-slate-400">→</span> {{ providerRoute.destination_city }}, {{ providerRoute.destination_state }}</span>
-                    <span class="mt-1 block text-[10px] text-slate-600">{{ formatCurrency(providerRoute.price_minor, providerRoute.currency) }} base · {{ providerRoute.included_weight_kg }} kg included</span>
-                  </span>
-                  <span v-if="form.selectedRouteId === providerRoute.id" class="flex size-5 shrink-0 items-center justify-center rounded-full text-white" :style="{ backgroundColor: primary }"><Check :size="12" /></span>
-                  <span v-else class="size-5 shrink-0 rounded-full border border-slate-300" />
-                </button>
-              </div>
-              <div v-else class="booking-soft mt-5 space-y-4 rounded-2xl border p-3.5 sm:p-4">
-                <BookingLocationField v-model="form.pickup" label="Pickup location" />
-                <div class="h-px bg-slate-200 dark:bg-white/10" />
-                <BookingLocationField v-model="form.dropoff" label="Drop-off location" />
-              </div>
-              <div v-if="!routes.length && !routeLoadError" class="mt-4 flex items-start gap-2 rounded-xl bg-brand-50 px-3 py-2.5 text-[10.5px] leading-5 text-brand-700">
-                <BadgeCheck :size="14" class="mt-0.5 shrink-0" /> Search and select a Mapbox suggestion to verify each map pin.
-              </div>
-              <div v-if="routeMode === 'route' && routeSelected" class="booking-soft mt-4 rounded-2xl border p-3.5 sm:p-4">
-                <p class="text-[11px] font-semibold text-slate-800 dark:text-slate-100">Route price</p>
-                <p class="mt-1 text-[10px] leading-5 text-slate-500">
-                  {{ formatCurrency(routeSelected.price_minor, routeSelected.currency) }} covers up to {{ routeSelected.included_weight_kg }} kg.
-                  Each extra kilogram is {{ formatCurrency(routeSelected.additional_weight_fee_minor, routeSelected.currency) }}.
-                </p>
-                <p v-if="estimatedDeliveryPrice !== null" class="mt-1 text-[11px] font-bold text-slate-800 dark:text-slate-100">
-                  Estimated for this package: {{ formatMoney(estimatedDeliveryPrice) }}
-                </p>
-              </div>
+              <template v-if="routes.length">
+                <label class="mt-5 block">
+                  <span class="mb-1.5 block text-[11px] font-semibold text-slate-600">Destination zone</span>
+                  <select
+                    v-model="form.destinationZoneId"
+                    class="w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-[12.5px] font-medium text-slate-800 outline-none focus:border-[var(--booking-primary)]"
+                  >
+                    <option v-for="zone in destinationZones" :key="zone.id" :value="zone.id">
+                      {{ destinationZoneLabel(zone) }}
+                    </option>
+                  </select>
+                  <span class="mt-1 block text-[9.5px] text-slate-400">Only destination zones this provider actively serves are shown.</span>
+                </label>
+
+                <div v-if="zoneRoutes.length > 1" class="mt-3 space-y-2">
+                  <p class="text-[10px] font-semibold tracking-wide text-slate-500 uppercase">Choose the hub route</p>
+                  <button
+                    v-for="providerRoute in zoneRoutes"
+                    :key="providerRoute.id"
+                    type="button"
+                    class="flex w-full items-center gap-3 rounded-2xl border p-3 text-left transition hover:-translate-y-0.5 hover:shadow-md"
+                    :style="form.selectedRouteId === providerRoute.id ? { borderColor: primary, backgroundColor: `${primary}08`, boxShadow: `0 0 0 1px ${primary}` } : {}"
+                    @click="selectRoute(providerRoute)"
+                  >
+                    <span class="flex size-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-brand-100 to-brand-50 text-brand-700 dark:from-brand-400/15 dark:to-brand-400/10 dark:text-brand-200"><MapPin :size="14" /></span>
+                    <span class="min-w-0 flex-1">
+                      <span class="block text-[11.5px] font-bold">
+                        {{ prefill.serviceMode === 'dropoff' ? 'Hub at' : 'Pickup from' }} {{ hubLabel(providerRoute) }}
+                      </span>
+                      <span v-if="providerRoute.dropoff_branch_name" class="mt-0.5 block text-[10px] font-medium text-slate-700">
+                        {{ providerRoute.dropoff_branch_name }}<template v-if="providerRoute.dropoff_branch_address"> — {{ providerRoute.dropoff_branch_address }}</template>
+                      </span>
+                      <span class="mt-0.5 block text-[10px] text-slate-600">
+                        {{ formatCurrency(providerRoute.price_minor, providerRoute.currency) }} base · {{ providerRoute.included_weight_kg }} kg included
+                        <template v-if="providerRoute.estimated_pickup_hours"> · pickup {{ hoursLabel(providerRoute.estimated_pickup_hours) }}</template>
+                        <template v-if="providerRoute.estimated_delivery_hours"> · delivery {{ hoursLabel(providerRoute.estimated_delivery_hours) }}</template>
+                      </span>
+                    </span>
+                    <span v-if="form.selectedRouteId === providerRoute.id" class="flex size-5 shrink-0 items-center justify-center rounded-full text-white" :style="{ backgroundColor: primary }"><Check :size="12" /></span>
+                    <span v-else class="size-5 shrink-0 rounded-full border border-slate-300" />
+                  </button>
+                </div>
+                <div v-else-if="routeSelected" class="booking-soft mt-3 rounded-2xl border p-3.5">
+                  <p class="text-[11.5px] font-bold">
+                    {{ prefill.serviceMode === 'dropoff' ? 'Hub at' : 'Pickup from' }} {{ hubLabel(routeSelected) }}
+                  </p>
+                  <p v-if="routeSelected.dropoff_branch_name" class="mt-0.5 text-[10px] font-medium text-slate-700">
+                    {{ routeSelected.dropoff_branch_name }}<template v-if="routeSelected.dropoff_branch_address"> — {{ routeSelected.dropoff_branch_address }}</template>
+                  </p>
+                  <p class="mt-1 text-[10px] leading-5 text-slate-500">
+                    {{ formatCurrency(routeSelected.price_minor, routeSelected.currency) }} base · {{ routeSelected.included_weight_kg }} kg included
+                    <template v-if="routeSelected.estimated_pickup_hours"> · pickup {{ hoursLabel(routeSelected.estimated_pickup_hours) }}</template>
+                    <template v-if="routeSelected.estimated_delivery_hours"> · delivery {{ hoursLabel(routeSelected.estimated_delivery_hours) }}</template>
+                  </p>
+                </div>
+
+                <div class="booking-soft mt-4 space-y-4 rounded-2xl border p-3.5 sm:p-4">
+                  <BookingLocationField v-model="form.pickup" label="Actual pickup address" />
+                  <div class="h-px bg-slate-200 dark:bg-white/10" />
+                  <BookingLocationField v-model="form.dropoff" label="Actual delivery address" />
+                </div>
+
+                <div v-if="routeSelected" class="booking-soft mt-4 rounded-2xl border p-3.5 sm:p-4">
+                  <p class="text-[11px] font-semibold text-slate-800 dark:text-slate-100">Route price</p>
+                  <p class="mt-1 text-[10px] leading-5 text-slate-500">
+                    {{ formatCurrency(routeSelected.price_minor, routeSelected.currency) }} covers up to {{ routeSelected.included_weight_kg }} kg.
+                    Each extra kilogram is {{ formatCurrency(routeSelected.additional_weight_fee_minor, routeSelected.currency) }}.
+                  </p>
+                  <p v-if="estimatedDeliveryPrice !== null" class="mt-1 text-[11px] font-bold text-slate-800 dark:text-slate-100">
+                    Estimated for this package: {{ formatMoney(estimatedDeliveryPrice) }}
+                  </p>
+                </div>
+              </template>
+
+              <template v-else>
+                <div class="booking-soft mt-5 space-y-4 rounded-2xl border p-3.5 sm:p-4">
+                  <BookingLocationField v-model="form.pickup" label="Pickup location" />
+                  <div class="h-px bg-slate-200 dark:bg-white/10" />
+                  <BookingLocationField v-model="form.dropoff" label="Drop-off location" />
+                </div>
+                <div v-if="!routeLoadError" class="mt-4 flex items-start gap-2 rounded-xl bg-brand-50 px-3 py-2.5 text-[10.5px] leading-5 text-brand-700">
+                  <BadgeCheck :size="14" class="mt-0.5 shrink-0" /> This provider has not published zone routes yet. Search and select a Mapbox suggestion to verify each map pin.
+                </div>
+              </template>
             </div>
 
             <div v-else-if="currentStep === 1" class="booking-panel rounded-3xl border p-4 sm:p-6">
@@ -1237,7 +1436,7 @@ const bookingCode = computed(() => bookingReference.value
                     <p class="flex gap-2"><MapPin :size="13" class="mt-0.5 shrink-0 text-success-600" /><span><b>Pickup</b><br />{{ pickupText }}</span></p>
                     <p class="flex gap-2"><MapPin :size="13" class="mt-0.5 shrink-0 text-red-600" /><span><b>Drop-off</b><br />{{ dropoffText }}</span></p>
                   </div>
-                  <p v-if="routeMode === 'map'" class="mt-2 text-[9px] font-medium text-success-700">Both locations have verified map pins.</p>
+                  <p v-if="form.pickup && form.dropoff" class="mt-2 text-[9px] font-medium text-success-700">Both locations have verified map pins.</p>
                 </section>
                 <section class="rounded-2xl border border-accent-200/60 bg-gradient-to-br from-accent-50 to-accent-50/60 p-3.5 dark:border-accent-400/20 dark:from-accent-400/10 dark:to-accent-400/5">
                   <p class="text-[9px] font-bold tracking-[0.14em] text-accent-700/70 uppercase dark:text-accent-200/70">Package</p>

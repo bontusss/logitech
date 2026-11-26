@@ -222,7 +222,7 @@ function openDelivery(id:string){navigateTo(`/dashboard/deliveries?id=${encodeUR
               <button
                 v-if="can('bookings.manage')"
                 type="button"
-                class="inline-flex items-center gap-1 rounded-lg bg-accent-500 px-3 py-2 text-[10.5px] font-semibold text-ink-950 transition hover:bg-accent-400"
+                class="inline-flex items-center gap-1 rounded-lg bg-accent-500 px-3 py-2 text-[10.5px] font-semibold text-white transition hover:bg-accent-400"
                 @click="openAccept(request)"
               >
                 <Check :size="12" /> Accept
@@ -283,7 +283,7 @@ function openDelivery(id:string){navigateTo(`/dashboard/deliveries?id=${encodeUR
           <button
             type="submit"
             :disabled="saving || !selectedDriver"
-            class="rounded-lg bg-accent-500 px-4 py-2 text-[11px] font-semibold text-ink-950 transition hover:bg-accent-400 disabled:opacity-50"
+            class="rounded-lg bg-accent-500 px-4 py-2 text-[11px] font-semibold text-white transition hover:bg-accent-400 disabled:opacity-50"
           >
             {{ saving ? 'Accepting…' : 'Accept & assign' }}
           </button>

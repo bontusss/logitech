@@ -227,7 +227,7 @@ async function savePolicy() {
         <p class="hidden text-[10px] text-ink-900/40 sm:block">Prohibited always wins over acceptable.</p>
         <div class="ml-auto flex gap-2">
           <button type="button" class="rounded-lg border border-ink-900/10 px-3 py-2 text-[11px] font-semibold" :disabled="saving" @click="closeEditor">Cancel</button>
-          <button type="submit" :disabled="saving" class="inline-flex items-center gap-1.5 rounded-lg bg-accent-500 px-4 py-2 text-[11px] font-semibold text-ink-950 hover:bg-accent-400 disabled:opacity-60">
+          <button type="submit" :disabled="saving" class="inline-flex items-center gap-1.5 rounded-lg bg-accent-500 px-4 py-2 text-[11px] font-semibold text-white hover:bg-accent-400 disabled:opacity-60">
             <Loader2 v-if="saving" :size="13" class="animate-spin" />
             <Check v-else :size="13" />
             {{ saving ? 'Saving…' : 'Save categories' }}

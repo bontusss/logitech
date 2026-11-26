@@ -187,7 +187,7 @@ function toggleMember(memberID: string) {
           <button
             type="button"
             :disabled="saving"
-            class="rounded-lg bg-accent-500 px-3.5 py-2 text-[12px] font-semibold text-ink-950 shadow-sm shadow-accent-500/20 transition hover:bg-accent-400 disabled:opacity-60"
+            class="rounded-lg bg-accent-500 px-3.5 py-2 text-[12px] font-semibold text-white shadow-sm shadow-accent-500/20 transition hover:bg-accent-400 disabled:opacity-60"
             @click="$emit('assign', selected)"
           >
             Save staff assignments

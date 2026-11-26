@@ -113,7 +113,7 @@ SELECT $5,$1,$2,$3,$4 WHERE EXISTS (
   SELECT 1 FROM last_mile_service_areas a WHERE a.id=$1 AND a.company_id=$5
 ) AND EXISTS (SELECT 1 FROM service_zones z WHERE z.id=$2 AND z.area_id=$1)
 AND EXISTS (SELECT 1 FROM service_zones z WHERE z.id=$3 AND z.area_id=$1)
-RETURNING id, company_id, area_id, from_zone_id, to_zone_id, price_minor, included_weight_kg, additional_weight_fee_minor, status, created_at, updated_at
+RETURNING id, company_id, area_id, from_zone_id, to_zone_id, price_minor, included_weight_kg, additional_weight_fee_minor, status, created_at, updated_at, pickup_available, dropoff_available, estimated_pickup_hours, estimated_delivery_hours, dropoff_branch_id
 `
 
 type CreatePricingZoneRateParams struct {
@@ -145,6 +145,11 @@ func (q *Queries) CreatePricingZoneRate(ctx context.Context, arg CreatePricingZo
 		&i.Status,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.PickupAvailable,
+		&i.DropoffAvailable,
+		&i.EstimatedPickupHours,
+		&i.EstimatedDeliveryHours,
+		&i.DropoffBranchID,
 	)
 	return i, err
 }
@@ -355,7 +360,7 @@ func (q *Queries) GetLastMileArea(ctx context.Context, arg GetLastMileAreaParams
 }
 
 const getPricingZoneRate = `-- name: GetPricingZoneRate :one
-SELECT r.id, r.company_id, r.area_id, r.from_zone_id, r.to_zone_id, r.price_minor, r.included_weight_kg, r.additional_weight_fee_minor, r.status, r.created_at, r.updated_at FROM pricing_zone_rates r JOIN last_mile_service_areas a ON a.id=r.area_id
+SELECT r.id, r.company_id, r.area_id, r.from_zone_id, r.to_zone_id, r.price_minor, r.included_weight_kg, r.additional_weight_fee_minor, r.status, r.created_at, r.updated_at, r.pickup_available, r.dropoff_available, r.estimated_pickup_hours, r.estimated_delivery_hours, r.dropoff_branch_id FROM pricing_zone_rates r JOIN last_mile_service_areas a ON a.id=r.area_id
 WHERE a.company_id=$1 AND r.area_id=$2 AND r.id=$3
 `
 
@@ -380,6 +385,11 @@ func (q *Queries) GetPricingZoneRate(ctx context.Context, arg GetPricingZoneRate
 		&i.Status,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.PickupAvailable,
+		&i.DropoffAvailable,
+		&i.EstimatedPickupHours,
+		&i.EstimatedDeliveryHours,
+		&i.DropoffBranchID,
 	)
 	return i, err
 }
@@ -512,7 +522,7 @@ func (q *Queries) ListServiceZones(ctx context.Context, arg ListServiceZonesPara
 }
 
 const listZoneRates = `-- name: ListZoneRates :many
-SELECT r.id, r.company_id, r.area_id, r.from_zone_id, r.to_zone_id, r.price_minor, r.included_weight_kg, r.additional_weight_fee_minor, r.status, r.created_at, r.updated_at FROM pricing_zone_rates r JOIN last_mile_service_areas a ON a.id=r.area_id
+SELECT r.id, r.company_id, r.area_id, r.from_zone_id, r.to_zone_id, r.price_minor, r.included_weight_kg, r.additional_weight_fee_minor, r.status, r.created_at, r.updated_at, r.pickup_available, r.dropoff_available, r.estimated_pickup_hours, r.estimated_delivery_hours, r.dropoff_branch_id FROM pricing_zone_rates r JOIN last_mile_service_areas a ON a.id=r.area_id
 WHERE a.company_id=$1 AND r.area_id=$2
 `
 
@@ -542,6 +552,11 @@ func (q *Queries) ListZoneRates(ctx context.Context, arg ListZoneRatesParams) ([
 			&i.Status,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.PickupAvailable,
+			&i.DropoffAvailable,
+			&i.EstimatedPickupHours,
+			&i.EstimatedDeliveryHours,
+			&i.DropoffBranchID,
 		); err != nil {
 			return nil, err
 		}
@@ -668,7 +683,7 @@ const updatePricingZoneRate = `-- name: UpdatePricingZoneRate :one
 UPDATE pricing_zone_rates r SET from_zone_id=$4, to_zone_id=$5, price_minor=$6, updated_at=now()
 FROM last_mile_service_areas a
 WHERE r.id=$3 AND r.area_id=$2 AND r.area_id=a.id AND a.company_id=$1
-RETURNING r.id, r.company_id, r.area_id, r.from_zone_id, r.to_zone_id, r.price_minor, r.included_weight_kg, r.additional_weight_fee_minor, r.status, r.created_at, r.updated_at
+RETURNING r.id, r.company_id, r.area_id, r.from_zone_id, r.to_zone_id, r.price_minor, r.included_weight_kg, r.additional_weight_fee_minor, r.status, r.created_at, r.updated_at, r.pickup_available, r.dropoff_available, r.estimated_pickup_hours, r.estimated_delivery_hours, r.dropoff_branch_id
 `
 
 type UpdatePricingZoneRateParams struct {
@@ -702,6 +717,11 @@ func (q *Queries) UpdatePricingZoneRate(ctx context.Context, arg UpdatePricingZo
 		&i.Status,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.PickupAvailable,
+		&i.DropoffAvailable,
+		&i.EstimatedPickupHours,
+		&i.EstimatedDeliveryHours,
+		&i.DropoffBranchID,
 	)
 	return i, err
 }

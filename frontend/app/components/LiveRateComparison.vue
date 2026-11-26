@@ -4,8 +4,10 @@ import {
   Clock3,
   Loader2,
   MapPin,
+  PackageCheck,
   Search,
   ShieldCheck,
+  Star,
   Truck,
   Wifi,
 } from 'lucide-vue-next'
@@ -22,13 +24,32 @@ const props = defineProps<{
   search: MarketplaceSearchPayload | null
 }>()
 
-const sortMode = ref<'cheapest' | 'rating' | 'fastest'>('cheapest')
+const sortMode = ref<'cheapest' | 'rating' | 'pickup' | 'delivery'>('cheapest')
+
+function deliveryHours(quote: MarketplaceQuote) {
+  return quote.estimated_delivery_hours ?? quote.estimated_duration_days * 24
+}
+
+function pickupHours(quote: MarketplaceQuote) {
+  return quote.estimated_pickup_hours ?? Number.POSITIVE_INFINITY
+}
+
 const visibleQuotes = computed<MarketplaceQuote[]>(() => {
   const quotes = [...(props.response?.quotes ?? [])]
   if (sortMode.value === 'rating') {
     quotes.sort((a, b) => b.provider_rating - a.provider_rating || a.total_price_minor - b.total_price_minor)
-  } else if (sortMode.value === 'fastest') {
-    quotes.sort((a, b) => a.estimated_duration_days - b.estimated_duration_days || a.total_price_minor - b.total_price_minor)
+  } else if (sortMode.value === 'pickup') {
+    quotes.sort(
+      (a, b) =>
+        pickupHours(a) - pickupHours(b) ||
+        deliveryHours(a) - deliveryHours(b) ||
+        a.total_price_minor - b.total_price_minor,
+    )
+  } else if (sortMode.value === 'delivery') {
+    quotes.sort(
+      (a, b) =>
+        deliveryHours(a) - deliveryHours(b) || a.total_price_minor - b.total_price_minor,
+    )
   } else {
     quotes.sort((a, b) => a.total_price_minor - b.total_price_minor)
   }
@@ -46,7 +67,22 @@ const categories: Record<string, string> = {
 }
 
 function bookingHref(quote: MarketplaceQuote) {
-  return quote.booking_slug ? `/book/${encodeURIComponent(quote.booking_slug)}` : undefined
+  if (!quote.booking_slug) return undefined
+  const params = new URLSearchParams()
+  const search = props.search
+  if (search) {
+    if (search.destination_zone_id) params.set('destination_zone_id', search.destination_zone_id)
+    if (search.origin_zone_id) params.set('origin_zone_id', search.origin_zone_id)
+    if (search.destination_lga) params.set('destination_lga', search.destination_lga)
+    if (search.destination_state) params.set('destination_state', search.destination_state)
+    if (search.origin_lga) params.set('origin_lga', search.origin_lga)
+    if (search.origin_state) params.set('origin_state', search.origin_state)
+    if (search.weight_kg) params.set('weight_kg', String(search.weight_kg))
+    if (search.category) params.set('category', search.category)
+    if (search.service_mode) params.set('service_mode', search.service_mode)
+  }
+  const query = params.toString()
+  return `/book/${encodeURIComponent(quote.booking_slug)}${query ? `?${query}` : ''}`
 }
 
 function etaLabel(quote: MarketplaceQuote) {
@@ -54,7 +90,11 @@ function etaLabel(quote: MarketplaceQuote) {
 }
 
 function handlingLabel(quote: MarketplaceQuote) {
-  return deliveryMethodLabel(quote.delivery_method)
+  return quote.service_mode === 'dropoff' ? 'Drop off at hub' : deliveryMethodLabel(quote.delivery_method)
+}
+
+function pickupLabel(quote: MarketplaceQuote) {
+  return quote.estimated_pickup || ''
 }
 
 function providerInitial(quote: MarketplaceQuote) {
@@ -106,9 +146,11 @@ function providerInitial(quote: MarketplaceQuote) {
     <template v-else-if="response && search">
       <div class="mt-4 flex items-center justify-between gap-3 rounded-xl border border-ink-900/8 bg-canvas px-3.5 py-3 dark:border-white/10 dark:bg-white/5">
         <div class="min-w-0">
-          <p class="text-[9px] font-semibold tracking-[0.12em] text-ink-900/60 uppercase">Zone route</p>
+          <p class="text-[9px] font-semibold tracking-[0.12em] text-ink-900/60 uppercase">
+            {{ search.service_mode === 'dropoff' ? 'Drop-off route' : 'Pickup route' }}
+          </p>
           <p class="mt-0.5 truncate text-[13px] font-semibold">
-            {{ search.origin_label || 'Pickup zone' }}
+            {{ search.origin_label || (search.service_mode === 'dropoff' ? 'Drop-off hub zone' : 'Pickup zone') }}
             <span class="px-1 text-accent-600 dark:text-accent-400">→</span>
             {{ search.destination_label || 'Destination zone' }}
           </p>
@@ -126,7 +168,8 @@ function providerInitial(quote: MarketplaceQuote) {
           v-for="option in ([
             { id: 'cheapest', label: 'Cheapest' },
             { id: 'rating', label: 'Top rated' },
-            { id: 'fastest', label: 'Fastest' },
+            { id: 'pickup', label: 'Pickup' },
+            { id: 'delivery', label: 'Delivery' },
           ] as const)"
           :key="option.id"
           type="button"
@@ -184,7 +227,16 @@ function providerInitial(quote: MarketplaceQuote) {
                     <span v-else>{{ providerInitial(quote) }}</span>
                   </span>
                   <div class="min-w-0">
-                    <p class="truncate text-[13px] font-semibold">{{ quote.provider_name }}</p>
+                    <div class="flex items-center gap-1.5">
+                      <p class="truncate text-[13px] font-semibold">{{ quote.provider_name }}</p>
+                      <span
+                        v-if="quote.provider_rating > 0"
+                        class="inline-flex shrink-0 items-center gap-0.5 text-[9.5px] font-semibold text-accent-700 dark:text-accent-400"
+                      >
+                        <Star :size="9" class="fill-accent-500 text-accent-500" />
+                        {{ quote.provider_rating.toFixed(1) }}
+                      </span>
+                    </div>
                     <div class="mt-1 flex flex-wrap items-center gap-1.5">
                       <span
                         class="rounded-full px-1.5 py-0.5 text-[9.5px] font-semibold"
@@ -207,10 +259,20 @@ function providerInitial(quote: MarketplaceQuote) {
               </div>
 
               <div class="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10.5px] font-medium text-ink-900/60">
+                <span v-if="pickupLabel(quote)" class="inline-flex items-center gap-1">
+                  <PackageCheck :size="11" /> {{ pickupLabel(quote) }}
+                </span>
                 <span class="inline-flex items-center gap-1">
                   <Clock3 :size="11" /> {{ etaLabel(quote) }}
                 </span>
-                <span class="inline-flex items-center gap-1">
+                <span v-if="quote.service_mode === 'dropoff'" class="inline-flex min-w-0 items-center gap-1">
+                  <MapPin :size="11" class="shrink-0" />
+                  <span class="truncate">
+                    Hub:
+                    {{ quote.dropoff_branch_name || quote.origin_zone_name || quote.origin_city }}, {{ quote.origin_state }}<template v-if="quote.dropoff_branch_address"> — {{ quote.dropoff_branch_address }}</template>
+                  </span>
+                </span>
+                <span v-else class="inline-flex items-center gap-1">
                   <MapPin :size="11" /> {{ handlingLabel(quote) }}
                 </span>
                 <span

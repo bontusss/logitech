@@ -406,8 +406,15 @@ func (a *API) publicBookingZoneRoutes(c *gin.Context) {
 			"id": route.ID, "price_minor": route.PriceMinor,
 			"included_weight_kg":          numericToFloat64(route.IncludedWeightKg),
 			"additional_weight_fee_minor": route.AdditionalWeightFeeMinor,
-			"from_zone":                   gin.H{"id": route.FromZoneID, "name": route.FromZoneName, "state": route.FromState, "lga": route.FromLga},
-			"to_zone":                     gin.H{"id": route.ToZoneID, "name": route.ToZoneName, "state": route.ToState, "lga": route.ToLga},
+			"pickup_available":            route.PickupAvailable,
+			"dropoff_available":           route.DropoffAvailable,
+			"estimated_pickup_hours":      numericPointer(route.EstimatedPickupHours),
+			"estimated_delivery_hours":    numericPointer(route.EstimatedDeliveryHours),
+			"from_zone":                   gin.H{"id": route.FromZoneID, "geo_zone_id": route.FromGeoZoneID, "name": route.FromZoneName, "state": route.FromState, "lga": route.FromLga},
+			"to_zone":                     gin.H{"id": route.ToZoneID, "geo_zone_id": route.ToGeoZoneID, "name": route.ToZoneName, "state": route.ToState, "lga": route.ToLga},
+			"dropoff_branch_id":           route.DropoffBranchID,
+			"dropoff_branch_name":         route.DropoffBranchName,
+			"dropoff_branch_address":      route.DropoffBranchAddress,
 		})
 	}
 	c.JSON(http.StatusOK, gin.H{"routes": items})

@@ -356,7 +356,7 @@ function paymentLabel(delivery: Delivery) {
         <button
           v-if="can('shipments.create')"
           type="button"
-          class="inline-flex min-h-10 items-center gap-1.5 rounded-xl bg-accent-500 px-4 py-2.5 text-[12px] font-semibold text-ink-950 shadow-sm shadow-accent-500/20 transition hover:-translate-y-0.5 hover:bg-accent-400"
+          class="inline-flex min-h-10 items-center gap-1.5 rounded-xl bg-accent-500 px-4 py-2.5 text-[12px] font-semibold text-white shadow-sm shadow-accent-500/20 transition hover:-translate-y-0.5 hover:bg-accent-400"
           @click="formOpen = true"
         >
           <Plus :size="14" /> Create delivery
@@ -374,7 +374,7 @@ function paymentLabel(delivery: Delivery) {
         role="tab"
         :aria-selected="activeTab === 'dispatch'"
         class="inline-flex items-center gap-2 rounded-lg px-3.5 py-2 text-[12px] font-semibold transition"
-        :class="activeTab === 'dispatch' ? 'bg-accent-500 text-ink-950 shadow-sm shadow-accent-500/25' : 'text-ink-900/55 hover:text-ink-900'"
+        :class="activeTab === 'dispatch' ? 'bg-accent-500 text-white shadow-sm shadow-accent-500/25' : 'text-ink-900/55 hover:text-ink-900'"
         @click="activeTab = 'dispatch'"
       >
         <Truck :size="14" /> Dispatch board
@@ -384,7 +384,7 @@ function paymentLabel(delivery: Delivery) {
         role="tab"
         :aria-selected="activeTab === 'all'"
         class="inline-flex items-center gap-2 rounded-lg px-3.5 py-2 text-[12px] font-semibold transition"
-        :class="activeTab === 'all' ? 'bg-accent-500 text-ink-950 shadow-sm shadow-accent-500/25' : 'text-ink-900/55 hover:text-ink-900'"
+        :class="activeTab === 'all' ? 'bg-accent-500 text-white shadow-sm shadow-accent-500/25' : 'text-ink-900/55 hover:text-ink-900'"
         @click="activeTab = 'all'"
       >
         <ClipboardList :size="14" /> All deliveries
@@ -476,7 +476,7 @@ function paymentLabel(delivery: Delivery) {
                 <p class="text-[10.5px] text-ink-900/55">{{ request.item_description }}</p>
                 <p class="mt-1 text-[11.5px] font-semibold">{{ request.delivery_price_minor ? formatMoney(request.delivery_price_minor) : 'Price to confirm' }}</p>
               </div>
-              <button type="button" class="rounded-lg bg-accent-500 px-3 py-2 text-[10.5px] font-semibold text-ink-950" @click="navigateTo('/dashboard/requests')">Review request</button>
+              <button type="button" class="rounded-lg bg-accent-500 px-3 py-2 text-[10.5px] font-semibold text-white" @click="navigateTo('/dashboard/requests')">Review request</button>
             </div>
           </article>
         </div>
@@ -822,7 +822,7 @@ function paymentLabel(delivery: Delivery) {
           <button type="button" :disabled="saving" class="rounded-lg border border-ink-900/10 px-4 py-2.5 text-[11.5px] font-semibold text-ink-900/60 hover:bg-canvas disabled:opacity-50" @click="closeForm">
             Cancel
           </button>
-          <button type="submit" :disabled="saving || !can('shipments.create')" class="inline-flex items-center gap-1.5 rounded-lg bg-accent-500 px-4 py-2.5 text-[11.5px] font-semibold text-ink-950 hover:bg-accent-500 disabled:opacity-50">
+          <button type="submit" :disabled="saving || !can('shipments.create')" class="inline-flex items-center gap-1.5 rounded-lg bg-accent-500 px-4 py-2.5 text-[11.5px] font-semibold text-white hover:bg-accent-500 disabled:opacity-50">
             <Loader2 v-if="saving" :size="14" class="animate-spin" />
             <Check v-else :size="14" />
             Save delivery

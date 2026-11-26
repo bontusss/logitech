@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import {
+  Bell,
   Building2,
   CalendarCheck,
   ChartNoAxesColumnIncreasing,
@@ -7,12 +8,17 @@ import {
   ClipboardList,
   CreditCard,
   Download,
+  FileText,
   LayoutDashboard,
+  LifeBuoy,
   LogOut,
+  MapPin,
   Menu,
+  Package,
   Palette,
-  Send,
+  Search,
   Settings,
+  Star,
   Truck,
   UserRound,
   Users,
@@ -54,13 +60,44 @@ interface NavigationGroup {
 
 const navigationGroups = computed<NavigationGroup[]>(() => {
   if (isCustomer.value) {
-    return [{
-      label: 'Workspace',
-      items: [
-        { label: 'Overview', to: '/dashboard', icon: LayoutDashboard, tone: 'brand' },
-        { label: 'Send a package', to: '/#rate-search', icon: Send, tone: 'accent' },
-      ],
-    }]
+    return [
+      {
+        label: 'Workspace',
+        items: [
+          { label: 'Overview', to: '/dashboard', icon: LayoutDashboard, tone: 'brand' },
+        ],
+      },
+      {
+        label: 'Shipments',
+        items: [
+          { label: 'My Shipments', to: '/dashboard/customer/shipments', icon: Package, tone: 'brand' },
+          { label: 'Track Shipment', to: '/dashboard/customer/track', icon: MapPin, tone: 'accent' },
+          { label: 'Find Providers', to: '/dashboard/customer/providers', icon: Search, tone: 'success', comingSoon: true },
+          { label: 'Saved Quotes', to: '/dashboard/customer/quotes', icon: FileText, tone: 'neutral', comingSoon: true },
+        ],
+      },
+      {
+        label: 'Personal',
+        items: [
+          { label: 'Address Book', to: '/dashboard/customer/addresses', icon: MapPin, tone: 'brand', comingSoon: true },
+          { label: 'Favourite Providers', to: '/dashboard/customer/favourites', icon: Star, tone: 'accent', comingSoon: true },
+          { label: 'Payments & Receipts', to: '/dashboard/customer/payments', icon: CreditCard, tone: 'success', comingSoon: true },
+        ],
+      },
+      {
+        label: 'Support',
+        items: [
+          { label: 'Help & Support', to: '/dashboard/customer/support', icon: LifeBuoy, tone: 'brand', comingSoon: true },
+          { label: 'Notifications', to: '/dashboard/customer/notifications', icon: Bell, tone: 'accent', comingSoon: true },
+        ],
+      },
+      {
+        label: 'Account',
+        items: [
+          { label: 'Settings', to: '/dashboard/customer/settings', icon: Settings, tone: 'neutral', comingSoon: true },
+        ],
+      },
+    ]
   }
   if (!isVerified.value) {
     return [{
@@ -134,10 +171,10 @@ function isActive(to: string) {
 }
 
 const pageTitle = computed(() => {
-  if (isCustomer.value) return 'Marketplace dashboard'
   if (route.path.startsWith('/onboarding')) return 'Company onboarding'
   const activeItem = navigationGroups.value.flatMap((group) => group.items).find((item) => isActive(item.to))
   if (activeItem) return activeItem.label
+  if (isCustomer.value) return 'Overview'
   return 'Workspace overview'
 })
 
@@ -208,7 +245,7 @@ watch(
           :aria-expanded="companyOpen"
           @click="companyOpen = !companyOpen"
         >
-          <span class="flex size-8 items-center justify-center rounded-lg bg-accent-500 text-[11px] font-semibold text-ink-950 shadow-sm shadow-accent-500/30">
+          <span class="flex size-8 items-center justify-center rounded-lg bg-accent-500 text-[11px] font-semibold text-white shadow-sm shadow-accent-500/30">
             {{ (currentCompany?.company_name ?? 'B').slice(0, 1).toUpperCase() }}
           </span>
           <span class="min-w-0 flex-1">
@@ -352,7 +389,7 @@ watch(
               :aria-expanded="profileOpen"
               @click="profileOpen = !profileOpen"
             >
-              <span class="flex size-7 items-center justify-center rounded-lg bg-accent-500 text-[10px] font-semibold text-ink-950 shadow-sm shadow-accent-500/25">
+              <span class="flex size-7 items-center justify-center rounded-lg bg-accent-500 text-[10px] font-semibold text-white shadow-sm shadow-accent-500/25">
                 {{ initials }}
               </span>
               <span class="hidden text-left sm:block">

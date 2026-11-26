@@ -25,7 +25,7 @@ const options = [
           class="rounded-full px-2.5 py-1 text-[10.5px] font-semibold transition"
           :class="
             modelValue === option.value
-              ? 'bg-ink-900 text-white dark:bg-white dark:text-ink-900'
+              ? 'bg-accent-500 text-white'
               : 'text-ink-900/55 hover:text-ink-900'
           "
           @click="emit('update:modelValue', option.value)"

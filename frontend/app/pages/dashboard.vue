@@ -12,6 +12,7 @@ import {
   ExternalLink,
   Loader2,
   MailCheck,
+  Route,
   Share2,
   ShieldCheck,
   Sparkles,
@@ -51,6 +52,9 @@ const loading = ref(false)
 const error = ref('')
 const bookingPageError = ref('')
 const driverError = ref('')
+const marketplaceZones = ref<number | null>(null)
+const marketplaceActiveRoutes = ref<number | null>(null)
+const marketplaceSetupError = ref('')
 const copiedBookingLink = ref(false)
 const bookingShareError = ref('')
 const qrCode = ref('')
@@ -73,6 +77,9 @@ async function load() {
   error.value = ''
   bookingPageError.value = ''
   driverError.value = ''
+  marketplaceSetupError.value = ''
+  marketplaceZones.value = null
+  marketplaceActiveRoutes.value = null
   try {
     detail.value = await api<CompanyDetail>('/companies/me')
     bookingPage.value = null
@@ -93,6 +100,26 @@ async function load() {
         } catch (err) {
           driverError.value = apiErrorMessage(err, 'Could not load your driver list.')
         }
+      }
+    }
+    if (
+      detail.value.company.status === 'verified' &&
+      detail.value.membership.permissions.includes('rates.view')
+    ) {
+      try {
+        const [zonesResult, routesResult] = await Promise.all([
+          api<{ zones: unknown[] }>('/companies/me/service-zones'),
+          api<{ routes: { status: string }[] }>('/companies/me/zone-routes'),
+        ])
+        marketplaceZones.value = zonesResult.zones?.length ?? 0
+        marketplaceActiveRoutes.value = (routesResult.routes ?? []).filter(
+          (zoneRoute) => zoneRoute.status === 'active',
+        ).length
+      } catch (err) {
+        marketplaceSetupError.value = apiErrorMessage(
+          err,
+          'Could not check your marketplace setup.',
+        )
       }
     }
   } catch (err) {
@@ -154,7 +181,7 @@ function downloadBookingQrCode() {
 
 const checklist = computed(() => {
   const company = detail.value?.company
-  return [
+  const items = [
     {
       label: 'Verify your email',
       body: 'Confirms ownership of the account email.',
@@ -186,6 +213,15 @@ const checklist = computed(() => {
       to: '/onboarding',
     },
   ]
+  if (detail.value?.membership.permissions.includes('rates.view')) {
+    items.push({
+      label: 'Set up zones & routes',
+      body: 'Required to appear in marketplace searches.',
+      done: (marketplaceActiveRoutes.value ?? 0) > 0,
+      to: '/dashboard/company/rates',
+    })
+  }
+  return items
 })
 
 const isVerified = computed(() => detail.value?.company.status === 'verified')
@@ -273,6 +309,36 @@ const analyticsDays = computed(() =>
     <template v-else-if="detail">
       <section v-if="isVerified" class="mt-5 space-y-5" aria-label="Company operations overview">
         <section
+          v-if="detail.membership.permissions.includes('rates.view') && marketplaceActiveRoutes === 0"
+          class="overview-nudge flex flex-col gap-4 rounded-xl border p-4 sm:flex-row sm:items-center sm:justify-between"
+          aria-labelledby="marketplace-setup-title"
+        >
+          <div class="flex items-start gap-3">
+            <span class="flex size-9 shrink-0 items-center justify-center rounded-lg bg-surface text-accent-700 dark:bg-white/5 dark:text-accent-300">
+              <Route :size="17" />
+            </span>
+            <div>
+              <h2 id="marketplace-setup-title" class="text-[13px] font-semibold">
+                Get listed in the marketplace
+              </h2>
+              <p class="mt-1 max-w-2xl text-[11.5px] leading-relaxed opacity-75">
+                Customers only see providers with an active zone route. You have added
+                {{ marketplaceZones ?? 0 }} zone{{ (marketplaceZones ?? 0) === 1 ? '' : 's' }} — publish at least
+                one direction to appear in landing page searches.
+              </p>
+            </div>
+          </div>
+          <NuxtLink
+            to="/dashboard/company/rates"
+            class="inline-flex min-h-9 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-accent-500 px-3.5 py-2 text-[11px] font-semibold text-white transition hover:bg-accent-400"
+          >
+            Set up zones & routes <ArrowRight :size="14" />
+          </NuxtLink>
+        </section>
+        <p v-if="marketplaceSetupError" role="alert" class="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-[11px] text-red-700">
+          {{ marketplaceSetupError }}
+        </p>
+        <section
           v-if="detail.membership.permissions.includes('staff.invite') && detail.membership.permissions.includes('staff.view') && !driverError && drivers.filter((driver) => driver.status === 'active').length === 0"
           class="overview-nudge flex flex-col gap-4 rounded-xl border p-4 sm:flex-row sm:items-center sm:justify-between"
           aria-labelledby="first-driver-title"
@@ -292,7 +358,7 @@ const analyticsDays = computed(() =>
           </div>
           <NuxtLink
             :to="{ path: '/dashboard/company/drivers', query: { create: '1' } }"
-            class="inline-flex min-h-9 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-accent-500 px-3.5 py-2 text-[11px] font-semibold text-ink-950 transition hover:bg-accent-400"
+            class="inline-flex min-h-9 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-accent-500 px-3.5 py-2 text-[11px] font-semibold text-white transition hover:bg-accent-400"
           >
             Create first driver <ArrowRight :size="14" />
           </NuxtLink>
@@ -352,7 +418,7 @@ const analyticsDays = computed(() =>
               <template v-if="bookingPage?.is_published">
                 <button
                   type="button"
-                  class="inline-flex min-h-10 items-center justify-center gap-1.5 rounded-lg bg-accent-500 px-3 py-2 text-[11.5px] font-semibold text-ink-950 transition hover:bg-accent-400"
+                  class="inline-flex min-h-10 items-center justify-center gap-1.5 rounded-lg bg-accent-500 px-3 py-2 text-[11.5px] font-semibold text-white transition hover:bg-accent-400"
                   @click="shareBookingLink"
                 >
                   <Share2 :size="14" /> Share

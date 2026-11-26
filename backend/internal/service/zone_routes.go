@@ -78,36 +78,84 @@ func formatKg(value float64) string {
 // ZoneRouteProvider is one active directional provider route matched for a
 // marketplace lane.
 type ZoneRouteProvider struct {
-	CompanyID            string
-	CompanyName          string
-	CompanySlug          string
-	BookingSlug          string
-	LogoURL              string
-	PublicDescription    string
-	RouteID              string
-	FromZoneID           string
-	FromZoneName         string
-	FromState            string
-	FromLGA              string
-	ToZoneID             string
-	ToZoneName           string
-	ToState              string
-	ToLGA                string
-	Pricing              ZoneRoutePricing
-	AcceptedCategories   []string
-	ProhibitedCategories []string
-	ProviderRating       float64
+	CompanyID              string
+	CompanyName            string
+	CompanySlug            string
+	BookingSlug            string
+	LogoURL                string
+	PublicDescription      string
+	RouteID                string
+	FromZoneID             string
+	FromZoneName           string
+	FromState              string
+	FromLGA                string
+	ToZoneID               string
+	ToZoneName             string
+	ToState                string
+	ToLGA                  string
+	DropoffBranchName      string
+	DropoffBranchAddress   string
+	Pricing                ZoneRoutePricing
+	PickupAvailable        bool
+	DropoffAvailable       bool
+	EstimatedPickupHours   *float64
+	EstimatedDeliveryHours *float64
+	AcceptedCategories     []string
+	ProhibitedCategories   []string
+	ProviderRating         float64
 }
 
 // BuildZoneRouteQuote converts a matched directional route into a marketplace
-// quote. It never falls back to a reverse route or a provider's home address.
+// quote. It never falls back to a reverse route, a provider's home address, or
+// a service mode the route does not offer.
 func BuildZoneRouteQuote(provider ZoneRouteProvider, req MarketplaceRouteRequest, expiresAt time.Time) (MarketplaceQuote, error) {
+	mode := req.ServiceMode
+	if mode == "" {
+		mode = "pickup"
+	}
+	switch mode {
+	case "pickup":
+		if !provider.PickupAvailable {
+			return MarketplaceQuote{}, ErrRouteUnavailable
+		}
+	case "dropoff":
+		if !provider.DropoffAvailable {
+			return MarketplaceQuote{}, ErrRouteUnavailable
+		}
+	default:
+		return MarketplaceQuote{}, ErrRouteUnavailable
+	}
 	if !ItemCategoryAllowed(req.Package.Category, provider.AcceptedCategories, provider.ProhibitedCategories) {
 		return MarketplaceQuote{}, ErrCategoryNotAllowed
 	}
 	price, err := CalculateZoneRoutePrice(provider.Pricing, req.Package.WeightKg)
 	if err != nil {
 		return MarketplaceQuote{}, err
+	}
+
+	deliveryMethod := "door-to-door"
+	if mode == "dropoff" {
+		deliveryMethod = "terminal-to-door"
+	}
+
+	estimatedDelivery := "3–5 days"
+	estimatedDurationDays := 4
+	if provider.EstimatedDeliveryHours != nil && *provider.EstimatedDeliveryHours > 0 {
+		hours := *provider.EstimatedDeliveryHours
+		estimatedDelivery = "Delivery in " + formatLegDuration(hours)
+		estimatedDurationDays = int(math.Ceil(hours / 24))
+	}
+	estimatedPickup := ""
+	var pickupHours *float64
+	if provider.EstimatedPickupHours != nil && *provider.EstimatedPickupHours > 0 {
+		hours := *provider.EstimatedPickupHours
+		pickupHours = &hours
+		estimatedPickup = "Pickup within " + formatLegDuration(hours)
+	}
+	var deliveryHours *float64
+	if provider.EstimatedDeliveryHours != nil && *provider.EstimatedDeliveryHours > 0 {
+		hours := *provider.EstimatedDeliveryHours
+		deliveryHours = &hours
 	}
 
 	return MarketplaceQuote{
@@ -118,22 +166,31 @@ func BuildZoneRouteQuote(provider ZoneRouteProvider, req MarketplaceRouteRequest
 		ProviderSlug:           provider.CompanySlug,
 		ProviderRating:         provider.ProviderRating,
 		BookingSlug:            provider.BookingSlug,
+		ServiceMode:            mode,
 		ServiceKey:             "zone_route",
 		ServiceName:            "Zone route",
 		OriginState:            provider.FromState,
 		OriginCity:             provider.FromLGA,
+		OriginZoneName:         provider.FromZoneName,
 		DestinationState:       provider.ToState,
 		DestinationCity:        provider.ToLGA,
+		DestinationZoneName:    provider.ToZoneName,
+		DropoffBranchName:      provider.DropoffBranchName,
+		DropoffBranchAddress:   provider.DropoffBranchAddress,
 		BasePriceMinor:         price.BasePriceMinor,
 		ChargeableWeightKg:     price.ChargeableWeightKg,
 		AdditionalChargesMinor: price.AdditionalChargesMinor,
 		TotalPriceMinor:        price.TotalMinor,
 		Currency:               "NGN",
-		EstimatedDelivery:      "3–5 days",
-		EstimatedDurationDays:  4,
-		PickupAvailable:        true,
+		EstimatedDelivery:      estimatedDelivery,
+		EstimatedDurationDays:  estimatedDurationDays,
+		EstimatedPickup:        estimatedPickup,
+		EstimatedPickupHours:   pickupHours,
+		EstimatedDeliveryHours: deliveryHours,
+		PickupAvailable:        provider.PickupAvailable,
+		DropoffAvailable:       provider.DropoffAvailable,
 		DeliveryAvailable:      true,
-		DeliveryMethod:         "door-to-door",
+		DeliveryMethod:         deliveryMethod,
 		PriceConfirmationType:  "confirmed",
 		Status:                 "active",
 		ExpiresAt:              expiresAt,
@@ -141,4 +198,26 @@ func BuildZoneRouteQuote(provider ZoneRouteProvider, req MarketplaceRouteRequest
 		DistanceKm:             0,
 		Conditions:             strings.TrimSpace(provider.PublicDescription),
 	}, nil
+}
+
+// formatLegDuration renders a configured hourly window for display.
+func formatLegDuration(hours float64) string {
+	switch {
+	case hours <= 0:
+		return ""
+	case hours < 1:
+		return "under 1h"
+	case hours < 24:
+		rounded := math.Round(hours)
+		if rounded < 1 {
+			rounded = 1
+		}
+		return fmt.Sprintf("%.0fh", rounded)
+	default:
+		days := math.Ceil(hours/24 - 1e-9)
+		if days <= 1 {
+			return "1 day"
+		}
+		return fmt.Sprintf("%.0f days", days)
+	}
 }

@@ -126,7 +126,7 @@ const initial = computed(() => props.quote.provider_name?.charAt(0)?.toUpperCase
         <button
           type="button"
           :disabled="busy || selected"
-          class="inline-flex items-center gap-1.5 rounded-xl bg-ink-900 px-3.5 py-2 text-[11.5px] font-semibold text-white transition hover:bg-brand-700 disabled:opacity-60 dark:bg-white dark:text-ink-900 dark:hover:bg-slate-200"
+          class="inline-flex items-center gap-1.5 rounded-xl bg-accent-500 px-3.5 py-2 text-[11.5px] font-semibold text-white transition hover:bg-accent-400 disabled:opacity-60"
           @click="$emit('select', quote)"
         >
           <Loader2 v-if="busy" :size="13" class="animate-spin" />

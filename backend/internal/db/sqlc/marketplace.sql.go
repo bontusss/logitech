@@ -89,7 +89,7 @@ SELECT
   sq.id AS saved_quote_id,
   sq.selection_status,
   sq.created_at AS selected_at,
-  q.id, q.quote_reference, q.search_id, q.company_id, q.provider_name, q.provider_logo, q.provider_slug, q.route_id, q.origin_state, q.origin_city, q.destination_state, q.destination_city, q.service_key, q.service_name, q.distance_km, q.package_snapshot, q.chargeable_weight_kg, q.base_price_minor, q.additional_charges_minor, q.discount_minor, q.total_price_minor, q.currency, q.price_confirmation_type, q.price_breakdown, q.rate_snapshot, q.estimated_delivery, q.estimated_duration_days, q.pickup_available, q.delivery_available, q.delivery_method, q.conditions, q.status, q.expires_at, q.created_at
+  q.id, q.quote_reference, q.search_id, q.company_id, q.provider_name, q.provider_logo, q.provider_slug, q.route_id, q.origin_state, q.origin_city, q.destination_state, q.destination_city, q.service_key, q.service_name, q.distance_km, q.package_snapshot, q.chargeable_weight_kg, q.base_price_minor, q.additional_charges_minor, q.discount_minor, q.total_price_minor, q.currency, q.price_confirmation_type, q.price_breakdown, q.rate_snapshot, q.estimated_delivery, q.estimated_duration_days, q.pickup_available, q.delivery_available, q.delivery_method, q.conditions, q.status, q.expires_at, q.created_at, q.service_mode, q.estimated_pickup, q.estimated_pickup_hours, q.estimated_delivery_hours, q.origin_zone_name, q.destination_zone_name, q.dropoff_branch_name, q.dropoff_branch_address
 FROM customer_saved_quotes sq
 JOIN marketplace_quotes q ON q.id = sq.quote_id
 WHERE sq.customer_id = $1
@@ -140,6 +140,14 @@ type GetCustomerSavedQuoteByReferenceRow struct {
 	Status                 string         `json:"status"`
 	ExpiresAt              time.Time      `json:"expires_at"`
 	CreatedAt              time.Time      `json:"created_at"`
+	ServiceMode            string         `json:"service_mode"`
+	EstimatedPickup        *string        `json:"estimated_pickup"`
+	EstimatedPickupHours   pgtype.Numeric `json:"estimated_pickup_hours"`
+	EstimatedDeliveryHours pgtype.Numeric `json:"estimated_delivery_hours"`
+	OriginZoneName         *string        `json:"origin_zone_name"`
+	DestinationZoneName    *string        `json:"destination_zone_name"`
+	DropoffBranchName      *string        `json:"dropoff_branch_name"`
+	DropoffBranchAddress   *string        `json:"dropoff_branch_address"`
 }
 
 func (q *Queries) GetCustomerSavedQuoteByReference(ctx context.Context, arg GetCustomerSavedQuoteByReferenceParams) (GetCustomerSavedQuoteByReferenceRow, error) {
@@ -183,6 +191,14 @@ func (q *Queries) GetCustomerSavedQuoteByReference(ctx context.Context, arg GetC
 		&i.Status,
 		&i.ExpiresAt,
 		&i.CreatedAt,
+		&i.ServiceMode,
+		&i.EstimatedPickup,
+		&i.EstimatedPickupHours,
+		&i.EstimatedDeliveryHours,
+		&i.OriginZoneName,
+		&i.DestinationZoneName,
+		&i.DropoffBranchName,
+		&i.DropoffBranchAddress,
 	)
 	return i, err
 }
@@ -263,7 +279,7 @@ func (q *Queries) GetMarketplaceProviderBySlug(ctx context.Context, slug string)
 }
 
 const getMarketplaceQuoteByReference = `-- name: GetMarketplaceQuoteByReference :one
-SELECT id, quote_reference, search_id, company_id, provider_name, provider_logo, provider_slug, route_id, origin_state, origin_city, destination_state, destination_city, service_key, service_name, distance_km, package_snapshot, chargeable_weight_kg, base_price_minor, additional_charges_minor, discount_minor, total_price_minor, currency, price_confirmation_type, price_breakdown, rate_snapshot, estimated_delivery, estimated_duration_days, pickup_available, delivery_available, delivery_method, conditions, status, expires_at, created_at FROM marketplace_quotes WHERE quote_reference = $1
+SELECT id, quote_reference, search_id, company_id, provider_name, provider_logo, provider_slug, route_id, origin_state, origin_city, destination_state, destination_city, service_key, service_name, distance_km, package_snapshot, chargeable_weight_kg, base_price_minor, additional_charges_minor, discount_minor, total_price_minor, currency, price_confirmation_type, price_breakdown, rate_snapshot, estimated_delivery, estimated_duration_days, pickup_available, delivery_available, delivery_method, conditions, status, expires_at, created_at, service_mode, estimated_pickup, estimated_pickup_hours, estimated_delivery_hours, origin_zone_name, destination_zone_name, dropoff_branch_name, dropoff_branch_address FROM marketplace_quotes WHERE quote_reference = $1
 `
 
 func (q *Queries) GetMarketplaceQuoteByReference(ctx context.Context, quoteReference string) (MarketplaceQuote, error) {
@@ -304,6 +320,14 @@ func (q *Queries) GetMarketplaceQuoteByReference(ctx context.Context, quoteRefer
 		&i.Status,
 		&i.ExpiresAt,
 		&i.CreatedAt,
+		&i.ServiceMode,
+		&i.EstimatedPickup,
+		&i.EstimatedPickupHours,
+		&i.EstimatedDeliveryHours,
+		&i.OriginZoneName,
+		&i.DestinationZoneName,
+		&i.DropoffBranchName,
+		&i.DropoffBranchAddress,
 	)
 	return i, err
 }
@@ -386,7 +410,9 @@ INSERT INTO marketplace_quotes (
   package_snapshot, chargeable_weight_kg, base_price_minor, additional_charges_minor,
   discount_minor, total_price_minor, currency, price_confirmation_type,
   price_breakdown, rate_snapshot, estimated_delivery, estimated_duration_days,
-  pickup_available, delivery_available, delivery_method, conditions, status, expires_at
+  pickup_available, delivery_available, delivery_method, conditions, status, expires_at,
+  service_mode, estimated_pickup, estimated_pickup_hours, estimated_delivery_hours,
+  origin_zone_name, destination_zone_name, dropoff_branch_name, dropoff_branch_address
 ) VALUES (
   $1, $2, $3, $4, $5, $6, $7,
   $8, $9, $10, $11,
@@ -396,9 +422,13 @@ INSERT INTO marketplace_quotes (
   $21, $22, $23,
   $24, $25, $26,
   $27, $28, $29,
-  $30, 'active', $31
+  $30, 'active', $31,
+  $32, $33,
+  $34, $35,
+  $36, $37,
+  $38, $39
 )
-RETURNING id, quote_reference, search_id, company_id, provider_name, provider_logo, provider_slug, route_id, origin_state, origin_city, destination_state, destination_city, service_key, service_name, distance_km, package_snapshot, chargeable_weight_kg, base_price_minor, additional_charges_minor, discount_minor, total_price_minor, currency, price_confirmation_type, price_breakdown, rate_snapshot, estimated_delivery, estimated_duration_days, pickup_available, delivery_available, delivery_method, conditions, status, expires_at, created_at
+RETURNING id, quote_reference, search_id, company_id, provider_name, provider_logo, provider_slug, route_id, origin_state, origin_city, destination_state, destination_city, service_key, service_name, distance_km, package_snapshot, chargeable_weight_kg, base_price_minor, additional_charges_minor, discount_minor, total_price_minor, currency, price_confirmation_type, price_breakdown, rate_snapshot, estimated_delivery, estimated_duration_days, pickup_available, delivery_available, delivery_method, conditions, status, expires_at, created_at, service_mode, estimated_pickup, estimated_pickup_hours, estimated_delivery_hours, origin_zone_name, destination_zone_name, dropoff_branch_name, dropoff_branch_address
 `
 
 type InsertMarketplaceQuoteParams struct {
@@ -433,6 +463,14 @@ type InsertMarketplaceQuoteParams struct {
 	DeliveryMethod         string         `json:"delivery_method"`
 	Conditions             *string        `json:"conditions"`
 	ExpiresAt              time.Time      `json:"expires_at"`
+	ServiceMode            string         `json:"service_mode"`
+	EstimatedPickup        *string        `json:"estimated_pickup"`
+	EstimatedPickupHours   pgtype.Numeric `json:"estimated_pickup_hours"`
+	EstimatedDeliveryHours pgtype.Numeric `json:"estimated_delivery_hours"`
+	OriginZoneName         *string        `json:"origin_zone_name"`
+	DestinationZoneName    *string        `json:"destination_zone_name"`
+	DropoffBranchName      *string        `json:"dropoff_branch_name"`
+	DropoffBranchAddress   *string        `json:"dropoff_branch_address"`
 }
 
 func (q *Queries) InsertMarketplaceQuote(ctx context.Context, arg InsertMarketplaceQuoteParams) (MarketplaceQuote, error) {
@@ -468,6 +506,14 @@ func (q *Queries) InsertMarketplaceQuote(ctx context.Context, arg InsertMarketpl
 		arg.DeliveryMethod,
 		arg.Conditions,
 		arg.ExpiresAt,
+		arg.ServiceMode,
+		arg.EstimatedPickup,
+		arg.EstimatedPickupHours,
+		arg.EstimatedDeliveryHours,
+		arg.OriginZoneName,
+		arg.DestinationZoneName,
+		arg.DropoffBranchName,
+		arg.DropoffBranchAddress,
 	)
 	var i MarketplaceQuote
 	err := row.Scan(
@@ -505,6 +551,14 @@ func (q *Queries) InsertMarketplaceQuote(ctx context.Context, arg InsertMarketpl
 		&i.Status,
 		&i.ExpiresAt,
 		&i.CreatedAt,
+		&i.ServiceMode,
+		&i.EstimatedPickup,
+		&i.EstimatedPickupHours,
+		&i.EstimatedDeliveryHours,
+		&i.OriginZoneName,
+		&i.DestinationZoneName,
+		&i.DropoffBranchName,
+		&i.DropoffBranchAddress,
 	)
 	return i, err
 }
@@ -542,7 +596,7 @@ SELECT
   sq.id AS saved_quote_id,
   sq.selection_status,
   sq.created_at AS selected_at,
-  q.id, q.quote_reference, q.search_id, q.company_id, q.provider_name, q.provider_logo, q.provider_slug, q.route_id, q.origin_state, q.origin_city, q.destination_state, q.destination_city, q.service_key, q.service_name, q.distance_km, q.package_snapshot, q.chargeable_weight_kg, q.base_price_minor, q.additional_charges_minor, q.discount_minor, q.total_price_minor, q.currency, q.price_confirmation_type, q.price_breakdown, q.rate_snapshot, q.estimated_delivery, q.estimated_duration_days, q.pickup_available, q.delivery_available, q.delivery_method, q.conditions, q.status, q.expires_at, q.created_at
+  q.id, q.quote_reference, q.search_id, q.company_id, q.provider_name, q.provider_logo, q.provider_slug, q.route_id, q.origin_state, q.origin_city, q.destination_state, q.destination_city, q.service_key, q.service_name, q.distance_km, q.package_snapshot, q.chargeable_weight_kg, q.base_price_minor, q.additional_charges_minor, q.discount_minor, q.total_price_minor, q.currency, q.price_confirmation_type, q.price_breakdown, q.rate_snapshot, q.estimated_delivery, q.estimated_duration_days, q.pickup_available, q.delivery_available, q.delivery_method, q.conditions, q.status, q.expires_at, q.created_at, q.service_mode, q.estimated_pickup, q.estimated_pickup_hours, q.estimated_delivery_hours, q.origin_zone_name, q.destination_zone_name, q.dropoff_branch_name, q.dropoff_branch_address
 FROM customer_saved_quotes sq
 JOIN marketplace_quotes q ON q.id = sq.quote_id
 WHERE sq.customer_id = $1
@@ -588,6 +642,14 @@ type ListCustomerSavedQuotesRow struct {
 	Status                 string         `json:"status"`
 	ExpiresAt              time.Time      `json:"expires_at"`
 	CreatedAt              time.Time      `json:"created_at"`
+	ServiceMode            string         `json:"service_mode"`
+	EstimatedPickup        *string        `json:"estimated_pickup"`
+	EstimatedPickupHours   pgtype.Numeric `json:"estimated_pickup_hours"`
+	EstimatedDeliveryHours pgtype.Numeric `json:"estimated_delivery_hours"`
+	OriginZoneName         *string        `json:"origin_zone_name"`
+	DestinationZoneName    *string        `json:"destination_zone_name"`
+	DropoffBranchName      *string        `json:"dropoff_branch_name"`
+	DropoffBranchAddress   *string        `json:"dropoff_branch_address"`
 }
 
 func (q *Queries) ListCustomerSavedQuotes(ctx context.Context, customerID *uuid.UUID) ([]ListCustomerSavedQuotesRow, error) {
@@ -637,6 +699,14 @@ func (q *Queries) ListCustomerSavedQuotes(ctx context.Context, customerID *uuid.
 			&i.Status,
 			&i.ExpiresAt,
 			&i.CreatedAt,
+			&i.ServiceMode,
+			&i.EstimatedPickup,
+			&i.EstimatedPickupHours,
+			&i.EstimatedDeliveryHours,
+			&i.OriginZoneName,
+			&i.DestinationZoneName,
+			&i.DropoffBranchName,
+			&i.DropoffBranchAddress,
 		); err != nil {
 			return nil, err
 		}

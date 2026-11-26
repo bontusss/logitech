@@ -131,7 +131,7 @@ const labelClass = 'mb-1.5 block text-[11.5px] font-semibold text-ink-900/75'
       <button
         type="button"
         class="flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-[12px] font-semibold transition"
-        :class="mode === 'customer' ? 'bg-accent-500 text-ink-950 shadow-sm' : 'text-ink-900/55 hover:bg-surface hover:text-ink-900'"
+        :class="mode === 'customer' ? 'bg-accent-500 text-white shadow-sm' : 'text-ink-900/55 hover:bg-surface hover:text-ink-900'"
         @click="mode = 'customer'"
       >
         <ShoppingBag :size="14" />
@@ -140,7 +140,7 @@ const labelClass = 'mb-1.5 block text-[11.5px] font-semibold text-ink-900/75'
       <button
         type="button"
         class="flex items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-[12px] font-semibold transition"
-        :class="mode === 'company' ? 'bg-accent-500 text-ink-950 shadow-sm' : 'text-ink-900/55 hover:bg-surface hover:text-ink-900'"
+        :class="mode === 'company' ? 'bg-accent-500 text-white shadow-sm' : 'text-ink-900/55 hover:bg-surface hover:text-ink-900'"
         @click="mode = 'company'"
       >
         <Building2 :size="14" />
