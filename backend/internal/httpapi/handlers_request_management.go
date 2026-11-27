@@ -28,7 +28,7 @@ func (a *API) listBookingRequests(c *gin.Context) {
 			PickupAddress: row.PickupAddress, DropoffAddress: row.DropoffAddress,
 			ItemDescription: row.ItemDescription, DeclaredValueMinor: row.DeclaredValueMinor,
 			DeliveryPriceMinor: row.DeliveryPriceMinor, Payer: row.Payer, IsPaid: row.IsPaid,
-			PaymentMethod: row.PaymentMethod, AssignedDriverID: row.AssignedDriverID,
+			PaidAt: row.PaidAt, PaymentMethod: row.PaymentMethod, AssignedDriverID: row.AssignedDriverID,
 			AssignedDriverName: row.AssignedDriverName, PackageCategory: row.PackageCategory,
 			WeightKg: numericToFloat64(row.WeightKg), AdditionalInstructions: row.AdditionalInstructions,
 			PackagePhotoURL: row.PackagePhotoUrl, PriceIsEstimate: row.PriceIsEstimate,
@@ -49,7 +49,8 @@ func (a *API) acceptBookingRequest(c *gin.Context) {
 		return
 	}
 	var req struct {
-		DriverID string `json:"driver_id" binding:"required"`
+		DriverID           string `json:"driver_id" binding:"required"`
+		DeliveryPriceMinor *int64 `json:"delivery_price_minor"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		fail(c, http.StatusBadRequest, "driver_required", "Choose a driver when accepting the request.")
@@ -58,6 +59,10 @@ func (a *API) acceptBookingRequest(c *gin.Context) {
 	driverID, err := uuid.Parse(strings.TrimSpace(req.DriverID))
 	if err != nil {
 		fail(c, http.StatusBadRequest, "invalid_driver", "Choose a valid active driver.")
+		return
+	}
+	if req.DeliveryPriceMinor != nil && (*req.DeliveryPriceMinor < 0 || *req.DeliveryPriceMinor > 10_000_000_000_00) {
+		fail(c, http.StatusBadRequest, "invalid_price", "Enter a valid final delivery price.")
 		return
 	}
 
@@ -69,6 +74,13 @@ func (a *API) acceptBookingRequest(c *gin.Context) {
 		}
 		if _, err := tx.Exec(c.Request.Context(), `UPDATE deliveries SET assigned_driver_id=$3, status='assigned', updated_at=now() WHERE id=$1 AND company_id=$2`, id, tenant.CompanyID, driverID); err != nil {
 			return err
+		}
+		if req.DeliveryPriceMinor != nil {
+			// The booking price was an estimate. The provider confirms the final
+			// amount at acceptance so the customer is not billed an unknown price.
+			if _, err := tx.Exec(c.Request.Context(), `UPDATE deliveries SET delivery_price_minor=$3, price_is_estimate=false, updated_at=now() WHERE id=$1 AND company_id=$2`, id, tenant.CompanyID, *req.DeliveryPriceMinor); err != nil {
+				return err
+			}
 		}
 		if _, err := q.AddDeliveryTimelineEvent(c.Request.Context(), db.AddDeliveryTimelineEventParams{DeliveryID: id, CompanyID: tenant.CompanyID, Status: "assigned", Note: stringPointer("Request accepted and driver assigned"), CreatedBy: actorIDPointer(c)}); err != nil {
 			return err

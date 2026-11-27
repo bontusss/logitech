@@ -23,8 +23,14 @@ var bookingPageSlugInvalidChars = regexp.MustCompile(`[^a-z0-9-]+`)
 var bookingPageSlugRepeatedHyphens = regexp.MustCompile(`-+`)
 
 func (a *API) publicConfig(c *gin.Context) {
+	// Browser map configuration. Keeping the provider id in the response lets
+	// the frontend swap tile/geocoding providers without changing this route.
 	c.JSON(http.StatusOK, gin.H{
-		"mapbox_access_token": a.cfg.MapboxAccessToken,
+		"map": gin.H{
+			"provider": a.cfg.MapProvider,
+			"api_key":  a.cfg.GeoapifyAPIKey,
+			"style":    a.cfg.GeoapifyMapStyle,
+		},
 	})
 }
 

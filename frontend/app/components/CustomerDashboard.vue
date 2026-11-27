@@ -1,16 +1,13 @@
 <script setup lang="ts">
 import {
   ArrowRight,
-  CheckCircle2,
   CircleAlert,
-  Clock3,
   Loader2,
   MapPin,
   Package,
   PackageCheck,
   Search,
   Truck,
-  XCircle,
 } from 'lucide-vue-next'
 import type { CustomerBooking } from '~/types/customer'
 
@@ -19,6 +16,7 @@ const {
   loading,
   error,
   load,
+  overview,
   activeBookings,
   pendingBookings,
   cancelledBookings,
@@ -35,31 +33,27 @@ const firstName = computed(() => user.value?.full_name?.split(' ')[0] || 'there'
 const stats = computed(() => [
   {
     label: 'Active shipments',
-    value: activeBookings.value.length,
+    value: overview.value?.active ?? activeBookings.value.length,
     detail: 'Still moving or awaiting pickup',
-    icon: Truck,
-    tone: 'bg-brand-50 text-brand-700 dark:bg-brand-400/10 dark:text-brand-200',
+    tone: 'brand' as const,
   },
   {
     label: 'Pending bookings',
-    value: pendingBookings.value.length,
+    value: overview.value?.pending ?? pendingBookings.value.length,
     detail: 'Waiting for provider confirmation',
-    icon: Clock3,
-    tone: 'bg-amber-50 text-amber-700 dark:bg-amber-400/10 dark:text-amber-200',
+    tone: 'accent' as const,
   },
   {
     label: 'Completed',
-    value: deliveredBookings.value.length,
+    value: overview.value?.delivered ?? deliveredBookings.value.length,
     detail: 'Delivered successfully',
-    icon: CheckCircle2,
-    tone: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-400/10 dark:text-emerald-200',
+    tone: 'success' as const,
   },
   {
     label: 'Cancelled',
-    value: cancelledBookings.value.length,
+    value: overview.value?.cancelled ?? cancelledBookings.value.length,
     detail: 'Cancelled or declined',
-    icon: XCircle,
-    tone: 'bg-rose-50 text-rose-700 dark:bg-rose-400/10 dark:text-rose-200',
+    tone: 'neutral' as const,
   },
 ])
 
@@ -103,16 +97,16 @@ function bookingDetail(booking: CustomerBooking) {
 </script>
 
 <template>
-  <div>
+  <div class="dash-page">
     <div class="flex flex-wrap items-start justify-between gap-4">
       <div>
         <p class="text-[10.5px] font-semibold tracking-[0.2em] text-brand-600 uppercase">
           Customer dashboard
         </p>
-        <h1 class="mt-2 text-[clamp(1.6rem,3vw,2.1rem)] leading-tight font-semibold tracking-[-0.035em]">
+        <h1 class="mt-2 text-[clamp(1.45rem,2.5vw,1.8rem)] leading-tight font-semibold tracking-[-0.04em]">
           Welcome back, {{ firstName }}
         </h1>
-        <p class="mt-2 max-w-xl text-[13.5px] leading-relaxed text-ink-900/50">
+        <p class="mt-2 max-w-xl text-[12.5px] leading-relaxed text-ink-900/50">
           Everything you send, everyone you ship with, and every update in one place.
         </p>
       </div>
@@ -126,17 +120,15 @@ function bookingDetail(booking: CustomerBooking) {
       <CircleAlert :size="14" class="mt-0.5 shrink-0" />{{ error }}
     </p>
 
-    <div class="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-      <div v-for="stat in stats" :key="stat.label" class="rounded-xl border border-ink-900/10 bg-surface p-4">
-        <div class="flex items-center justify-between gap-2">
-          <p class="text-[9.5px] font-semibold tracking-[0.14em] text-ink-900/40 uppercase">{{ stat.label }}</p>
-          <span class="flex size-7 items-center justify-center rounded-lg" :class="stat.tone">
-            <component :is="stat.icon" :size="14" />
-          </span>
-        </div>
-        <p class="mt-2 text-[26px] leading-none font-semibold tracking-[-0.04em] tabular-nums">{{ stat.value }}</p>
-        <p class="mt-1.5 text-[10.5px] text-ink-900/40">{{ stat.detail }}</p>
-      </div>
+    <div class="mt-5 grid grid-cols-2 gap-3 xl:grid-cols-4">
+      <DashboardStatCard
+        v-for="stat in stats"
+        :key="stat.label"
+        :label="stat.label"
+        :value="stat.value"
+        :detail="stat.detail"
+        :tone="stat.tone"
+      />
     </div>
 
     <div class="mt-5 grid gap-4 lg:grid-cols-[minmax(0,1.55fr)_minmax(260px,1fr)]">

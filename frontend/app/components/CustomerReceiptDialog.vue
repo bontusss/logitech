@@ -40,7 +40,7 @@ function paymentLabel(booking: CustomerBooking) {
 }
 
 function receiptHtml(booking: CustomerBooking) {
-  const rows = [
+  const rows: [string, string][] = [
     ['Booking reference', booking.tracking_code || booking.id],
     ['Provider', booking.provider_name],
     ['Booked', formatDate(booking.created_at)],
@@ -50,6 +50,9 @@ function receiptHtml(booking: CustomerBooking) {
     ['Receiver', `${booking.receiver_name} · ${booking.receiver_phone}`],
     ['Package', `${booking.item_description} · ${booking.weight_kg} kg`],
     ['Payment', paymentLabel(booking)],
+    ...(booking.is_paid && booking.paid_at
+      ? [['Paid on', formatDate(booking.paid_at)] as [string, string]]
+      : []),
   ]
   return `<!doctype html>
 <html><head><meta charset="utf-8"><title>Receipt ${escapeHtml(booking.tracking_code || booking.id)}</title>
@@ -148,6 +151,10 @@ function downloadReceipt() {
               <div>
                 <dt class="text-ink-900/40">Booked</dt>
                 <dd class="mt-0.5 font-medium">{{ formatDate(booking.created_at) }}</dd>
+              </div>
+              <div v-if="booking.is_paid && booking.paid_at">
+                <dt class="text-ink-900/40">Paid on</dt>
+                <dd class="mt-0.5 font-medium">{{ formatDate(booking.paid_at) }}</dd>
               </div>
               <div class="sm:col-span-2">
                 <dt class="text-ink-900/40">Route</dt>

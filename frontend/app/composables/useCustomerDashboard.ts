@@ -1,4 +1,9 @@
-import type { CustomerBooking, CustomerRecentAddress, DeliveryStatus } from '~/types/customer'
+import type {
+  CustomerBooking,
+  CustomerBookingOverview,
+  CustomerRecentAddress,
+  DeliveryStatus,
+} from '~/types/customer'
 
 export interface BookingStateMeta {
   label: string
@@ -88,6 +93,7 @@ export function bookingStatusLabel(status: DeliveryStatus) {
 export function useCustomerDashboard() {
   const { api } = useApi()
   const bookings = ref<CustomerBooking[]>([])
+  const overview = ref<CustomerBookingOverview | null>(null)
   const loading = ref(false)
   const error = ref('')
   const loaded = ref(false)
@@ -104,6 +110,13 @@ export function useCustomerDashboard() {
       error.value = apiErrorMessage(cause, 'Could not load your bookings.')
     } finally {
       loading.value = false
+    }
+    try {
+      const result = await api<{ overview: CustomerBookingOverview }>('/customer/overview')
+      overview.value = result.overview
+    } catch {
+      // The summary falls back to the loaded booking list.
+      overview.value = null
     }
   }
 
@@ -189,6 +202,7 @@ export function useCustomerDashboard() {
 
   return {
     bookings,
+    overview,
     loading,
     error,
     loaded,

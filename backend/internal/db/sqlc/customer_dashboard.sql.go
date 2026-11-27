@@ -123,6 +123,42 @@ func (q *Queries) CreateCustomerAddress(ctx context.Context, arg CreateCustomerA
 	return i, err
 }
 
+const createCustomerRecurringShipment = `-- name: CreateCustomerRecurringShipment :one
+INSERT INTO customer_recurring_shipments (
+  customer_id, label, frequency, search_payload
+) VALUES (
+  $1, $2, $3, $4
+)
+RETURNING id, customer_id, label, frequency, search_payload, created_at, updated_at
+`
+
+type CreateCustomerRecurringShipmentParams struct {
+	CustomerID    uuid.UUID `json:"customer_id"`
+	Label         string    `json:"label"`
+	Frequency     string    `json:"frequency"`
+	SearchPayload []byte    `json:"search_payload"`
+}
+
+func (q *Queries) CreateCustomerRecurringShipment(ctx context.Context, arg CreateCustomerRecurringShipmentParams) (CustomerRecurringShipment, error) {
+	row := q.db.QueryRow(ctx, createCustomerRecurringShipment,
+		arg.CustomerID,
+		arg.Label,
+		arg.Frequency,
+		arg.SearchPayload,
+	)
+	var i CustomerRecurringShipment
+	err := row.Scan(
+		&i.ID,
+		&i.CustomerID,
+		&i.Label,
+		&i.Frequency,
+		&i.SearchPayload,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const createDeliveryIssue = `-- name: CreateDeliveryIssue :one
 INSERT INTO delivery_issues (delivery_id, customer_id, issue_type, description)
 SELECT $1::uuid, $2::uuid,
@@ -173,6 +209,24 @@ type DeleteCustomerAddressParams struct {
 
 func (q *Queries) DeleteCustomerAddress(ctx context.Context, arg DeleteCustomerAddressParams) (int64, error) {
 	result, err := q.db.Exec(ctx, deleteCustomerAddress, arg.ID, arg.CustomerID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const deleteCustomerRecurringShipment = `-- name: DeleteCustomerRecurringShipment :execrows
+DELETE FROM customer_recurring_shipments
+WHERE id = $1 AND customer_id = $2
+`
+
+type DeleteCustomerRecurringShipmentParams struct {
+	ID         uuid.UUID `json:"id"`
+	CustomerID uuid.UUID `json:"customer_id"`
+}
+
+func (q *Queries) DeleteCustomerRecurringShipment(ctx context.Context, arg DeleteCustomerRecurringShipmentParams) (int64, error) {
+	result, err := q.db.Exec(ctx, deleteCustomerRecurringShipment, arg.ID, arg.CustomerID)
 	if err != nil {
 		return 0, err
 	}
@@ -380,6 +434,41 @@ func (q *Queries) ListCustomerFavourites(ctx context.Context, customerID uuid.UU
 			&i.Rating,
 			&i.RouteCount,
 			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listCustomerRecurringShipments = `-- name: ListCustomerRecurringShipments :many
+SELECT id, customer_id, label, frequency, search_payload, created_at, updated_at
+FROM customer_recurring_shipments
+WHERE customer_id = $1
+ORDER BY created_at DESC
+`
+
+func (q *Queries) ListCustomerRecurringShipments(ctx context.Context, customerID uuid.UUID) ([]CustomerRecurringShipment, error) {
+	rows, err := q.db.Query(ctx, listCustomerRecurringShipments, customerID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []CustomerRecurringShipment{}
+	for rows.Next() {
+		var i CustomerRecurringShipment
+		if err := rows.Scan(
+			&i.ID,
+			&i.CustomerID,
+			&i.Label,
+			&i.Frequency,
+			&i.SearchPayload,
+			&i.CreatedAt,
+			&i.UpdatedAt,
 		); err != nil {
 			return nil, err
 		}

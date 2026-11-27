@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import type { Map as MapboxMap, Marker as MapboxMarker } from 'mapbox-gl'
-import 'mapbox-gl/dist/mapbox-gl.css'
+import type { Map as MapLibreMap, Marker as MapLibreMarker } from 'maplibre-gl'
+import 'maplibre-gl/dist/maplibre-gl.css'
 
 const props = withDefaults(defineProps<{
   latitude: number
   longitude: number
-  accessToken: string
+  styleUrl: string
   height?: string
   accent?: string
 }>(), {
@@ -19,28 +19,26 @@ const emit = defineEmits<{
 
 const container = ref<HTMLElement | null>(null)
 const message = ref('')
-let map: MapboxMap | null = null
-let marker: MapboxMarker | null = null
+let map: MapLibreMap | null = null
+let marker: MapLibreMarker | null = null
 let cancelled = false
 
 onMounted(async () => {
-  if (!container.value || !props.accessToken) return
+  if (!container.value || !props.styleUrl) return
   try {
-    const mapbox = await import('mapbox-gl')
+    const maplibre = await import('maplibre-gl')
     if (cancelled || !container.value) return
-    mapbox.default.accessToken = props.accessToken
-    map = new mapbox.default.Map({
+    map = new maplibre.Map({
       container: container.value,
-      style: 'mapbox://styles/mapbox/streets-v12',
+      style: props.styleUrl,
       center: [props.longitude, props.latitude],
       zoom: 15,
-      attributionControl: true,
       scrollZoom: false,
       dragRotate: false,
       pitchWithRotate: false,
     })
-    map.addControl(new mapbox.default.NavigationControl({ showCompass: false }), 'top-right')
-    marker = new mapbox.default.Marker({ color: props.accent, draggable: true })
+    map.addControl(new maplibre.NavigationControl({ showCompass: false }), 'top-right')
+    marker = new maplibre.Marker({ color: props.accent, draggable: true })
       .setLngLat([props.longitude, props.latitude])
       .addTo(map)
     marker.on('dragend', () => {

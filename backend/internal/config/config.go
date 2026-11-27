@@ -25,7 +25,9 @@ type Config struct {
 	UploadDir                string
 	APIPublicURL             string
 	AppDomain                string
-	MapboxAccessToken        string
+	MapProvider              string
+	GeoapifyAPIKey           string
+	GeoapifyMapStyle         string
 	SuperAdminEmail          string
 	SuperAdminPassword       string
 	PlunkSecretKey           string
@@ -57,7 +59,9 @@ func Load() (*Config, error) {
 		UploadDir:                getenv("UPLOAD_DIR", "uploads"),
 		APIPublicURL:             getenv("API_PUBLIC_URL", "http://localhost:8080"),
 		AppDomain:                getenv("APP_DOMAIN", "localhost"),
-		MapboxAccessToken:        os.Getenv("NUXT_PUBLIC_MAPBOX_ACCESS_TOKEN"),
+		MapProvider:              getenv("MAP_PROVIDER", "geoapify"),
+		GeoapifyAPIKey:           strings.TrimSpace(os.Getenv("GEOAPIFY_API_KEY")),
+		GeoapifyMapStyle:         getenv("GEOAPIFY_MAP_STYLE", "osm-bright"),
 		SuperAdminEmail:          os.Getenv("SUPER_ADMIN_EMAIL"),
 		SuperAdminPassword:       os.Getenv("SUPER_ADMIN_PASSWORD"),
 		PlunkSecretKey:           os.Getenv("PLUNK_SECRET_KEY"),

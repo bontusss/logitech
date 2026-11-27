@@ -117,6 +117,7 @@ SELECT
   d.receiver_phone,
   d.payer,
   d.is_paid,
+  d.paid_at,
   d.payment_method,
   d.additional_instructions,
   d.package_photo_url,
@@ -166,6 +167,7 @@ type GetCustomerBookingRow struct {
 	ReceiverPhone          string         `json:"receiver_phone"`
 	Payer                  string         `json:"payer"`
 	IsPaid                 bool           `json:"is_paid"`
+	PaidAt                 *time.Time     `json:"paid_at"`
 	PaymentMethod          *string        `json:"payment_method"`
 	AdditionalInstructions string         `json:"additional_instructions"`
 	PackagePhotoUrl        *string        `json:"package_photo_url"`
@@ -208,6 +210,7 @@ func (q *Queries) GetCustomerBooking(ctx context.Context, arg GetCustomerBooking
 		&i.ReceiverPhone,
 		&i.Payer,
 		&i.IsPaid,
+		&i.PaidAt,
 		&i.PaymentMethod,
 		&i.AdditionalInstructions,
 		&i.PackagePhotoUrl,
@@ -228,9 +231,82 @@ func (q *Queries) GetCustomerBooking(ctx context.Context, arg GetCustomerBooking
 	return i, err
 }
 
+const getCustomerBookingOverview = `-- name: GetCustomerBookingOverview :one
+SELECT
+  COUNT(*) FILTER (
+    WHERE d.request_status = 'accepted' AND d.status NOT IN ('delivered', 'cancelled')
+  )::bigint AS active,
+  COUNT(*) FILTER (
+    WHERE d.request_status = 'pending' OR d.status = 'requested'
+  )::bigint AS pending,
+  COUNT(*) FILTER (WHERE d.status = 'delivered')::bigint AS delivered,
+  COUNT(*) FILTER (
+    WHERE d.status = 'cancelled' OR d.request_status = 'declined'
+  )::bigint AS cancelled,
+  COUNT(*)::bigint AS total,
+  COALESCE(SUM(d.delivery_price_minor) FILTER (
+    WHERE d.is_paid AND d.status <> 'cancelled' AND d.request_status <> 'declined'
+  ), 0)::bigint AS paid_minor,
+  COALESCE(SUM(d.delivery_price_minor) FILTER (
+    WHERE NOT d.is_paid AND d.status <> 'cancelled' AND d.request_status <> 'declined'
+  ), 0)::bigint AS outstanding_minor,
+  COUNT(*) FILTER (
+    WHERE d.status <> 'cancelled' AND d.request_status <> 'declined'
+  )::bigint AS billable_count,
+  COUNT(*) FILTER (
+    WHERE d.is_paid AND d.status <> 'cancelled' AND d.request_status <> 'declined'
+  )::bigint AS paid_count,
+  COUNT(*) FILTER (
+    WHERE NOT d.is_paid AND d.status <> 'cancelled' AND d.request_status <> 'declined'
+  )::bigint AS unpaid_count,
+  COALESCE((
+    SELECT cs.currency
+    FROM deliveries latest
+    LEFT JOIN company_settings cs ON cs.company_id = latest.company_id
+    WHERE latest.customer_id = $1
+    ORDER BY latest.created_at DESC
+    LIMIT 1
+  ), 'NGN')::text AS currency
+FROM deliveries d
+WHERE d.customer_id = $1
+`
+
+type GetCustomerBookingOverviewRow struct {
+	Active           int64  `json:"active"`
+	Pending          int64  `json:"pending"`
+	Delivered        int64  `json:"delivered"`
+	Cancelled        int64  `json:"cancelled"`
+	Total            int64  `json:"total"`
+	PaidMinor        int64  `json:"paid_minor"`
+	OutstandingMinor int64  `json:"outstanding_minor"`
+	BillableCount    int64  `json:"billable_count"`
+	PaidCount        int64  `json:"paid_count"`
+	UnpaidCount      int64  `json:"unpaid_count"`
+	Currency         string `json:"currency"`
+}
+
+func (q *Queries) GetCustomerBookingOverview(ctx context.Context, customerID *uuid.UUID) (GetCustomerBookingOverviewRow, error) {
+	row := q.db.QueryRow(ctx, getCustomerBookingOverview, customerID)
+	var i GetCustomerBookingOverviewRow
+	err := row.Scan(
+		&i.Active,
+		&i.Pending,
+		&i.Delivered,
+		&i.Cancelled,
+		&i.Total,
+		&i.PaidMinor,
+		&i.OutstandingMinor,
+		&i.BillableCount,
+		&i.PaidCount,
+		&i.UnpaidCount,
+		&i.Currency,
+	)
+	return i, err
+}
+
 const listCompanyCustomerDeliveries = `-- name: ListCompanyCustomerDeliveries :many
 SELECT
-  d.id, d.company_id, d.sender_name, d.sender_phone, d.receiver_name, d.receiver_phone, d.pickup_address, d.dropoff_address, d.item_description, d.declared_value_minor, d.delivery_price_minor, d.payer, d.is_paid, d.payment_method, d.assigned_driver_id, d.status, d.created_by, d.created_at, d.updated_at, d.package_category, d.weight_kg, d.additional_instructions, d.package_photo_url, d.pickup_latitude, d.pickup_longitude, d.dropoff_latitude, d.dropoff_longitude, d.selected_route_id, d.price_is_estimate, d.booking_source, d.delivery_speed, d.distance_km, d.request_status, d.tracking_code, d.rider_link_token, d.declined_at, d.accepted_at, d.customer_id,
+  d.id, d.company_id, d.sender_name, d.sender_phone, d.receiver_name, d.receiver_phone, d.pickup_address, d.dropoff_address, d.item_description, d.declared_value_minor, d.delivery_price_minor, d.payer, d.is_paid, d.payment_method, d.assigned_driver_id, d.status, d.created_by, d.created_at, d.updated_at, d.package_category, d.weight_kg, d.additional_instructions, d.package_photo_url, d.pickup_latitude, d.pickup_longitude, d.dropoff_latitude, d.dropoff_longitude, d.selected_route_id, d.price_is_estimate, d.booking_source, d.delivery_speed, d.distance_km, d.request_status, d.tracking_code, d.rider_link_token, d.declined_at, d.accepted_at, d.customer_id, d.paid_at,
   driver.full_name AS assigned_driver_name
 FROM deliveries d
 LEFT JOIN driver_profiles driver ON driver.id = d.assigned_driver_id
@@ -283,6 +359,7 @@ type ListCompanyCustomerDeliveriesRow struct {
 	DeclinedAt             *time.Time     `json:"declined_at"`
 	AcceptedAt             *time.Time     `json:"accepted_at"`
 	CustomerID             *uuid.UUID     `json:"customer_id"`
+	PaidAt                 *time.Time     `json:"paid_at"`
 	AssignedDriverName     *string        `json:"assigned_driver_name"`
 }
 
@@ -334,6 +411,7 @@ func (q *Queries) ListCompanyCustomerDeliveries(ctx context.Context, arg ListCom
 			&i.DeclinedAt,
 			&i.AcceptedAt,
 			&i.CustomerID,
+			&i.PaidAt,
 			&i.AssignedDriverName,
 		); err != nil {
 			return nil, err
@@ -431,6 +509,7 @@ SELECT
   d.receiver_phone,
   d.payer,
   d.is_paid,
+  d.paid_at,
   d.payment_method,
   d.additional_instructions,
   d.package_photo_url,
@@ -477,6 +556,7 @@ type ListCustomerBookingsRow struct {
 	ReceiverPhone          string         `json:"receiver_phone"`
 	Payer                  string         `json:"payer"`
 	IsPaid                 bool           `json:"is_paid"`
+	PaidAt                 *time.Time     `json:"paid_at"`
 	PaymentMethod          *string        `json:"payment_method"`
 	AdditionalInstructions string         `json:"additional_instructions"`
 	PackagePhotoUrl        *string        `json:"package_photo_url"`
@@ -525,6 +605,7 @@ func (q *Queries) ListCustomerBookings(ctx context.Context, customerID *uuid.UUI
 			&i.ReceiverPhone,
 			&i.Payer,
 			&i.IsPaid,
+			&i.PaidAt,
 			&i.PaymentMethod,
 			&i.AdditionalInstructions,
 			&i.PackagePhotoUrl,

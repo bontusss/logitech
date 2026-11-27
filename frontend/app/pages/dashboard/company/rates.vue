@@ -89,8 +89,9 @@ const routeForm = reactive({
   additionalFee: '',
   pickupAvailable: true,
   dropoffAvailable: true,
-  pickupHours: '',
-  deliveryHours: '',
+  // Number inputs bind values as numbers, not strings.
+  pickupHours: '' as string | number,
+  deliveryHours: '' as string | number,
   branchId: '',
   status: 'active' as 'active' | 'inactive',
 })
@@ -288,8 +289,8 @@ async function saveRoute() {
   const price = nairaToMinor(routeForm.basePrice)
   const additional = nairaToMinor(routeForm.additionalFee || 0)
   const included = Number(routeForm.includedWeight)
-  const pickupHours = routeForm.pickupHours.trim() === '' ? null : Number(routeForm.pickupHours)
-  const deliveryHours = routeForm.deliveryHours.trim() === '' ? null : Number(routeForm.deliveryHours)
+  const pickupHours = routeForm.pickupHours === '' ? null : Number(routeForm.pickupHours)
+  const deliveryHours = routeForm.deliveryHours === '' ? null : Number(routeForm.deliveryHours)
   if (!routeForm.from || !routeForm.to) {
     error.value = 'Choose both the from and to zones.'
     return
@@ -376,12 +377,12 @@ onMounted(load)
 </script>
 
 <template>
-  <div class="space-y-5">
+  <div class="dash-page space-y-5">
     <header class="flex flex-wrap items-end justify-between gap-3">
       <div>
         <p class="text-[10px] font-bold tracking-[0.18em] text-accent-700 uppercase dark:text-accent-400">Coverage & pricing</p>
-        <h1 class="mt-1 text-[24px] font-semibold tracking-[-0.04em]">Zones & Routes</h1>
-        <p class="mt-1 max-w-[640px] text-[13px] text-ink-900/60">
+        <h1 class="mt-1 text-[clamp(1.45rem,2.5vw,1.8rem)] leading-tight font-semibold tracking-[-0.04em]">Zones & Routes</h1>
+        <p class="mt-1 max-w-[640px] text-[12.5px] text-ink-900/60">
           Add the LGAs you serve, then publish a price for each direction you cover. The marketplace only matches these active routes.
         </p>
       </div>

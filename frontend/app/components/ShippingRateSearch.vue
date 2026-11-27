@@ -1,10 +1,19 @@
 <script setup lang="ts">
 import { ArrowRight, Loader2, PackageCheck, Search, Truck, Warehouse } from 'lucide-vue-next'
 import type { MarketplaceSearchPayload } from '~/types/marketplace'
+import type { CustomerSavedAddress } from '~/types/customer'
 import type { SearchGeoZone, SearchLocationValue } from '~/components/SearchLocationPicker.vue'
 import { ITEM_CATEGORIES } from '~/utils/itemCategories'
 
-withDefaults(defineProps<{ loading?: boolean }>(), { loading: false })
+const props = withDefaults(
+  defineProps<{
+    loading?: boolean
+    savedAddresses?: CustomerSavedAddress[]
+    prefill?: MarketplaceSearchPayload | null
+    heading?: string
+  }>(),
+  { loading: false, savedAddresses: () => [], prefill: null, heading: '' },
+)
 
 const emit = defineEmits<{ search: [payload: MarketplaceSearchPayload] }>()
 
@@ -17,6 +26,20 @@ const zonesLoading = ref(true)
 const reachableLoading = ref(false)
 const zoneError = ref('')
 const error = ref('')
+const pendingDestination = ref<SearchLocationValue | null>(null)
+const pendingPrefill = ref<MarketplaceSearchPayload | null>(props.prefill)
+const savedNotice = ref('')
+
+const savedPickupAddresses = computed(() =>
+  [...props.savedAddresses].sort(
+    (a, b) => Number(b.default_pickup) - Number(a.default_pickup) || a.label.localeCompare(b.label),
+  ),
+)
+const savedDeliveryAddresses = computed(() =>
+  [...props.savedAddresses].sort(
+    (a, b) => Number(b.default_delivery) - Number(a.default_delivery) || a.label.localeCompare(b.label),
+  ),
+)
 
 function blankLocation(): SearchLocationValue {
   return { state: '', lgaKey: '', zoneId: '', area: '', address: '', latitude: null, longitude: null }
@@ -74,8 +97,158 @@ function locationLabel(location: SearchLocationValue, list: SearchGeoZone[]) {
   return parts.join(', ')
 }
 
+async function assignLocation(location: SearchLocationValue, value: SearchLocationValue) {
+  Object.assign(location, {
+    state: value.state,
+    lgaKey: value.lgaKey,
+    zoneId: value.zoneId,
+    area: value.area,
+    address: '',
+    latitude: null,
+    longitude: null,
+  })
+  await nextTick()
+  location.address = value.address
+  location.latitude = value.latitude
+  location.longitude = value.longitude
+}
+
+function locationForZone(zone: SearchGeoZone, address = ''): SearchLocationValue {
+  return {
+    state: zone.state,
+    lgaKey: zoneLgaKey(zone),
+    zoneId: zone.id,
+    area: zone.parent_id ? zone.name : '',
+    address,
+    latitude: null,
+    longitude: null,
+  }
+}
+
+function savedAddressLocation(address: CustomerSavedAddress, list: SearchGeoZone[]) {
+  const state = address.state.trim().toLowerCase()
+  const city = address.city.trim().toLowerCase()
+  const area = address.area.trim().toLowerCase()
+  let matches = list.filter(
+    (zone) => zone.state.toLowerCase() === state && zone.lga.toLowerCase() === city,
+  )
+  if (!matches.length) {
+    // Saved addresses use the customer's own city wording, which may be a
+    // shorter or longer form of the zone LGA ("Abuja" vs "Abuja Municipal").
+    matches = list.filter(
+      (zone) =>
+        zone.state.toLowerCase() === state &&
+        (zone.lga.toLowerCase().includes(city) || city.includes(zone.lga.toLowerCase())),
+    )
+  }
+  if (!matches.length) return null
+  const areaZone = area ? matches.find((zone) => zone.name.toLowerCase() === area) : undefined
+  const zone = areaZone ?? matches.find((item) => !item.parent_id) ?? matches[0]!
+  const location = locationForZone(zone)
+  location.area = areaZone?.name ?? ''
+  location.zoneId = areaZone?.id ?? zone.id
+  const street = [address.street_address, address.area, address.city, address.state]
+    .filter(Boolean)
+    .join(', ')
+  location.address = street
+  location.latitude = address.latitude
+  location.longitude = address.longitude
+  return location
+}
+
+async function useSavedAddress(event: Event, role: 'origin' | 'destination') {
+  const id = (event.target as HTMLSelectElement).value
+  ;(event.target as HTMLSelectElement).value = ''
+  if (!id) return
+  const address = props.savedAddresses.find((item) => item.id === id)
+  if (!address) return
+  error.value = ''
+  savedNotice.value = ''
+  const list = role === 'origin' ? zones.value : destinationZones.value
+  const location = savedAddressLocation(address, list)
+  if (!location) {
+    error.value = role === 'origin'
+      ? `We could not match ${address.label} to a service zone yet. Pick the zone manually below.`
+      : `${address.label} is not reachable from this pickup zone. Pick another saved address or zone.`
+    return
+  }
+  if (location.latitude === null || location.longitude === null) {
+    savedNotice.value = `${address.label} has no map pin saved yet. Confirm the exact spot below so providers can collect it.`
+  }
+  if (role === 'origin') {
+    await assignLocation(form.origin, location)
+    return
+  }
+  if (!list.some((zone) => zone.id === location.zoneId)) {
+    if (reachableLoading.value) {
+      pendingDestination.value = location
+      return
+    }
+    error.value = `${address.label} is not reachable from this pickup zone. Pick another saved address or zone.`
+    return
+  }
+  await assignLocation(form.destination, location)
+}
+
+async function applyPrefill(payload: MarketplaceSearchPayload) {
+  if (!zones.value.length) {
+    pendingPrefill.value = payload
+    return
+  }
+  pendingPrefill.value = null
+  form.mode = payload.service_mode === 'dropoff' ? 'dropoff' : 'pickup'
+  const originZone = payload.origin_zone_id
+    ? zones.value.find((zone) => zone.id === payload.origin_zone_id)
+    : undefined
+  const originFallback = !originZone && payload.origin_lga
+    ? zones.value.find(
+        (zone) =>
+          zone.lga.toLowerCase() === payload.origin_lga!.toLowerCase() &&
+          zone.state.toLowerCase() === (payload.origin_state ?? '').toLowerCase(),
+      )
+    : undefined
+  const resolvedOrigin = originZone ?? originFallback
+  if (resolvedOrigin) {
+    const originLocation = locationForZone(resolvedOrigin, payload.origin_address ?? '')
+    originLocation.latitude = payload.origin_latitude ?? null
+    originLocation.longitude = payload.origin_longitude ?? null
+    await assignLocation(form.origin, originLocation)
+    await loadReachable()
+  }
+  const destinationZone = payload.destination_zone_id
+    ? destinationZones.value.find((zone) => zone.id === payload.destination_zone_id)
+    : undefined
+  if (destinationZone) {
+    const destinationLocation = locationForZone(
+      destinationZone,
+      payload.destination_address ?? '',
+    )
+    destinationLocation.latitude = payload.destination_latitude ?? null
+    destinationLocation.longitude = payload.destination_longitude ?? null
+    await assignLocation(form.destination, destinationLocation)
+  }
+  const weight = Number(payload.weight_kg)
+  if (Number.isFinite(weight) && weight > 0) form.weight = weight
+  if (payload.category) form.category = payload.category
+  if (payload.length_cm && payload.width_cm && payload.height_cm) {
+    form.length = payload.length_cm
+    form.width = payload.width_cm
+    form.height = payload.height_cm
+  }
+}
+
 function ensureDestination() {
   const list = destinationZones.value
+  const pending = pendingDestination.value
+  if (pending) {
+    if (list.some((zone) => zone.id === pending.zoneId)) {
+      pendingDestination.value = null
+      void assignLocation(form.destination, pending)
+      return
+    }
+    if (reachableLoading.value) return
+    pendingDestination.value = null
+  }
   const current = list.find((zone) => zone.id === form.destination.zoneId)
   if (current) {
     form.destination.state = current.state
@@ -140,11 +313,25 @@ onMounted(async () => {
   } finally {
     zonesLoading.value = false
   }
+  if (pendingPrefill.value) await applyPrefill(pendingPrefill.value)
 })
 
+watch(
+  () => props.prefill,
+  (payload) => {
+    if (payload) void applyPrefill(payload)
+  },
+)
+
+let reachableRequestId = 0
+
 async function loadReachable() {
+  const requestId = ++reachableRequestId
   reachableZones.value = []
-  if (!form.origin.zoneId) return
+  if (!form.origin.zoneId) {
+    reachableLoading.value = false
+    return
+  }
   reachableLoading.value = true
   zoneError.value = ''
   try {
@@ -153,9 +340,11 @@ async function loadReachable() {
       service_mode: form.mode,
     })
     const response = await api<{ zones: SearchGeoZone[] }>(`/public/zones/reachable?${params}`)
+    if (requestId !== reachableRequestId) return
     reachableZones.value = response.zones ?? []
     ensureDestination()
   } catch (cause) {
+    if (requestId !== reachableRequestId) return
     zoneError.value = apiErrorMessage(
       cause,
       form.mode === 'dropoff'
@@ -163,7 +352,7 @@ async function loadReachable() {
         : 'Could not load destination zones for that pickup zone.',
     )
   } finally {
-    reachableLoading.value = false
+    if (requestId === reachableRequestId) reachableLoading.value = false
   }
 }
 
@@ -263,7 +452,7 @@ function submitSearch() {
     <div class="flex items-start justify-between gap-4">
       <div>
         <p class="text-[10px] font-bold tracking-[0.18em] text-accent-700 uppercase dark:text-accent-400">where are you sending?</p>
-        <h2 class="mt-1.5 text-[19px] font-semibold tracking-[-0.03em]">Where are you sending?</h2>
+        <h2 class="mt-1.5 text-[19px] font-semibold tracking-[-0.03em]">{{ heading || 'Where are you sending?' }}</h2>
         <p class="mt-1 text-[12.5px] text-ink-900/65">
           Choose how your parcel starts its journey, then the exact destination.
         </p>
@@ -302,6 +491,16 @@ function submitSearch() {
         </template>
       </p>
 
+      <label v-if="form.mode === 'pickup' && savedPickupAddresses.length" class="block">
+        <span :class="labelClass">Use a saved pickup</span>
+        <select :class="fieldClass" @change="useSavedAddress($event, 'origin')">
+          <option value="">Choose a saved address…</option>
+          <option v-for="address in savedPickupAddresses" :key="address.id" :value="address.id">
+            {{ address.label }} — {{ address.street_address }}, {{ address.city }}
+          </option>
+        </select>
+      </label>
+
       <SearchLocationPicker
         v-model="form.origin"
         :label="form.mode === 'dropoff' ? 'Drop-off hub' : 'Pickup'"
@@ -310,12 +509,33 @@ function submitSearch() {
         :show-pin="form.mode === 'pickup'"
       />
 
+      <label v-if="savedDeliveryAddresses.length" class="block">
+        <span :class="labelClass">Use a saved destination</span>
+        <select
+          :class="fieldClass"
+          :disabled="!form.origin.zoneId"
+          @change="useSavedAddress($event, 'destination')"
+        >
+          <option value="">Choose a saved address…</option>
+          <option v-for="address in savedDeliveryAddresses" :key="address.id" :value="address.id">
+            {{ address.label }} — {{ address.street_address }}, {{ address.city }}
+          </option>
+        </select>
+      </label>
+
       <SearchLocationPicker
         v-model="form.destination"
         label="Destination"
         :zones="destinationZones"
         :loading="destinationLoading"
       />
+
+      <p v-if="savedAddresses.length" class="text-[10.5px] leading-relaxed text-ink-900/45">
+        Saved addresses fill the zone and map pin for you; confirm the pin before searching.
+        <NuxtLink to="/dashboard/customer/addresses" class="font-semibold text-brand-700 hover:text-brand-600">
+          Manage addresses
+        </NuxtLink>
+      </p>
 
       <p
         v-if="form.origin.zoneId && !destinationLoading && !destinationZones.length"
@@ -377,6 +597,13 @@ function submitSearch() {
           </label>
         </div>
       </details>
+
+      <p
+        v-if="savedNotice"
+        class="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-[12px] font-medium text-amber-800"
+      >
+        {{ savedNotice }}
+      </p>
 
       <p
         v-if="error"

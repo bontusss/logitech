@@ -169,6 +169,17 @@ const prefill = {
   weightKg: queryString(route.query.weight_kg),
   category: queryString(route.query.category),
   serviceMode: queryString(route.query.service_mode),
+  senderName: queryString(route.query.sender_name),
+  senderPhone: queryString(route.query.sender_phone),
+  receiverName: queryString(route.query.receiver_name),
+  receiverPhone: queryString(route.query.receiver_phone),
+  pickupAddress: queryString(route.query.pickup_address),
+  pickupLatitude: queryString(route.query.pickup_latitude),
+  pickupLongitude: queryString(route.query.pickup_longitude),
+  dropoffAddress: queryString(route.query.dropoff_address),
+  dropoffLatitude: queryString(route.query.dropoff_latitude),
+  dropoffLongitude: queryString(route.query.dropoff_longitude),
+  instructions: queryString(route.query.instructions),
 }
 
 const { data, error: pageLoadError, status } = await useAsyncData(
@@ -453,6 +464,30 @@ if (
 ) {
   form.category = prefill.category as PackageCategory
 }
+
+function prefillCoordinate(latitude: string, longitude: string) {
+  const lat = Number(latitude)
+  const lng = Number(longitude)
+  if (!latitude || !longitude || !Number.isFinite(lat) || !Number.isFinite(lng)) return null
+  if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return null
+  return { latitude: lat, longitude: lng }
+}
+
+// A search started in the customer dashboard carries the addresses and contact
+// details it already knows, so booking does not ask for them a second time.
+const prefillPickupPin = prefillCoordinate(prefill.pickupLatitude, prefill.pickupLongitude)
+if (prefill.pickupAddress && prefillPickupPin) {
+  form.pickup = { address: prefill.pickupAddress, ...prefillPickupPin }
+}
+const prefillDropoffPin = prefillCoordinate(prefill.dropoffLatitude, prefill.dropoffLongitude)
+if (prefill.dropoffAddress && prefillDropoffPin) {
+  form.dropoff = { address: prefill.dropoffAddress, ...prefillDropoffPin }
+}
+if (prefill.senderName) form.senderName = prefill.senderName
+if (prefill.senderPhone) form.senderPhone = prefill.senderPhone
+if (prefill.receiverName) form.receiverName = prefill.receiverName
+if (prefill.receiverPhone) form.receiverPhone = prefill.receiverPhone
+if (prefill.instructions) form.instructions = prefill.instructions
 
 const routeSelected = computed(() => routes.value.find((item) => item.id === form.selectedRouteId) ?? null)
 
@@ -1327,7 +1362,7 @@ const bookingCode = computed(() => bookingReference.value
                   <BookingLocationField v-model="form.dropoff" label="Drop-off location" />
                 </div>
                 <div v-if="!routeLoadError" class="mt-4 flex items-start gap-2 rounded-xl bg-brand-50 px-3 py-2.5 text-[10.5px] leading-5 text-brand-700">
-                  <BadgeCheck :size="14" class="mt-0.5 shrink-0" /> This provider has not published zone routes yet. Search and select a Mapbox suggestion to verify each map pin.
+                  <BadgeCheck :size="14" class="mt-0.5 shrink-0" /> This provider has not published zone routes yet. Search and select an address suggestion to verify each map pin.
                 </div>
               </template>
             </div>

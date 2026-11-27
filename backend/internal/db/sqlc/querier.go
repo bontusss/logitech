@@ -46,6 +46,7 @@ type Querier interface {
 	CreateCompanySettings(ctx context.Context, companyID uuid.UUID) (CompanySetting, error)
 	CreateCompanyZoneRoute(ctx context.Context, arg CreateCompanyZoneRouteParams) (PricingZoneRate, error)
 	CreateCustomerAddress(ctx context.Context, arg CreateCustomerAddressParams) (CustomerAddress, error)
+	CreateCustomerRecurringShipment(ctx context.Context, arg CreateCustomerRecurringShipmentParams) (CustomerRecurringShipment, error)
 	CreateDelivery(ctx context.Context, arg CreateDeliveryParams) (Delivery, error)
 	CreateDeliveryIssue(ctx context.Context, arg CreateDeliveryIssueParams) (DeliveryIssue, error)
 	CreateDriverProfile(ctx context.Context, arg CreateDriverProfileParams) (DriverProfile, error)
@@ -68,6 +69,7 @@ type Querier interface {
 	DeleteCompanyServiceZone(ctx context.Context, arg DeleteCompanyServiceZoneParams) error
 	DeleteCompanyZoneRoute(ctx context.Context, arg DeleteCompanyZoneRouteParams) error
 	DeleteCustomerAddress(ctx context.Context, arg DeleteCustomerAddressParams) (int64, error)
+	DeleteCustomerRecurringShipment(ctx context.Context, arg DeleteCustomerRecurringShipmentParams) (int64, error)
 	DeleteLastMileArea(ctx context.Context, arg DeleteLastMileAreaParams) error
 	DeleteMemberBranches(ctx context.Context, memberID uuid.UUID) error
 	DeleteMemberRoles(ctx context.Context, memberID uuid.UUID) error
@@ -84,6 +86,7 @@ type Querier interface {
 	GetCompanyBranding(ctx context.Context, companyID uuid.UUID) (CompanyBranding, error)
 	GetCompanyByID(ctx context.Context, id uuid.UUID) (Company, error)
 	GetCompanyDelivery(ctx context.Context, arg GetCompanyDeliveryParams) (GetCompanyDeliveryRow, error)
+	GetCompanyDeliveryOverview(ctx context.Context, companyID uuid.UUID) (GetCompanyDeliveryOverviewRow, error)
 	GetCompanyIDBySubdomain(ctx context.Context, subdomain string) (uuid.UUID, error)
 	GetCompanyInvitation(ctx context.Context, arg GetCompanyInvitationParams) (CompanyInvitation, error)
 	GetCompanyMember(ctx context.Context, arg GetCompanyMemberParams) (CompanyMember, error)
@@ -95,10 +98,11 @@ type Querier interface {
 	GetCompanyZoneRoute(ctx context.Context, arg GetCompanyZoneRouteParams) (PricingZoneRate, error)
 	GetCustomerAddress(ctx context.Context, arg GetCustomerAddressParams) (CustomerAddress, error)
 	GetCustomerBooking(ctx context.Context, arg GetCustomerBookingParams) (GetCustomerBookingRow, error)
+	GetCustomerBookingOverview(ctx context.Context, customerID *uuid.UUID) (GetCustomerBookingOverviewRow, error)
 	GetCustomerSavedQuoteByReference(ctx context.Context, arg GetCustomerSavedQuoteByReferenceParams) (GetCustomerSavedQuoteByReferenceRow, error)
 	GetDriverActiveAssignment(ctx context.Context, arg GetDriverActiveAssignmentParams) (GetDriverActiveAssignmentRow, error)
-	GetDriverProfileForPortal(ctx context.Context, portalTokenHash string) (GetDriverProfileForPortalRow, error)
 	GetDriverProfileForPortalByID(ctx context.Context, id uuid.UUID) (GetDriverProfileForPortalByIDRow, error)
+	GetDriverProfileForPortalByPlate(ctx context.Context, vehiclePlate string) (GetDriverProfileForPortalByPlateRow, error)
 	GetEmailVerificationByHash(ctx context.Context, tokenHash string) (EmailVerification, error)
 	GetGeoAreaZoneByName(ctx context.Context, arg GetGeoAreaZoneByNameParams) (GeoZone, error)
 	GetGeoZone(ctx context.Context, id uuid.UUID) (GeoZone, error)
@@ -136,6 +140,7 @@ type Querier interface {
 	ListCompanyCustomerDeliveries(ctx context.Context, arg ListCompanyCustomerDeliveriesParams) ([]ListCompanyCustomerDeliveriesRow, error)
 	ListCompanyCustomers(ctx context.Context, companyID uuid.UUID) ([]ListCompanyCustomersRow, error)
 	ListCompanyDeliveries(ctx context.Context, companyID uuid.UUID) ([]ListCompanyDeliveriesRow, error)
+	ListCompanyDeliveryDailyCounts(ctx context.Context, companyID uuid.UUID) ([]ListCompanyDeliveryDailyCountsRow, error)
 	ListCompanyInvitations(ctx context.Context, companyID uuid.UUID) ([]ListCompanyInvitationsRow, error)
 	ListCompanyMembers(ctx context.Context, companyID uuid.UUID) ([]ListCompanyMembersRow, error)
 	ListCompanyRequests(ctx context.Context, companyID uuid.UUID) ([]ListCompanyRequestsRow, error)
@@ -147,6 +152,7 @@ type Querier interface {
 	ListCustomerBookings(ctx context.Context, customerID *uuid.UUID) ([]ListCustomerBookingsRow, error)
 	ListCustomerDeliveryIssues(ctx context.Context, customerID uuid.UUID) ([]ListCustomerDeliveryIssuesRow, error)
 	ListCustomerFavourites(ctx context.Context, customerID uuid.UUID) ([]ListCustomerFavouritesRow, error)
+	ListCustomerRecurringShipments(ctx context.Context, customerID uuid.UUID) ([]CustomerRecurringShipment, error)
 	ListCustomerSavedQuotes(ctx context.Context, customerID *uuid.UUID) ([]ListCustomerSavedQuotesRow, error)
 	ListDeliveryTimeline(ctx context.Context, arg ListDeliveryTimelineParams) ([]DeliveryTimelineEvent, error)
 	ListDriverProfiles(ctx context.Context, companyID uuid.UUID) ([]ListDriverProfilesRow, error)

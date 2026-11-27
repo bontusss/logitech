@@ -14,44 +14,45 @@ import (
 )
 
 type customerBookingDTO struct {
-	ID                     uuid.UUID `json:"id"`
-	Status                 string    `json:"status"`
-	RequestStatus          string    `json:"request_status"`
-	TrackingCode           *string   `json:"tracking_code"`
-	TrackingURL            *string   `json:"tracking_url"`
-	PickupAddress          string    `json:"pickup_address"`
-	DropoffAddress         string    `json:"dropoff_address"`
-	PackageCategory        string    `json:"package_category"`
-	ItemDescription        string    `json:"item_description"`
-	WeightKg               float64   `json:"weight_kg"`
-	DeliveryPriceMinor     int64     `json:"delivery_price_minor"`
-	DeclaredValueMinor     int64     `json:"declared_value_minor"`
-	PriceIsEstimate        bool      `json:"price_is_estimate"`
-	DeliverySpeed          string    `json:"delivery_speed"`
-	DistanceKm             float64   `json:"distance_km"`
-	SenderName             string    `json:"sender_name"`
-	SenderPhone            string    `json:"sender_phone"`
-	ReceiverName           string    `json:"receiver_name"`
-	ReceiverPhone          string    `json:"receiver_phone"`
-	Payer                  string    `json:"payer"`
-	IsPaid                 bool      `json:"is_paid"`
-	PaymentMethod          *string   `json:"payment_method"`
-	AdditionalInstructions string    `json:"additional_instructions"`
-	PackagePhotoURL        *string   `json:"package_photo_url"`
-	BookingSource          string    `json:"booking_source"`
-	PickupLatitude         float64   `json:"pickup_latitude"`
-	PickupLongitude        float64   `json:"pickup_longitude"`
-	DropoffLatitude        float64   `json:"dropoff_latitude"`
-	DropoffLongitude       float64   `json:"dropoff_longitude"`
-	ProviderID             uuid.UUID `json:"provider_id"`
-	ProviderSlug           string    `json:"provider_slug"`
-	ProviderPhone          string    `json:"provider_phone"`
-	ProviderName           string    `json:"provider_name"`
-	ProviderLogoURL        *string   `json:"provider_logo_url"`
-	Currency               string    `json:"currency"`
-	CanCancel              bool      `json:"can_cancel"`
-	CreatedAt              time.Time `json:"created_at"`
-	UpdatedAt              time.Time `json:"updated_at"`
+	ID                     uuid.UUID  `json:"id"`
+	Status                 string     `json:"status"`
+	RequestStatus          string     `json:"request_status"`
+	TrackingCode           *string    `json:"tracking_code"`
+	TrackingURL            *string    `json:"tracking_url"`
+	PickupAddress          string     `json:"pickup_address"`
+	DropoffAddress         string     `json:"dropoff_address"`
+	PackageCategory        string     `json:"package_category"`
+	ItemDescription        string     `json:"item_description"`
+	WeightKg               float64    `json:"weight_kg"`
+	DeliveryPriceMinor     int64      `json:"delivery_price_minor"`
+	DeclaredValueMinor     int64      `json:"declared_value_minor"`
+	PriceIsEstimate        bool       `json:"price_is_estimate"`
+	DeliverySpeed          string     `json:"delivery_speed"`
+	DistanceKm             float64    `json:"distance_km"`
+	SenderName             string     `json:"sender_name"`
+	SenderPhone            string     `json:"sender_phone"`
+	ReceiverName           string     `json:"receiver_name"`
+	ReceiverPhone          string     `json:"receiver_phone"`
+	Payer                  string     `json:"payer"`
+	IsPaid                 bool       `json:"is_paid"`
+	PaidAt                 *time.Time `json:"paid_at"`
+	PaymentMethod          *string    `json:"payment_method"`
+	AdditionalInstructions string     `json:"additional_instructions"`
+	PackagePhotoURL        *string    `json:"package_photo_url"`
+	BookingSource          string     `json:"booking_source"`
+	PickupLatitude         float64    `json:"pickup_latitude"`
+	PickupLongitude        float64    `json:"pickup_longitude"`
+	DropoffLatitude        float64    `json:"dropoff_latitude"`
+	DropoffLongitude       float64    `json:"dropoff_longitude"`
+	ProviderID             uuid.UUID  `json:"provider_id"`
+	ProviderSlug           string     `json:"provider_slug"`
+	ProviderPhone          string     `json:"provider_phone"`
+	ProviderName           string     `json:"provider_name"`
+	ProviderLogoURL        *string    `json:"provider_logo_url"`
+	Currency               string     `json:"currency"`
+	CanCancel              bool       `json:"can_cancel"`
+	CreatedAt              time.Time  `json:"created_at"`
+	UpdatedAt              time.Time  `json:"updated_at"`
 }
 
 func customerBookingDTOFromListRow(row db.ListCustomerBookingsRow, appURL string) customerBookingDTO {
@@ -77,6 +78,7 @@ func customerBookingDTOFromListRow(row db.ListCustomerBookingsRow, appURL string
 		ReceiverPhone:          row.ReceiverPhone,
 		Payer:                  row.Payer,
 		IsPaid:                 row.IsPaid,
+		PaidAt:                 row.PaidAt,
 		PaymentMethod:          row.PaymentMethod,
 		AdditionalInstructions: row.AdditionalInstructions,
 		PackagePhotoURL:        row.PackagePhotoUrl,
@@ -120,6 +122,7 @@ func customerBookingDTOFromGetRow(row db.GetCustomerBookingRow, appURL string) c
 		ReceiverPhone:          row.ReceiverPhone,
 		Payer:                  row.Payer,
 		IsPaid:                 row.IsPaid,
+		PaidAt:                 row.PaidAt,
 		PaymentMethod:          row.PaymentMethod,
 		AdditionalInstructions: row.AdditionalInstructions,
 		PackagePhotoURL:        row.PackagePhotoUrl,
@@ -396,6 +399,7 @@ func (a *API) listCompanyCustomerBookings(c *gin.Context) {
 			DeliveryPriceMinor:     row.DeliveryPriceMinor,
 			Payer:                  row.Payer,
 			IsPaid:                 row.IsPaid,
+			PaidAt:                 row.PaidAt,
 			PaymentMethod:          row.PaymentMethod,
 			AssignedDriverID:       row.AssignedDriverID,
 			AssignedDriverName:     row.AssignedDriverName,

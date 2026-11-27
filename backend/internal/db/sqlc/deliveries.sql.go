@@ -19,7 +19,7 @@ SET request_status = 'accepted', status = 'created', accepted_at = now(),
     tracking_code = COALESCE(tracking_code, 'TRK-' || upper(substr(replace(id::text, '-', ''), 1, 12))),
     updated_at = now()
 WHERE company_id = $1 AND id = $2 AND request_status = 'pending'
-RETURNING id, company_id, sender_name, sender_phone, receiver_name, receiver_phone, pickup_address, dropoff_address, item_description, declared_value_minor, delivery_price_minor, payer, is_paid, payment_method, assigned_driver_id, status, created_by, created_at, updated_at, package_category, weight_kg, additional_instructions, package_photo_url, pickup_latitude, pickup_longitude, dropoff_latitude, dropoff_longitude, selected_route_id, price_is_estimate, booking_source, delivery_speed, distance_km, request_status, tracking_code, rider_link_token, declined_at, accepted_at, customer_id
+RETURNING id, company_id, sender_name, sender_phone, receiver_name, receiver_phone, pickup_address, dropoff_address, item_description, declared_value_minor, delivery_price_minor, payer, is_paid, payment_method, assigned_driver_id, status, created_by, created_at, updated_at, package_category, weight_kg, additional_instructions, package_photo_url, pickup_latitude, pickup_longitude, dropoff_latitude, dropoff_longitude, selected_route_id, price_is_estimate, booking_source, delivery_speed, distance_km, request_status, tracking_code, rider_link_token, declined_at, accepted_at, customer_id, paid_at
 `
 
 type AcceptBookingRequestParams struct {
@@ -69,6 +69,7 @@ func (q *Queries) AcceptBookingRequest(ctx context.Context, arg AcceptBookingReq
 		&i.DeclinedAt,
 		&i.AcceptedAt,
 		&i.CustomerID,
+		&i.PaidAt,
 	)
 	return i, err
 }
@@ -118,7 +119,7 @@ WHERE delivery.company_id = $1 AND delivery.id = $2
   AND (NULLIF($3::uuid, '00000000-0000-0000-0000-000000000000') IS NULL
        OR EXISTS (SELECT 1 FROM driver_profiles driver
                   WHERE driver.id = $3::uuid AND driver.company_id = $1 AND driver.status = 'active'))
-RETURNING id, company_id, sender_name, sender_phone, receiver_name, receiver_phone, pickup_address, dropoff_address, item_description, declared_value_minor, delivery_price_minor, payer, is_paid, payment_method, assigned_driver_id, status, created_by, created_at, updated_at, package_category, weight_kg, additional_instructions, package_photo_url, pickup_latitude, pickup_longitude, dropoff_latitude, dropoff_longitude, selected_route_id, price_is_estimate, booking_source, delivery_speed, distance_km, request_status, tracking_code, rider_link_token, declined_at, accepted_at, customer_id
+RETURNING id, company_id, sender_name, sender_phone, receiver_name, receiver_phone, pickup_address, dropoff_address, item_description, declared_value_minor, delivery_price_minor, payer, is_paid, payment_method, assigned_driver_id, status, created_by, created_at, updated_at, package_category, weight_kg, additional_instructions, package_photo_url, pickup_latitude, pickup_longitude, dropoff_latitude, dropoff_longitude, selected_route_id, price_is_estimate, booking_source, delivery_speed, distance_km, request_status, tracking_code, rider_link_token, declined_at, accepted_at, customer_id, paid_at
 `
 
 type AssignDeliveryDriverParams struct {
@@ -169,6 +170,7 @@ func (q *Queries) AssignDeliveryDriver(ctx context.Context, arg AssignDeliveryDr
 		&i.DeclinedAt,
 		&i.AcceptedAt,
 		&i.CustomerID,
+		&i.PaidAt,
 	)
 	return i, err
 }
@@ -194,7 +196,7 @@ WHERE NULLIF($14::uuid, '00000000-0000-0000-0000-000000000000'::uuid) IS NULL
        AND d.company_id = $1::uuid
        AND d.status = 'active'
    )
-RETURNING id, company_id, sender_name, sender_phone, receiver_name, receiver_phone, pickup_address, dropoff_address, item_description, declared_value_minor, delivery_price_minor, payer, is_paid, payment_method, assigned_driver_id, status, created_by, created_at, updated_at, package_category, weight_kg, additional_instructions, package_photo_url, pickup_latitude, pickup_longitude, dropoff_latitude, dropoff_longitude, selected_route_id, price_is_estimate, booking_source, delivery_speed, distance_km, request_status, tracking_code, rider_link_token, declined_at, accepted_at, customer_id
+RETURNING id, company_id, sender_name, sender_phone, receiver_name, receiver_phone, pickup_address, dropoff_address, item_description, declared_value_minor, delivery_price_minor, payer, is_paid, payment_method, assigned_driver_id, status, created_by, created_at, updated_at, package_category, weight_kg, additional_instructions, package_photo_url, pickup_latitude, pickup_longitude, dropoff_latitude, dropoff_longitude, selected_route_id, price_is_estimate, booking_source, delivery_speed, distance_km, request_status, tracking_code, rider_link_token, declined_at, accepted_at, customer_id, paid_at
 `
 
 type CreateDeliveryParams struct {
@@ -275,6 +277,7 @@ func (q *Queries) CreateDelivery(ctx context.Context, arg CreateDeliveryParams) 
 		&i.DeclinedAt,
 		&i.AcceptedAt,
 		&i.CustomerID,
+		&i.PaidAt,
 	)
 	return i, err
 }
@@ -283,7 +286,7 @@ const declineBookingRequest = `-- name: DeclineBookingRequest :one
 UPDATE deliveries
 SET request_status = 'declined', status = 'cancelled', declined_at = now(), updated_at = now()
 WHERE company_id = $1 AND id = $2 AND request_status = 'pending'
-RETURNING id, company_id, sender_name, sender_phone, receiver_name, receiver_phone, pickup_address, dropoff_address, item_description, declared_value_minor, delivery_price_minor, payer, is_paid, payment_method, assigned_driver_id, status, created_by, created_at, updated_at, package_category, weight_kg, additional_instructions, package_photo_url, pickup_latitude, pickup_longitude, dropoff_latitude, dropoff_longitude, selected_route_id, price_is_estimate, booking_source, delivery_speed, distance_km, request_status, tracking_code, rider_link_token, declined_at, accepted_at, customer_id
+RETURNING id, company_id, sender_name, sender_phone, receiver_name, receiver_phone, pickup_address, dropoff_address, item_description, declared_value_minor, delivery_price_minor, payer, is_paid, payment_method, assigned_driver_id, status, created_by, created_at, updated_at, package_category, weight_kg, additional_instructions, package_photo_url, pickup_latitude, pickup_longitude, dropoff_latitude, dropoff_longitude, selected_route_id, price_is_estimate, booking_source, delivery_speed, distance_km, request_status, tracking_code, rider_link_token, declined_at, accepted_at, customer_id, paid_at
 `
 
 type DeclineBookingRequestParams struct {
@@ -333,12 +336,13 @@ func (q *Queries) DeclineBookingRequest(ctx context.Context, arg DeclineBookingR
 		&i.DeclinedAt,
 		&i.AcceptedAt,
 		&i.CustomerID,
+		&i.PaidAt,
 	)
 	return i, err
 }
 
 const getCompanyDelivery = `-- name: GetCompanyDelivery :one
-SELECT d.id, d.company_id, d.sender_name, d.sender_phone, d.receiver_name, d.receiver_phone, d.pickup_address, d.dropoff_address, d.item_description, d.declared_value_minor, d.delivery_price_minor, d.payer, d.is_paid, d.payment_method, d.assigned_driver_id, d.status, d.created_by, d.created_at, d.updated_at, d.package_category, d.weight_kg, d.additional_instructions, d.package_photo_url, d.pickup_latitude, d.pickup_longitude, d.dropoff_latitude, d.dropoff_longitude, d.selected_route_id, d.price_is_estimate, d.booking_source, d.delivery_speed, d.distance_km, d.request_status, d.tracking_code, d.rider_link_token, d.declined_at, d.accepted_at, d.customer_id, driver.full_name AS assigned_driver_name
+SELECT d.id, d.company_id, d.sender_name, d.sender_phone, d.receiver_name, d.receiver_phone, d.pickup_address, d.dropoff_address, d.item_description, d.declared_value_minor, d.delivery_price_minor, d.payer, d.is_paid, d.payment_method, d.assigned_driver_id, d.status, d.created_by, d.created_at, d.updated_at, d.package_category, d.weight_kg, d.additional_instructions, d.package_photo_url, d.pickup_latitude, d.pickup_longitude, d.dropoff_latitude, d.dropoff_longitude, d.selected_route_id, d.price_is_estimate, d.booking_source, d.delivery_speed, d.distance_km, d.request_status, d.tracking_code, d.rider_link_token, d.declined_at, d.accepted_at, d.customer_id, d.paid_at, driver.full_name AS assigned_driver_name
 FROM deliveries d
 LEFT JOIN driver_profiles driver ON driver.id = d.assigned_driver_id
 WHERE d.company_id = $1 AND d.id = $2
@@ -388,6 +392,7 @@ type GetCompanyDeliveryRow struct {
 	DeclinedAt             *time.Time     `json:"declined_at"`
 	AcceptedAt             *time.Time     `json:"accepted_at"`
 	CustomerID             *uuid.UUID     `json:"customer_id"`
+	PaidAt                 *time.Time     `json:"paid_at"`
 	AssignedDriverName     *string        `json:"assigned_driver_name"`
 }
 
@@ -433,14 +438,92 @@ func (q *Queries) GetCompanyDelivery(ctx context.Context, arg GetCompanyDelivery
 		&i.DeclinedAt,
 		&i.AcceptedAt,
 		&i.CustomerID,
+		&i.PaidAt,
 		&i.AssignedDriverName,
+	)
+	return i, err
+}
+
+const getCompanyDeliveryOverview = `-- name: GetCompanyDeliveryOverview :one
+WITH company_tz AS (
+  SELECT COALESCE(NULLIF(cs.timezone, ''), 'Africa/Lagos') AS name
+  FROM companies c
+  LEFT JOIN company_settings cs ON cs.company_id = c.id
+  WHERE c.id = $1
+)
+SELECT
+  COALESCE(SUM(d.delivery_price_minor) FILTER (
+    WHERE d.status = 'delivered'
+      AND d.request_status <> 'declined'
+      AND (d.updated_at AT TIME ZONE tz.name)::date = (now() AT TIME ZONE tz.name)::date
+  ), 0)::bigint AS earned_today_minor,
+  COALESCE(SUM(d.delivery_price_minor) FILTER (
+    WHERE d.is_paid
+      AND d.paid_at IS NOT NULL
+      AND d.request_status <> 'declined'
+      AND (d.paid_at AT TIME ZONE tz.name)::date = (now() AT TIME ZONE tz.name)::date
+  ), 0)::bigint AS collected_today_minor,
+  COALESCE(SUM(d.delivery_price_minor) FILTER (
+    WHERE NOT d.is_paid
+      AND d.status <> 'cancelled'
+      AND d.request_status <> 'declined'
+  ), 0)::bigint AS amount_owed_minor,
+  COALESCE(SUM(d.delivery_price_minor) FILTER (
+    WHERE d.is_paid
+      AND d.payment_method = 'cash'
+      AND d.status IN ('assigned', 'picked_up', 'in_transit')
+      AND d.request_status <> 'declined'
+  ), 0)::bigint AS cash_with_drivers_minor,
+  COUNT(*) FILTER (
+    WHERE (d.created_at AT TIME ZONE tz.name)::date = (now() AT TIME ZONE tz.name)::date
+  )::bigint AS bookings_today,
+  COUNT(*) FILTER (
+    WHERE d.status IN ('assigned', 'picked_up', 'in_transit')
+      AND d.request_status <> 'declined'
+  )::bigint AS in_progress,
+  COUNT(*) FILTER (
+    WHERE d.status IN ('created', 'requested')
+      AND d.request_status <> 'declined'
+  )::bigint AS waiting_for_drivers,
+  COUNT(*) FILTER (WHERE d.request_status = 'pending')::bigint AS booking_requests,
+  COUNT(*)::bigint AS total_bookings
+FROM deliveries d
+CROSS JOIN company_tz tz
+WHERE d.company_id = $1
+`
+
+type GetCompanyDeliveryOverviewRow struct {
+	EarnedTodayMinor     int64 `json:"earned_today_minor"`
+	CollectedTodayMinor  int64 `json:"collected_today_minor"`
+	AmountOwedMinor      int64 `json:"amount_owed_minor"`
+	CashWithDriversMinor int64 `json:"cash_with_drivers_minor"`
+	BookingsToday        int64 `json:"bookings_today"`
+	InProgress           int64 `json:"in_progress"`
+	WaitingForDrivers    int64 `json:"waiting_for_drivers"`
+	BookingRequests      int64 `json:"booking_requests"`
+	TotalBookings        int64 `json:"total_bookings"`
+}
+
+func (q *Queries) GetCompanyDeliveryOverview(ctx context.Context, companyID uuid.UUID) (GetCompanyDeliveryOverviewRow, error) {
+	row := q.db.QueryRow(ctx, getCompanyDeliveryOverview, companyID)
+	var i GetCompanyDeliveryOverviewRow
+	err := row.Scan(
+		&i.EarnedTodayMinor,
+		&i.CollectedTodayMinor,
+		&i.AmountOwedMinor,
+		&i.CashWithDriversMinor,
+		&i.BookingsToday,
+		&i.InProgress,
+		&i.WaitingForDrivers,
+		&i.BookingRequests,
+		&i.TotalBookings,
 	)
 	return i, err
 }
 
 const listCompanyDeliveries = `-- name: ListCompanyDeliveries :many
 SELECT
-  d.id, d.company_id, d.sender_name, d.sender_phone, d.receiver_name, d.receiver_phone, d.pickup_address, d.dropoff_address, d.item_description, d.declared_value_minor, d.delivery_price_minor, d.payer, d.is_paid, d.payment_method, d.assigned_driver_id, d.status, d.created_by, d.created_at, d.updated_at, d.package_category, d.weight_kg, d.additional_instructions, d.package_photo_url, d.pickup_latitude, d.pickup_longitude, d.dropoff_latitude, d.dropoff_longitude, d.selected_route_id, d.price_is_estimate, d.booking_source, d.delivery_speed, d.distance_km, d.request_status, d.tracking_code, d.rider_link_token, d.declined_at, d.accepted_at, d.customer_id,
+  d.id, d.company_id, d.sender_name, d.sender_phone, d.receiver_name, d.receiver_phone, d.pickup_address, d.dropoff_address, d.item_description, d.declared_value_minor, d.delivery_price_minor, d.payer, d.is_paid, d.payment_method, d.assigned_driver_id, d.status, d.created_by, d.created_at, d.updated_at, d.package_category, d.weight_kg, d.additional_instructions, d.package_photo_url, d.pickup_latitude, d.pickup_longitude, d.dropoff_latitude, d.dropoff_longitude, d.selected_route_id, d.price_is_estimate, d.booking_source, d.delivery_speed, d.distance_km, d.request_status, d.tracking_code, d.rider_link_token, d.declined_at, d.accepted_at, d.customer_id, d.paid_at,
   driver.full_name AS assigned_driver_name
 FROM deliveries d
 LEFT JOIN driver_profiles driver ON driver.id = d.assigned_driver_id
@@ -488,6 +571,7 @@ type ListCompanyDeliveriesRow struct {
 	DeclinedAt             *time.Time     `json:"declined_at"`
 	AcceptedAt             *time.Time     `json:"accepted_at"`
 	CustomerID             *uuid.UUID     `json:"customer_id"`
+	PaidAt                 *time.Time     `json:"paid_at"`
 	AssignedDriverName     *string        `json:"assigned_driver_name"`
 }
 
@@ -539,6 +623,7 @@ func (q *Queries) ListCompanyDeliveries(ctx context.Context, companyID uuid.UUID
 			&i.DeclinedAt,
 			&i.AcceptedAt,
 			&i.CustomerID,
+			&i.PaidAt,
 			&i.AssignedDriverName,
 		); err != nil {
 			return nil, err
@@ -551,8 +636,57 @@ func (q *Queries) ListCompanyDeliveries(ctx context.Context, companyID uuid.UUID
 	return items, nil
 }
 
+const listCompanyDeliveryDailyCounts = `-- name: ListCompanyDeliveryDailyCounts :many
+WITH company_tz AS (
+  SELECT COALESCE(NULLIF(cs.timezone, ''), 'Africa/Lagos') AS name
+  FROM companies c
+  LEFT JOIN company_settings cs ON cs.company_id = c.id
+  WHERE c.id = $1
+),
+days AS (
+  SELECT generate_series(
+    (now() AT TIME ZONE tz.name)::date - 6,
+    (now() AT TIME ZONE tz.name)::date,
+    interval '1 day'
+  )::date AS day
+  FROM company_tz tz
+)
+SELECT days.day::date AS day, COUNT(d.id)::bigint AS bookings
+FROM days
+LEFT JOIN deliveries d
+  ON d.company_id = $1
+ AND (d.created_at AT TIME ZONE (SELECT name FROM company_tz))::date = days.day
+GROUP BY days.day
+ORDER BY days.day
+`
+
+type ListCompanyDeliveryDailyCountsRow struct {
+	Day      pgtype.Date `json:"day"`
+	Bookings int64       `json:"bookings"`
+}
+
+func (q *Queries) ListCompanyDeliveryDailyCounts(ctx context.Context, companyID uuid.UUID) ([]ListCompanyDeliveryDailyCountsRow, error) {
+	rows, err := q.db.Query(ctx, listCompanyDeliveryDailyCounts, companyID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListCompanyDeliveryDailyCountsRow{}
+	for rows.Next() {
+		var i ListCompanyDeliveryDailyCountsRow
+		if err := rows.Scan(&i.Day, &i.Bookings); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listCompanyRequests = `-- name: ListCompanyRequests :many
-SELECT d.id, d.company_id, d.sender_name, d.sender_phone, d.receiver_name, d.receiver_phone, d.pickup_address, d.dropoff_address, d.item_description, d.declared_value_minor, d.delivery_price_minor, d.payer, d.is_paid, d.payment_method, d.assigned_driver_id, d.status, d.created_by, d.created_at, d.updated_at, d.package_category, d.weight_kg, d.additional_instructions, d.package_photo_url, d.pickup_latitude, d.pickup_longitude, d.dropoff_latitude, d.dropoff_longitude, d.selected_route_id, d.price_is_estimate, d.booking_source, d.delivery_speed, d.distance_km, d.request_status, d.tracking_code, d.rider_link_token, d.declined_at, d.accepted_at, d.customer_id, driver.full_name AS assigned_driver_name
+SELECT d.id, d.company_id, d.sender_name, d.sender_phone, d.receiver_name, d.receiver_phone, d.pickup_address, d.dropoff_address, d.item_description, d.declared_value_minor, d.delivery_price_minor, d.payer, d.is_paid, d.payment_method, d.assigned_driver_id, d.status, d.created_by, d.created_at, d.updated_at, d.package_category, d.weight_kg, d.additional_instructions, d.package_photo_url, d.pickup_latitude, d.pickup_longitude, d.dropoff_latitude, d.dropoff_longitude, d.selected_route_id, d.price_is_estimate, d.booking_source, d.delivery_speed, d.distance_km, d.request_status, d.tracking_code, d.rider_link_token, d.declined_at, d.accepted_at, d.customer_id, d.paid_at, driver.full_name AS assigned_driver_name
 FROM deliveries d
 LEFT JOIN driver_profiles driver ON driver.id = d.assigned_driver_id
 WHERE d.company_id = $1
@@ -600,6 +734,7 @@ type ListCompanyRequestsRow struct {
 	DeclinedAt             *time.Time     `json:"declined_at"`
 	AcceptedAt             *time.Time     `json:"accepted_at"`
 	CustomerID             *uuid.UUID     `json:"customer_id"`
+	PaidAt                 *time.Time     `json:"paid_at"`
 	AssignedDriverName     *string        `json:"assigned_driver_name"`
 }
 
@@ -651,6 +786,7 @@ func (q *Queries) ListCompanyRequests(ctx context.Context, companyID uuid.UUID) 
 			&i.DeclinedAt,
 			&i.AcceptedAt,
 			&i.CustomerID,
+			&i.PaidAt,
 			&i.AssignedDriverName,
 		); err != nil {
 			return nil, err
@@ -712,7 +848,7 @@ SET sender_name = $3, sender_phone = $4, receiver_name = $5, receiver_phone = $6
     package_category = $12, weight_kg = $13, additional_instructions = $14,
     updated_at = now()
 WHERE company_id = $1 AND id = $2
-RETURNING id, company_id, sender_name, sender_phone, receiver_name, receiver_phone, pickup_address, dropoff_address, item_description, declared_value_minor, delivery_price_minor, payer, is_paid, payment_method, assigned_driver_id, status, created_by, created_at, updated_at, package_category, weight_kg, additional_instructions, package_photo_url, pickup_latitude, pickup_longitude, dropoff_latitude, dropoff_longitude, selected_route_id, price_is_estimate, booking_source, delivery_speed, distance_km, request_status, tracking_code, rider_link_token, declined_at, accepted_at, customer_id
+RETURNING id, company_id, sender_name, sender_phone, receiver_name, receiver_phone, pickup_address, dropoff_address, item_description, declared_value_minor, delivery_price_minor, payer, is_paid, payment_method, assigned_driver_id, status, created_by, created_at, updated_at, package_category, weight_kg, additional_instructions, package_photo_url, pickup_latitude, pickup_longitude, dropoff_latitude, dropoff_longitude, selected_route_id, price_is_estimate, booking_source, delivery_speed, distance_km, request_status, tracking_code, rider_link_token, declined_at, accepted_at, customer_id, paid_at
 `
 
 type UpdateCompanyDeliveryParams struct {
@@ -789,6 +925,7 @@ func (q *Queries) UpdateCompanyDelivery(ctx context.Context, arg UpdateCompanyDe
 		&i.DeclinedAt,
 		&i.AcceptedAt,
 		&i.CustomerID,
+		&i.PaidAt,
 	)
 	return i, err
 }
@@ -797,7 +934,7 @@ const updateCompanyDeliveryStatus = `-- name: UpdateCompanyDeliveryStatus :one
 UPDATE deliveries
 SET status = $3, updated_at = now()
 WHERE company_id = $1 AND id = $2
-RETURNING id, company_id, sender_name, sender_phone, receiver_name, receiver_phone, pickup_address, dropoff_address, item_description, declared_value_minor, delivery_price_minor, payer, is_paid, payment_method, assigned_driver_id, status, created_by, created_at, updated_at, package_category, weight_kg, additional_instructions, package_photo_url, pickup_latitude, pickup_longitude, dropoff_latitude, dropoff_longitude, selected_route_id, price_is_estimate, booking_source, delivery_speed, distance_km, request_status, tracking_code, rider_link_token, declined_at, accepted_at, customer_id
+RETURNING id, company_id, sender_name, sender_phone, receiver_name, receiver_phone, pickup_address, dropoff_address, item_description, declared_value_minor, delivery_price_minor, payer, is_paid, payment_method, assigned_driver_id, status, created_by, created_at, updated_at, package_category, weight_kg, additional_instructions, package_photo_url, pickup_latitude, pickup_longitude, dropoff_latitude, dropoff_longitude, selected_route_id, price_is_estimate, booking_source, delivery_speed, distance_km, request_status, tracking_code, rider_link_token, declined_at, accepted_at, customer_id, paid_at
 `
 
 type UpdateCompanyDeliveryStatusParams struct {
@@ -848,6 +985,7 @@ func (q *Queries) UpdateCompanyDeliveryStatus(ctx context.Context, arg UpdateCom
 		&i.DeclinedAt,
 		&i.AcceptedAt,
 		&i.CustomerID,
+		&i.PaidAt,
 	)
 	return i, err
 }

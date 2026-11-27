@@ -25,12 +25,13 @@ const searching = ref(false)
 const locating = ref(false)
 const adjusting = ref(false)
 const error = ref('')
-const { token, loadError: tokenError, load: loadToken } = useMapboxToken()
+const { provider, loadError: mapConfigError, load: loadMapProvider } = useMapProvider()
+const mapStyleUrl = computed(() => provider.value?.styleUrl() ?? '')
 let timer: ReturnType<typeof setTimeout> | undefined
 let controller: AbortController | null = null
 let suppressInputWatch = false
 
-onMounted(() => void loadToken())
+onMounted(() => void loadMapProvider())
 onBeforeUnmount(() => {
   if (timer) clearTimeout(timer)
   controller?.abort()
@@ -44,61 +45,26 @@ watch(input, (value) => {
   open.value = false
   controller?.abort()
   if (timer) clearTimeout(timer)
-  if (value.trim().length < 3 || !token.value) return
+  if (value.trim().length < 3 || !provider.value) return
   timer = setTimeout(() => void search(value.trim()), 320)
 })
 
-function parseFeature(feature: {
-  geometry?: { coordinates?: [number, number] }
-  properties?: {
-    full_address?: string
-    name?: string
-    place_formatted?: string
-    context?: Record<string, { name?: string }>
-  }
-}): Suggestion | null {
-  const coordinates = feature.geometry?.coordinates
-  const address = feature.properties?.full_address
-    || [feature.properties?.name, feature.properties?.place_formatted].filter(Boolean).join(', ')
-  if (!coordinates || !address) return null
-  const context = feature.properties?.context ?? {}
-  const city = context.place?.name || context.locality?.name || context.district?.name || ''
-  const state = context.region?.name || ''
-  return { address, longitude: coordinates[0], latitude: coordinates[1], city, state }
-}
-
 async function search(query: string) {
+  const mapProvider = provider.value
+  if (!mapProvider) return
   const request = new AbortController()
   controller = request
   searching.value = true
   try {
-    const params = new URLSearchParams({
-      q: query,
-      country: 'ng',
-      autocomplete: 'true',
-      limit: '5',
-      access_token: token.value,
-    })
-    const response = await fetch(`https://api.mapbox.com/search/geocode/v6/forward?${params}`, {
-      signal: request.signal,
-    })
-    if (!response.ok) throw new Error('Address search is unavailable right now.')
-    const result = await response.json() as {
-      features?: Array<{
-        geometry?: { coordinates?: [number, number] }
-        properties?: {
-          full_address?: string
-          name?: string
-          place_formatted?: string
-          context?: Record<string, { name?: string }>
-        }
-      }>
-    }
+    const places = await mapProvider.autocomplete(query, { signal: request.signal, limit: 5 })
     if (request.signal.aborted) return
-    suggestions.value = (result.features ?? []).flatMap((feature) => {
-      const parsed = parseFeature(feature)
-      return parsed ? [parsed] : []
-    })
+    suggestions.value = places.map((place) => ({
+      address: place.address,
+      longitude: place.longitude,
+      latitude: place.latitude,
+      city: place.city,
+      state: place.state,
+    }))
     open.value = true
     if (!suggestions.value.length) error.value = 'No matching places. Add an area or city.'
   } catch (cause) {
@@ -122,31 +88,21 @@ async function choose(place: Suggestion) {
 }
 
 async function reverseGeocode(latitude: number, longitude: number): Promise<Suggestion> {
-  const params = new URLSearchParams({
-    longitude: String(longitude),
-    latitude: String(latitude),
-    access_token: token.value,
-  })
-  const response = await fetch(`https://api.mapbox.com/search/geocode/v6/reverse?${params}`)
-  if (!response.ok) throw new Error('Could not verify this spot on the map.')
-  const result = await response.json() as {
-    features?: Array<{
-      geometry?: { coordinates?: [number, number] }
-      properties?: {
-        full_address?: string
-        name?: string
-        place_formatted?: string
-        context?: Record<string, { name?: string }>
-      }
-    }>
+  const mapProvider = provider.value
+  if (!mapProvider) throw new Error('Address search is not configured.')
+  const place = await mapProvider.reverse({ latitude, longitude })
+  if (!place) throw new Error('Could not find an address at this spot. Move the pin again.')
+  return {
+    address: place.address,
+    longitude: place.longitude,
+    latitude: place.latitude,
+    city: place.city,
+    state: place.state,
   }
-  const place = result.features?.[0] ? parseFeature(result.features[0]) : null
-  if (!place) throw new Error('Mapbox could not find an address at this spot.')
-  return place
 }
 
 async function adjustPin(coordinates: { latitude: number; longitude: number }) {
-  if (!token.value) return
+  if (!provider.value) return
   adjusting.value = true
   error.value = ''
   try {
@@ -154,9 +110,9 @@ async function adjustPin(coordinates: { latitude: number; longitude: number }) {
     suppressInputWatch = true
     input.value = place.address
     await nextTick()
-    // Keep the pin exactly where the customer dropped it. Mapbox reverse
-    // geocoding can snap its result to the nearest road, which would otherwise
-    // pull the marker away from the chosen building or gate.
+    // Keep the pin exactly where the customer dropped it. Reverse geocoding
+    // can snap its result to the nearest road, which would otherwise pull the
+    // marker away from the chosen building or gate.
     emit('update:modelValue', {
       ...place,
       latitude: coordinates.latitude,
@@ -176,8 +132,8 @@ function useCurrentLocation() {
     error.value = 'This browser does not support location access.'
     return
   }
-  if (!token.value) {
-    error.value = 'Mapbox address search is not configured.'
+  if (!provider.value) {
+    error.value = 'Address search is not configured.'
     return
   }
   locating.value = true
@@ -226,7 +182,7 @@ function useCurrentLocation() {
         type="search"
         autocomplete="off"
         :aria-label="label"
-        :disabled="!token"
+        :disabled="!provider"
         :placeholder="placeholder || 'Search a street, area or landmark'"
         class="w-full rounded-xl border border-slate-200 bg-canvas py-2.5 pr-9 pl-8 text-[12px] font-medium text-ink-900 outline-none transition placeholder:text-ink-900/35 focus:border-brand-500 disabled:opacity-60 dark:border-white/10 dark:bg-white/5"
         @focus="suggestions.length && (open = true)"
@@ -236,14 +192,14 @@ function useCurrentLocation() {
       <Check v-else-if="modelValue" :size="13" class="absolute top-3 right-3 text-success-600" />
     </div>
     <p v-if="modelValue" class="mt-1 text-[9.5px] font-medium text-success-700 dark:text-success-200">
-      Mapbox verified<template v-if="modelValue.city"> · {{ modelValue.city }}<template v-if="modelValue.state">, {{ modelValue.state }}</template></template>
+      Location verified<template v-if="modelValue.city"> · {{ modelValue.city }}<template v-if="modelValue.state">, {{ modelValue.state }}</template></template>
     </p>
-    <p v-else-if="tokenError" class="mt-1 text-[9.5px] leading-4 text-accent-700">{{ tokenError }}</p>
-    <div v-if="token && modelValue" class="mt-2 space-y-1.5">
+    <p v-else-if="mapConfigError" class="mt-1 text-[9.5px] leading-4 text-accent-700">{{ mapConfigError }}</p>
+    <div v-if="provider && modelValue" class="mt-2 space-y-1.5">
       <MapPinAdjuster
         :latitude="modelValue.latitude"
         :longitude="modelValue.longitude"
-        :access-token="token"
+        :style-url="mapStyleUrl"
         height="148px"
         accent="#4f46e5"
         @change="adjustPin"

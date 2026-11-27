@@ -99,3 +99,73 @@ FROM delivery_timeline_events event
 JOIN deliveries delivery ON delivery.id = event.delivery_id
 WHERE delivery.company_id = $1 AND event.delivery_id = $2
 ORDER BY event.created_at ASC;
+
+-- name: GetCompanyDeliveryOverview :one
+WITH company_tz AS (
+  SELECT COALESCE(NULLIF(cs.timezone, ''), 'Africa/Lagos') AS name
+  FROM companies c
+  LEFT JOIN company_settings cs ON cs.company_id = c.id
+  WHERE c.id = sqlc.arg(company_id)
+)
+SELECT
+  COALESCE(SUM(d.delivery_price_minor) FILTER (
+    WHERE d.status = 'delivered'
+      AND d.request_status <> 'declined'
+      AND (d.updated_at AT TIME ZONE tz.name)::date = (now() AT TIME ZONE tz.name)::date
+  ), 0)::bigint AS earned_today_minor,
+  COALESCE(SUM(d.delivery_price_minor) FILTER (
+    WHERE d.is_paid
+      AND d.paid_at IS NOT NULL
+      AND d.request_status <> 'declined'
+      AND (d.paid_at AT TIME ZONE tz.name)::date = (now() AT TIME ZONE tz.name)::date
+  ), 0)::bigint AS collected_today_minor,
+  COALESCE(SUM(d.delivery_price_minor) FILTER (
+    WHERE NOT d.is_paid
+      AND d.status <> 'cancelled'
+      AND d.request_status <> 'declined'
+  ), 0)::bigint AS amount_owed_minor,
+  COALESCE(SUM(d.delivery_price_minor) FILTER (
+    WHERE d.is_paid
+      AND d.payment_method = 'cash'
+      AND d.status IN ('assigned', 'picked_up', 'in_transit')
+      AND d.request_status <> 'declined'
+  ), 0)::bigint AS cash_with_drivers_minor,
+  COUNT(*) FILTER (
+    WHERE (d.created_at AT TIME ZONE tz.name)::date = (now() AT TIME ZONE tz.name)::date
+  )::bigint AS bookings_today,
+  COUNT(*) FILTER (
+    WHERE d.status IN ('assigned', 'picked_up', 'in_transit')
+      AND d.request_status <> 'declined'
+  )::bigint AS in_progress,
+  COUNT(*) FILTER (
+    WHERE d.status IN ('created', 'requested')
+      AND d.request_status <> 'declined'
+  )::bigint AS waiting_for_drivers,
+  COUNT(*) FILTER (WHERE d.request_status = 'pending')::bigint AS booking_requests,
+  COUNT(*)::bigint AS total_bookings
+FROM deliveries d
+CROSS JOIN company_tz tz
+WHERE d.company_id = sqlc.arg(company_id);
+
+-- name: ListCompanyDeliveryDailyCounts :many
+WITH company_tz AS (
+  SELECT COALESCE(NULLIF(cs.timezone, ''), 'Africa/Lagos') AS name
+  FROM companies c
+  LEFT JOIN company_settings cs ON cs.company_id = c.id
+  WHERE c.id = sqlc.arg(company_id)
+),
+days AS (
+  SELECT generate_series(
+    (now() AT TIME ZONE tz.name)::date - 6,
+    (now() AT TIME ZONE tz.name)::date,
+    interval '1 day'
+  )::date AS day
+  FROM company_tz tz
+)
+SELECT days.day::date AS day, COUNT(d.id)::bigint AS bookings
+FROM days
+LEFT JOIN deliveries d
+  ON d.company_id = sqlc.arg(company_id)
+ AND (d.created_at AT TIME ZONE (SELECT name FROM company_tz))::date = days.day
+GROUP BY days.day
+ORDER BY days.day;

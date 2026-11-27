@@ -32,6 +32,7 @@ SELECT
   d.receiver_phone,
   d.payer,
   d.is_paid,
+  d.paid_at,
   d.payment_method,
   d.additional_instructions,
   d.package_photo_url,
@@ -78,6 +79,7 @@ SELECT
   d.receiver_phone,
   d.payer,
   d.is_paid,
+  d.paid_at,
   d.payment_method,
   d.additional_instructions,
   d.package_photo_url,
@@ -136,3 +138,42 @@ LEFT JOIN driver_profiles driver ON driver.id = d.assigned_driver_id
 WHERE d.company_id = $1 AND d.customer_id = $2
 ORDER BY d.created_at DESC
 LIMIT 200;
+
+-- name: GetCustomerBookingOverview :one
+SELECT
+  COUNT(*) FILTER (
+    WHERE d.request_status = 'accepted' AND d.status NOT IN ('delivered', 'cancelled')
+  )::bigint AS active,
+  COUNT(*) FILTER (
+    WHERE d.request_status = 'pending' OR d.status = 'requested'
+  )::bigint AS pending,
+  COUNT(*) FILTER (WHERE d.status = 'delivered')::bigint AS delivered,
+  COUNT(*) FILTER (
+    WHERE d.status = 'cancelled' OR d.request_status = 'declined'
+  )::bigint AS cancelled,
+  COUNT(*)::bigint AS total,
+  COALESCE(SUM(d.delivery_price_minor) FILTER (
+    WHERE d.is_paid AND d.status <> 'cancelled' AND d.request_status <> 'declined'
+  ), 0)::bigint AS paid_minor,
+  COALESCE(SUM(d.delivery_price_minor) FILTER (
+    WHERE NOT d.is_paid AND d.status <> 'cancelled' AND d.request_status <> 'declined'
+  ), 0)::bigint AS outstanding_minor,
+  COUNT(*) FILTER (
+    WHERE d.status <> 'cancelled' AND d.request_status <> 'declined'
+  )::bigint AS billable_count,
+  COUNT(*) FILTER (
+    WHERE d.is_paid AND d.status <> 'cancelled' AND d.request_status <> 'declined'
+  )::bigint AS paid_count,
+  COUNT(*) FILTER (
+    WHERE NOT d.is_paid AND d.status <> 'cancelled' AND d.request_status <> 'declined'
+  )::bigint AS unpaid_count,
+  COALESCE((
+    SELECT cs.currency
+    FROM deliveries latest
+    LEFT JOIN company_settings cs ON cs.company_id = latest.company_id
+    WHERE latest.customer_id = sqlc.arg(customer_id)
+    ORDER BY latest.created_at DESC
+    LIMIT 1
+  ), 'NGN')::text AS currency
+FROM deliveries d
+WHERE d.customer_id = sqlc.arg(customer_id);

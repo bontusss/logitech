@@ -90,10 +90,10 @@ function trackBooking(booking: CustomerBooking) {
 </script>
 
 <template>
-  <div>
+  <div class="dash-page">
     <div>
       <p class="text-[10.5px] font-semibold tracking-[0.2em] text-brand-600 uppercase">Shipments</p>
-      <h1 class="mt-2 text-[clamp(1.5rem,2.6vw,1.9rem)] font-semibold tracking-[-0.035em]">Track shipment</h1>
+      <h1 class="mt-2 text-[clamp(1.45rem,2.5vw,1.8rem)] leading-tight font-semibold tracking-[-0.04em]">Track shipment</h1>
       <p class="mt-1.5 max-w-2xl text-[12.5px] leading-relaxed text-ink-900/50">
         Use the tracking code or booking reference from your receipt to see every update.
       </p>

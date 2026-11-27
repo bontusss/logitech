@@ -53,7 +53,7 @@ WHERE $19::uuid IS NULL
        AND r.company_id = $1::uuid
        AND r.status = 'active'
    )
-RETURNING id, company_id, sender_name, sender_phone, receiver_name, receiver_phone, pickup_address, dropoff_address, item_description, declared_value_minor, delivery_price_minor, payer, is_paid, payment_method, assigned_driver_id, status, created_by, created_at, updated_at, package_category, weight_kg, additional_instructions, package_photo_url, pickup_latitude, pickup_longitude, dropoff_latitude, dropoff_longitude, selected_route_id, price_is_estimate, booking_source, delivery_speed, distance_km, request_status, tracking_code, rider_link_token, declined_at, accepted_at, customer_id
+RETURNING id, company_id, sender_name, sender_phone, receiver_name, receiver_phone, pickup_address, dropoff_address, item_description, declared_value_minor, delivery_price_minor, payer, is_paid, payment_method, assigned_driver_id, status, created_by, created_at, updated_at, package_category, weight_kg, additional_instructions, package_photo_url, pickup_latitude, pickup_longitude, dropoff_latitude, dropoff_longitude, selected_route_id, price_is_estimate, booking_source, delivery_speed, distance_km, request_status, tracking_code, rider_link_token, declined_at, accepted_at, customer_id, paid_at
 `
 
 type CreatePublicBookingDeliveryParams struct {
@@ -150,6 +150,7 @@ func (q *Queries) CreatePublicBookingDelivery(ctx context.Context, arg CreatePub
 		&i.DeclinedAt,
 		&i.AcceptedAt,
 		&i.CustomerID,
+		&i.PaidAt,
 	)
 	return i, err
 }

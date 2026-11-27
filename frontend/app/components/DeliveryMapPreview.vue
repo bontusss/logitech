@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import type { Map as MapboxMap, Marker as MapboxMarker } from 'mapbox-gl'
-import 'mapbox-gl/dist/mapbox-gl.css'
+import type { Map as MapLibreMap, Marker as MapLibreMarker } from 'maplibre-gl'
+import 'maplibre-gl/dist/maplibre-gl.css'
+import type { MapProvider } from '~/utils/maps'
 
 const props = defineProps<{
   pickupAddress: string
@@ -11,38 +12,38 @@ const mapElement = ref<HTMLElement | null>(null)
 const message = ref('')
 const loading = ref(false)
 
-let map: MapboxMap | null = null
-let pickupMarker: MapboxMarker | null = null
-let dropoffMarker: MapboxMarker | null = null
-let mapboxModule: typeof import('mapbox-gl') | null = null
+let map: MapLibreMap | null = null
+let pickupMarker: MapLibreMarker | null = null
+let dropoffMarker: MapLibreMarker | null = null
+let maplibreModule: typeof import('maplibre-gl') | null = null
+let activeProvider: MapProvider | null = null
 let geocodeTimer: ReturnType<typeof setTimeout> | undefined
 let requestController: AbortController | null = null
 
-const { token: mapboxToken, loadError: mapboxConfigError, load: loadMapboxToken } = useMapboxToken()
+const { provider, loadError: mapConfigError, load: loadMapProvider } = useMapProvider()
 
 onMounted(async () => {
-  await loadMapboxToken()
-  if (!mapboxToken) {
-    message.value = mapboxConfigError.value || 'Add NUXT_PUBLIC_MAPBOX_ACCESS_TOKEN to enable address lookup and the map preview.'
+  await loadMapProvider()
+  activeProvider = provider.value
+  if (!activeProvider) {
+    message.value = mapConfigError.value || 'Map previews are not configured for this site yet.'
     return
   }
   if (!mapElement.value) return
 
   try {
-    mapboxModule = await import('mapbox-gl')
-    mapboxModule.default.accessToken = mapboxToken
-    map = new mapboxModule.default.Map({
+    maplibreModule = await import('maplibre-gl')
+    map = new maplibreModule.Map({
       container: mapElement.value,
-      style: 'mapbox://styles/mapbox/streets-v12',
+      style: activeProvider.styleUrl(),
       center: [7.4951, 9.0579],
       zoom: 5,
-      attributionControl: true,
     })
-    pickupMarker = new mapboxModule.default.Marker({ color: '#2563eb' })
-    dropoffMarker = new mapboxModule.default.Marker({ color: '#e11d48' })
+    pickupMarker = new maplibreModule.Marker({ color: '#2563eb' })
+    dropoffMarker = new maplibreModule.Marker({ color: '#e11d48' })
     scheduleGeocode()
   } catch {
-    message.value = 'Could not load the Mapbox map. Check your connection and try again.'
+    message.value = 'Could not load the map. Check your connection and try again.'
   }
 })
 
@@ -80,22 +81,28 @@ function scheduleGeocode() {
 }
 
 async function geocodeAddresses(pickup: string, dropoff: string) {
+  if (!activeProvider) return
   const controller = new AbortController()
   requestController = controller
   loading.value = true
   message.value = ''
 
   try {
-    const [pickupCoordinates, dropoffCoordinates] = await Promise.all([
-      geocode(pickup, controller.signal),
-      geocode(dropoff, controller.signal),
+    const [pickupPlace, dropoffPlace] = await Promise.all([
+      activeProvider.geocode(pickup, { signal: controller.signal }),
+      activeProvider.geocode(dropoff, { signal: controller.signal }),
     ])
     if (controller.signal.aborted || !map || !pickupMarker || !dropoffMarker) return
+    if (!pickupPlace || !dropoffPlace) {
+      throw new Error('Could not find one of these addresses. Try a more specific address.')
+    }
 
+    const pickupCoordinates: [number, number] = [pickupPlace.longitude, pickupPlace.latitude]
+    const dropoffCoordinates: [number, number] = [dropoffPlace.longitude, dropoffPlace.latitude]
     pickupMarker.setLngLat(pickupCoordinates).addTo(map)
     dropoffMarker.setLngLat(dropoffCoordinates).addTo(map)
-    if (!mapboxModule) return
-    const bounds = new mapboxModule.default.LngLatBounds()
+    if (!maplibreModule) return
+    const bounds = new maplibreModule.LngLatBounds()
       .extend(pickupCoordinates)
       .extend(dropoffCoordinates)
     map.fitBounds(bounds, { padding: 48, maxZoom: 13, duration: 500 })
@@ -107,23 +114,6 @@ async function geocodeAddresses(pickup: string, dropoff: string) {
   } finally {
     if (!controller.signal.aborted) loading.value = false
   }
-}
-
-async function geocode(address: string, signal: AbortSignal): Promise<[number, number]> {
-  const params = new URLSearchParams({
-    q: address,
-    country: 'ng',
-    limit: '1',
-    access_token: mapboxToken,
-  })
-  const response = await fetch(`https://api.mapbox.com/search/geocode/v6/forward?${params}`, { signal })
-  if (!response.ok) throw new Error('Mapbox address lookup failed. Check the token and try again.')
-  const result = await response.json() as {
-    features?: Array<{ geometry?: { coordinates?: [number, number] } }>
-  }
-  const coordinates = result.features?.[0]?.geometry?.coordinates
-  if (!coordinates) throw new Error(`Could not find “${address}”. Try a more specific address.`)
-  return coordinates
 }
 </script>
 

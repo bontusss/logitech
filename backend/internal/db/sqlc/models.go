@@ -247,6 +247,16 @@ type CustomerFavouriteProvider struct {
 	CreatedAt  time.Time `json:"created_at"`
 }
 
+type CustomerRecurringShipment struct {
+	ID            uuid.UUID `json:"id"`
+	CustomerID    uuid.UUID `json:"customer_id"`
+	Label         string    `json:"label"`
+	Frequency     string    `json:"frequency"`
+	SearchPayload []byte    `json:"search_payload"`
+	CreatedAt     time.Time `json:"created_at"`
+	UpdatedAt     time.Time `json:"updated_at"`
+}
+
 type CustomerSavedQuote struct {
 	ID              uuid.UUID  `json:"id"`
 	CustomerID      *uuid.UUID `json:"customer_id"`
@@ -296,6 +306,7 @@ type Delivery struct {
 	DeclinedAt             *time.Time     `json:"declined_at"`
 	AcceptedAt             *time.Time     `json:"accepted_at"`
 	CustomerID             *uuid.UUID     `json:"customer_id"`
+	PaidAt                 *time.Time     `json:"paid_at"`
 }
 
 type DeliveryIssue struct {

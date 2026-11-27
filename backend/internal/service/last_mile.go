@@ -40,8 +40,8 @@ type LastMileProviderRate struct {
 	ProhibitedCategories []string
 }
 
-// BuildLastMileQuote turns a provider's coverage area and a verified Mapbox
-// route distance into a transparent local delivery quote.
+// BuildLastMileQuote turns a provider's coverage area and a verified route
+// distance into a transparent local delivery quote.
 func BuildLastMileQuote(provider LastMileProviderRate, req MarketplaceRouteRequest, expiresAt time.Time) (MarketplaceQuote, error) {
 	if !ItemCategoryAllowed(req.Package.Category, provider.AcceptedCategories, provider.ProhibitedCategories) {
 		return MarketplaceQuote{}, ErrCategoryNotAllowed

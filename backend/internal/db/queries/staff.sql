@@ -97,11 +97,12 @@ FROM driver_profiles
 WHERE company_id = $1
 ORDER BY created_at DESC;
 
--- name: GetDriverProfileForPortal :one
+-- name: GetDriverProfileForPortalByPlate :one
 SELECT d.id, d.company_id, d.full_name, d.phone, d.vehicle_plate, d.email, d.status, c.name AS company_name
 FROM driver_profiles d
 JOIN companies c ON c.id = d.company_id AND c.deleted_at IS NULL AND c.status = 'verified'
-WHERE d.portal_token_hash = $1 AND d.status = 'active';
+WHERE upper(regexp_replace(d.vehicle_plate, '[^A-Za-z0-9]', '', 'g')) = $1
+  AND d.status = 'active';
 
 -- name: GetDriverProfileForPortalByID :one
 SELECT d.id, d.company_id, d.full_name, d.phone, d.vehicle_plate, d.email, d.status, c.name AS company_name

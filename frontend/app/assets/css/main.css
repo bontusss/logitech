@@ -320,6 +320,42 @@ html.dark .dashboard-overview {
   background: var(--overview-neutral) !important;
 }
 
+/* Shared stat tiles (provider overview, customer dashboard). Self-contained so
+   they render the same inside .dashboard-overview and .dash-page scopes. */
+.dash-stat-card {
+  border-color: rgb(11 31 68 / 9%);
+  background: linear-gradient(145deg, #e9eff7 0%, #ffffff 100%);
+}
+
+.dash-stat-card--accent {
+  background: linear-gradient(145deg, #fff4e8 0%, #ffffff 100%);
+}
+
+.dash-stat-card--success {
+  background: linear-gradient(145deg, #e8faf3 0%, #ffffff 100%);
+}
+
+.dash-stat-card--neutral {
+  background: linear-gradient(145deg, #f5f7fa 0%, #ffffff 100%);
+}
+
+html.dark .dash-stat-card {
+  border-color: rgb(232 238 248 / 12%);
+  background: linear-gradient(145deg, #12233d 0%, #0c1a31 100%);
+}
+
+html.dark .dash-stat-card--accent {
+  background: linear-gradient(145deg, #33210f 0%, #0c1a31 100%);
+}
+
+html.dark .dash-stat-card--success {
+  background: linear-gradient(145deg, #0d2b25 0%, #0c1a31 100%);
+}
+
+html.dark .dash-stat-card--neutral {
+  background: linear-gradient(145deg, #0f1e35 0%, #0c1a31 100%);
+}
+
 .dashboard-overview [class~="text-[9px]"],
 .dashboard-overview [class~="text-[9.5px]"],
 .dashboard-overview [class~="text-[10px]"],

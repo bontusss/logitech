@@ -98,11 +98,15 @@ docker exec app_postgres createdb -U app appdb_test
 | `NUXT_PUBLIC_APP_DOMAIN` | Frontend copy of the tenant base domain |
 | `NUXT_PUBLIC_DEMO_URL` | Booking CTA destination |
 | `NUXT_PUBLIC_WHATSAPP_URL` | Full `https://wa.me/<number>` chat URL |
-| `NUXT_PUBLIC_MAPBOX_ACCESS_TOKEN` | Public Mapbox token for delivery address lookup and map previews |
+| `GEOAPIFY_API_KEY` | Geoapify key for MapLibre map tiles, address autocomplete, geocoding and routing |
+| `GEOAPIFY_MAP_STYLE` | Geoapify map style for MapLibre (default `osm-bright`) |
+| `MAP_PROVIDER` | Browser map provider id (default `geoapify`) |
 | `NUXT_PUBLIC_CLOUDINARY_CLOUD_NAME` | Cloudinary cloud name for optional booking-page package photos |
 | `NUXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET` | Cloudinary unsigned upload preset for package photos |
 
-Public booking pages use Mapbox autocomplete/reverse geocoding for verified location pins.
+Maps render with MapLibre GL JS and Geoapify vector styles. Public booking pages use Geoapify
+autocomplete/reverse geocoding for verified location pins, and the provider adapter also exposes
+Geoapify routing for distance and route geometry.
 Optional package photos use Cloudinary's unsigned image upload; configure the preset to allow
 images only and cap file size (the booking form accepts files up to 10 MB). If Cloudinary is not
 configured, customers can still submit bookings without a photo.
@@ -120,9 +124,11 @@ frontend URL, and `CORS_ORIGINS` to that URL (without a trailing slash). The fro
 to the relative `/api/v1` path. If the API is hosted on a different origin, set
 `NUXT_PUBLIC_API_BASE` to its public API URL in the frontend build environment; this value is embedded when the static
 frontend is generated, so changing only the runtime environment requires a rebuild/redeploy.
-The Mapbox token is fetched from the API at runtime, so configure
-`NUXT_PUBLIC_MAPBOX_ACCESS_TOKEN` on the API service; changing it does not require rebuilding the
-static frontend.
+The map configuration is fetched from the API at runtime, so configure `GEOAPIFY_API_KEY`,
+`GEOAPIFY_MAP_STYLE` and (optionally) `MAP_PROVIDER` on the API service; changing them does not
+require rebuilding the static frontend. Map providers live behind
+`frontend/app/utils/maps/`, so adding TomTom or another provider is a new adapter rather than a
+UI rewrite.
 
 ### Transactional email and WhatsApp verification
 

@@ -453,6 +453,8 @@ CREATE TABLE driver_profiles (
 );
 
 CREATE INDEX driver_profiles_company_status_idx ON driver_profiles (company_id, status);
+CREATE UNIQUE INDEX driver_profiles_rider_slug_unique
+  ON driver_profiles (upper(regexp_replace(vehicle_plate, '[^A-Za-z0-9]', '', 'g')));
 
 CREATE TRIGGER driver_profiles_set_updated_at
 BEFORE UPDATE ON driver_profiles
@@ -915,3 +917,44 @@ CREATE INDEX delivery_issues_customer_created_idx
   ON delivery_issues (customer_id, created_at DESC);
 CREATE INDEX delivery_issues_delivery_idx
   ON delivery_issues (delivery_id);
+
+-- Payment capture timestamp for deliveries, set by the trigger below.
+ALTER TABLE deliveries
+  ADD COLUMN paid_at timestamptz;
+
+CREATE OR REPLACE FUNCTION set_delivery_paid_at()
+RETURNS trigger AS $$
+BEGIN
+  IF NEW.is_paid THEN
+    IF TG_OP = 'INSERT' OR OLD.is_paid IS DISTINCT FROM true THEN
+      NEW.paid_at := COALESCE(NEW.paid_at, now());
+    END IF;
+  ELSE
+    NEW.paid_at := NULL;
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER deliveries_set_paid_at
+BEFORE INSERT OR UPDATE ON deliveries
+FOR EACH ROW EXECUTE FUNCTION set_delivery_paid_at();
+
+CREATE TABLE customer_recurring_shipments (
+  id             uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  customer_id    uuid NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+  label          text NOT NULL DEFAULT '',
+  frequency      text NOT NULL DEFAULT 'monthly'
+                 CHECK (frequency IN ('weekly', 'biweekly', 'monthly')),
+  search_payload jsonb NOT NULL,
+  created_at     timestamptz NOT NULL DEFAULT now(),
+  updated_at     timestamptz NOT NULL DEFAULT now(),
+  CHECK (jsonb_typeof(search_payload) = 'object')
+);
+
+CREATE INDEX customer_recurring_shipments_customer_idx
+  ON customer_recurring_shipments (customer_id, created_at DESC);
+
+CREATE TRIGGER customer_recurring_shipments_set_updated_at
+BEFORE UPDATE ON customer_recurring_shipments
+FOR EACH ROW EXECUTE FUNCTION set_updated_at();

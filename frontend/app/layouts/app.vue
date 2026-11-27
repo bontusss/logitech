@@ -72,29 +72,29 @@ const navigationGroups = computed<NavigationGroup[]>(() => {
         items: [
           { label: 'My Shipments', to: '/dashboard/customer/shipments', icon: Package, tone: 'brand' },
           { label: 'Track Shipment', to: '/dashboard/customer/track', icon: MapPin, tone: 'accent' },
-          { label: 'Find Providers', to: '/dashboard/customer/providers', icon: Search, tone: 'success', comingSoon: true },
-          { label: 'Saved Quotes', to: '/dashboard/customer/quotes', icon: FileText, tone: 'neutral', comingSoon: true },
+          { label: 'Find Providers', to: '/dashboard/customer/providers', icon: Search, tone: 'success' },
+          { label: 'Saved Quotes', to: '/dashboard/customer/quotes', icon: FileText, tone: 'neutral' },
         ],
       },
       {
         label: 'Personal',
         items: [
-          { label: 'Address Book', to: '/dashboard/customer/addresses', icon: MapPin, tone: 'brand', comingSoon: true },
-          { label: 'Favourite Providers', to: '/dashboard/customer/favourites', icon: Star, tone: 'accent', comingSoon: true },
-          { label: 'Payments & Receipts', to: '/dashboard/customer/payments', icon: CreditCard, tone: 'success', comingSoon: true },
+          { label: 'Address Book', to: '/dashboard/customer/addresses', icon: MapPin, tone: 'brand' },
+          { label: 'Favourite Providers', to: '/dashboard/customer/favourites', icon: Star, tone: 'accent' },
+          { label: 'Payments & Receipts', to: '/dashboard/customer/payments', icon: CreditCard, tone: 'success' },
         ],
       },
       {
         label: 'Support',
         items: [
-          { label: 'Help & Support', to: '/dashboard/customer/support', icon: LifeBuoy, tone: 'brand', comingSoon: true },
-          { label: 'Notifications', to: '/dashboard/customer/notifications', icon: Bell, tone: 'accent', comingSoon: true },
+          { label: 'Help & Support', to: '/dashboard/customer/support', icon: LifeBuoy, tone: 'brand' },
+          { label: 'Notifications', to: '/dashboard/customer/notifications', icon: Bell, tone: 'accent' },
         ],
       },
       {
         label: 'Account',
         items: [
-          { label: 'Settings', to: '/dashboard/customer/settings', icon: Settings, tone: 'neutral', comingSoon: true },
+          { label: 'Settings', to: '/dashboard/customer/settings', icon: Settings, tone: 'neutral' },
         ],
       },
     ]

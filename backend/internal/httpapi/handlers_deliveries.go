@@ -26,6 +26,7 @@ type deliveryDTO struct {
 	DeliveryPriceMinor     int64      `json:"delivery_price_minor"`
 	Payer                  string     `json:"payer"`
 	IsPaid                 bool       `json:"is_paid"`
+	PaidAt                 *time.Time `json:"paid_at"`
 	PaymentMethod          *string    `json:"payment_method"`
 	AssignedDriverID       *uuid.UUID `json:"assigned_driver_id"`
 	AssignedDriverName     *string    `json:"assigned_driver_name"`
@@ -69,6 +70,7 @@ func deliveryFromList(row db.ListCompanyDeliveriesRow, appURL string) deliveryDT
 		DeliveryPriceMinor:     row.DeliveryPriceMinor,
 		Payer:                  row.Payer,
 		IsPaid:                 row.IsPaid,
+		PaidAt:                 row.PaidAt,
 		PaymentMethod:          row.PaymentMethod,
 		AssignedDriverID:       row.AssignedDriverID,
 		AssignedDriverName:     row.AssignedDriverName,
@@ -210,6 +212,7 @@ func (a *API) createDelivery(c *gin.Context) {
 		DeliveryPriceMinor: delivery.DeliveryPriceMinor,
 		Payer:              delivery.Payer,
 		IsPaid:             delivery.IsPaid,
+		PaidAt:             delivery.PaidAt,
 		PaymentMethod:      delivery.PaymentMethod,
 		AssignedDriverID:   delivery.AssignedDriverID,
 		Status:             delivery.Status,

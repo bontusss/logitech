@@ -31,6 +31,7 @@ export interface CustomerBooking {
   receiver_phone: string
   payer: 'sender' | 'receiver'
   is_paid: boolean
+  paid_at: string | null
   payment_method: 'cash' | 'pos' | 'bank_transfer' | null
   additional_instructions: string
   package_photo_url: string | null
@@ -95,6 +96,17 @@ export interface CustomerAddressInput {
   default_delivery: boolean
 }
 
+export type RecurringFrequency = 'weekly' | 'biweekly' | 'monthly'
+
+export interface CustomerRecurringShipment {
+  id: string
+  label: string
+  frequency: RecurringFrequency
+  search_payload: import('./marketplace').MarketplaceSearchPayload
+  created_at: string
+  updated_at: string
+}
+
 export interface CustomerFavouriteProvider {
   id: string
   name: string
@@ -135,4 +147,18 @@ export interface TrackingResult {
   dropoff_address: string
   updated_at: string
   timeline: TrackingEvent[]
+}
+
+export interface CustomerBookingOverview {
+  active: number
+  pending: number
+  delivered: number
+  cancelled: number
+  total: number
+  paid_minor: number
+  outstanding_minor: number
+  billable_count: number
+  paid_count: number
+  unpaid_count: number
+  currency: string
 }

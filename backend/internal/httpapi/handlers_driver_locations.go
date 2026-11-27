@@ -5,7 +5,6 @@ import (
 	"errors"
 	"math"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -13,7 +12,6 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 
-	"github.com/bol-platform/backend/internal/auth"
 	db "github.com/bol-platform/backend/internal/db/sqlc"
 )
 
@@ -25,29 +23,13 @@ type driverPortalIdentity struct {
 	CompanyName  string
 }
 
-// resolveDriverPortalIdentity accepts both the current signed portal token and
-// the legacy hashed token issued before signed links were introduced.
-func (a *API) resolveDriverPortalIdentity(ctx context.Context, token string) (driverPortalIdentity, error) {
-	token = strings.TrimSpace(token)
-	if token == "" {
+// resolveDriverPortalIdentity looks a rider link up by its plate-number slug.
+func (a *API) resolveDriverPortalIdentity(ctx context.Context, slug string) (driverPortalIdentity, error) {
+	slug = normalizeRiderSlug(slug)
+	if slug == "" {
 		return driverPortalIdentity{}, pgx.ErrNoRows
 	}
-
-	if driverID, err := a.auth.ParseDriverPortalToken(token); err == nil {
-		driver, queryErr := a.svc.Q.GetDriverProfileForPortalByID(ctx, driverID)
-		if queryErr != nil {
-			return driverPortalIdentity{}, queryErr
-		}
-		return driverPortalIdentity{
-			DriverID:     driver.ID,
-			CompanyID:    driver.CompanyID,
-			FullName:     driver.FullName,
-			VehiclePlate: driver.VehiclePlate,
-			CompanyName:  driver.CompanyName,
-		}, nil
-	}
-
-	driver, err := a.svc.Q.GetDriverProfileForPortal(ctx, auth.HashToken(token))
+	driver, err := a.svc.Q.GetDriverProfileForPortalByPlate(ctx, slug)
 	if err != nil {
 		return driverPortalIdentity{}, err
 	}

@@ -115,3 +115,21 @@ LEFT JOIN company_branding b ON b.company_id = c.id
 WHERE i.customer_id = $1
 ORDER BY i.created_at DESC
 LIMIT 100;
+
+-- name: ListCustomerRecurringShipments :many
+SELECT *
+FROM customer_recurring_shipments
+WHERE customer_id = $1
+ORDER BY created_at DESC;
+
+-- name: CreateCustomerRecurringShipment :one
+INSERT INTO customer_recurring_shipments (
+  customer_id, label, frequency, search_payload
+) VALUES (
+  $1, $2, $3, $4
+)
+RETURNING *;
+
+-- name: DeleteCustomerRecurringShipment :execrows
+DELETE FROM customer_recurring_shipments
+WHERE id = $1 AND customer_id = $2;

@@ -27,19 +27,25 @@ type driverProfileDTO struct {
 	CreatedAt    time.Time `json:"created_at"`
 }
 
-func (a *API) driverPortalURL(driverID uuid.UUID) (string, error) {
-	token, err := a.auth.DriverPortalToken(driverID)
-	if err != nil {
-		return "", err
+// normalizeRiderSlug turns a vehicle plate into the short public rider link
+// segment: uppercase letters and digits only, so "ABC-123-XY" becomes
+// "ABC123XY". Plate numbers are unique, which keeps the link unambiguous.
+func normalizeRiderSlug(value string) string {
+	var b strings.Builder
+	for _, r := range strings.ToUpper(strings.TrimSpace(value)) {
+		if (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') {
+			b.WriteRune(r)
+		}
 	}
-	return strings.TrimRight(a.cfg.AppURL, "/") + "/rider/" + token, nil
+	return b.String()
+}
+
+func (a *API) driverPortalURL(plate string) string {
+	return strings.TrimRight(a.cfg.AppURL, "/") + "/rider/" + normalizeRiderSlug(plate)
 }
 
 func (a *API) toDriverProfileDTO(driver db.ListDriverProfilesRow) driverProfileDTO {
-	portalURL, err := a.driverPortalURL(driver.ID)
-	if err != nil {
-		a.log.Error("could not sign driver portal link", "driver_id", driver.ID, "error", err)
-	}
+	portalURL := a.driverPortalURL(driver.VehiclePlate)
 	return driverProfileDTO{
 		ID:           driver.ID,
 		FullName:     driver.FullName,
@@ -108,26 +114,14 @@ func (a *API) createDriver(c *gin.Context) {
 	})
 	if err != nil {
 		if isUniqueViolation(err) {
-			fail(c, http.StatusConflict, "driver_exists", "A driver with this email is already registered for your company.")
+			fail(c, http.StatusConflict, "driver_exists", "A driver with this email or vehicle plate number already exists.")
 			return
 		}
 		a.handleServiceError(c, err)
 		return
 	}
 
-	portalToken, err := a.auth.DriverPortalToken(driver.ID)
-	if err != nil {
-		a.handleServiceError(c, err)
-		return
-	}
-	if err := a.svc.Q.SetDriverPortalTokenHash(c.Request.Context(), db.SetDriverPortalTokenHashParams{
-		ID:              driver.ID,
-		CompanyID:       tenant.CompanyID,
-		PortalTokenHash: auth.HashToken(portalToken),
-	}); err != nil {
-		a.log.Warn("could not persist driver portal token hash", "driver_id", driver.ID, "error", err)
-	}
-	portalURL := strings.TrimRight(a.cfg.AppURL, "/") + "/rider/" + portalToken
+	portalURL := a.driverPortalURL(driver.VehiclePlate)
 	emailSent := true
 	if err := a.svc.Mailer.SendDriverWelcome(c.Request.Context(), driver.Email, driver.FullName, company.Name, portalURL); err != nil {
 		emailSent = false
@@ -187,7 +181,7 @@ func (a *API) setDriverStatus(c *gin.Context) {
 		IP:         c.ClientIP(),
 		UserAgent:  c.Request.UserAgent(),
 	})
-	portalURL, _ := a.driverPortalURL(driver.ID)
+	portalURL := a.driverPortalURL(driver.VehiclePlate)
 	c.JSON(http.StatusOK, gin.H{"driver": driverProfileDTO{
 		ID: driver.ID, FullName: driver.FullName, Phone: driver.Phone,
 		VehiclePlate: driver.VehiclePlate, Email: driver.Email, Status: driver.Status,
@@ -227,7 +221,7 @@ func (a *API) updateDriver(c *gin.Context) {
 	})
 	if err != nil {
 		if isUniqueViolation(err) {
-			fail(c, http.StatusConflict, "driver_exists", "A driver with this email is already registered for your company.")
+			fail(c, http.StatusConflict, "driver_exists", "A driver with this email or vehicle plate number already exists.")
 			return
 		}
 		if err == pgx.ErrNoRows {
@@ -237,7 +231,7 @@ func (a *API) updateDriver(c *gin.Context) {
 		a.handleServiceError(c, err)
 		return
 	}
-	portalURL, _ := a.driverPortalURL(driver.ID)
+	portalURL := a.driverPortalURL(driver.VehiclePlate)
 	a.svc.Audit(c.Request.Context(), service.AuditEntry{
 		ActorID:    actorID(c),
 		CompanyID:  &tenant.CompanyID,

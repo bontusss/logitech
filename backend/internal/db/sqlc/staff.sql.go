@@ -157,40 +157,6 @@ func (q *Queries) GetCompanyInvitation(ctx context.Context, arg GetCompanyInvita
 	return i, err
 }
 
-const getDriverProfileForPortal = `-- name: GetDriverProfileForPortal :one
-SELECT d.id, d.company_id, d.full_name, d.phone, d.vehicle_plate, d.email, d.status, c.name AS company_name
-FROM driver_profiles d
-JOIN companies c ON c.id = d.company_id AND c.deleted_at IS NULL AND c.status = 'verified'
-WHERE d.portal_token_hash = $1 AND d.status = 'active'
-`
-
-type GetDriverProfileForPortalRow struct {
-	ID           uuid.UUID `json:"id"`
-	CompanyID    uuid.UUID `json:"company_id"`
-	FullName     string    `json:"full_name"`
-	Phone        string    `json:"phone"`
-	VehiclePlate string    `json:"vehicle_plate"`
-	Email        string    `json:"email"`
-	Status       string    `json:"status"`
-	CompanyName  string    `json:"company_name"`
-}
-
-func (q *Queries) GetDriverProfileForPortal(ctx context.Context, portalTokenHash string) (GetDriverProfileForPortalRow, error) {
-	row := q.db.QueryRow(ctx, getDriverProfileForPortal, portalTokenHash)
-	var i GetDriverProfileForPortalRow
-	err := row.Scan(
-		&i.ID,
-		&i.CompanyID,
-		&i.FullName,
-		&i.Phone,
-		&i.VehiclePlate,
-		&i.Email,
-		&i.Status,
-		&i.CompanyName,
-	)
-	return i, err
-}
-
 const getDriverProfileForPortalByID = `-- name: GetDriverProfileForPortalByID :one
 SELECT d.id, d.company_id, d.full_name, d.phone, d.vehicle_plate, d.email, d.status, c.name AS company_name
 FROM driver_profiles d
@@ -212,6 +178,41 @@ type GetDriverProfileForPortalByIDRow struct {
 func (q *Queries) GetDriverProfileForPortalByID(ctx context.Context, id uuid.UUID) (GetDriverProfileForPortalByIDRow, error) {
 	row := q.db.QueryRow(ctx, getDriverProfileForPortalByID, id)
 	var i GetDriverProfileForPortalByIDRow
+	err := row.Scan(
+		&i.ID,
+		&i.CompanyID,
+		&i.FullName,
+		&i.Phone,
+		&i.VehiclePlate,
+		&i.Email,
+		&i.Status,
+		&i.CompanyName,
+	)
+	return i, err
+}
+
+const getDriverProfileForPortalByPlate = `-- name: GetDriverProfileForPortalByPlate :one
+SELECT d.id, d.company_id, d.full_name, d.phone, d.vehicle_plate, d.email, d.status, c.name AS company_name
+FROM driver_profiles d
+JOIN companies c ON c.id = d.company_id AND c.deleted_at IS NULL AND c.status = 'verified'
+WHERE upper(regexp_replace(d.vehicle_plate, '[^A-Za-z0-9]', '', 'g')) = $1
+  AND d.status = 'active'
+`
+
+type GetDriverProfileForPortalByPlateRow struct {
+	ID           uuid.UUID `json:"id"`
+	CompanyID    uuid.UUID `json:"company_id"`
+	FullName     string    `json:"full_name"`
+	Phone        string    `json:"phone"`
+	VehiclePlate string    `json:"vehicle_plate"`
+	Email        string    `json:"email"`
+	Status       string    `json:"status"`
+	CompanyName  string    `json:"company_name"`
+}
+
+func (q *Queries) GetDriverProfileForPortalByPlate(ctx context.Context, vehiclePlate string) (GetDriverProfileForPortalByPlateRow, error) {
+	row := q.db.QueryRow(ctx, getDriverProfileForPortalByPlate, vehiclePlate)
+	var i GetDriverProfileForPortalByPlateRow
 	err := row.Scan(
 		&i.ID,
 		&i.CompanyID,

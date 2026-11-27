@@ -46,8 +46,40 @@ interface Driver {
   status: string
 }
 
+interface OverviewBooking {
+  id: string
+  delivery_price_minor: number
+  is_paid: boolean
+  paid_at: string | null
+  payment_method: string | null
+  status: string
+  request_status: string
+  created_at: string
+  updated_at: string
+}
+
+interface CompanyOverview {
+  financial: {
+    earned_today_minor: number
+    collected_today_minor: number
+    amount_owed_minor: number
+    cash_with_drivers_minor: number
+  }
+  bookings: {
+    created_today: number
+    in_progress: number
+    waiting_for_drivers: number
+    requests: number
+    total: number
+  }
+  daily: { date: string; bookings: number }[]
+}
+
 const bookingPage = ref<BookingPage | null>(null)
 const drivers = ref<Driver[]>([])
+const overview = ref<CompanyOverview | null>(null)
+const requests = ref<OverviewBooking[]>([])
+const metricsError = ref('')
 const loading = ref(false)
 const error = ref('')
 const bookingPageError = ref('')
@@ -78,8 +110,11 @@ async function load() {
   bookingPageError.value = ''
   driverError.value = ''
   marketplaceSetupError.value = ''
+  metricsError.value = ''
   marketplaceZones.value = null
   marketplaceActiveRoutes.value = null
+  overview.value = null
+  requests.value = []
   try {
     detail.value = await api<CompanyDetail>('/companies/me')
     bookingPage.value = null
@@ -100,6 +135,31 @@ async function load() {
         } catch (err) {
           driverError.value = apiErrorMessage(err, 'Could not load your driver list.')
         }
+      }
+    }
+    if (
+      detail.value.company.status === 'verified' &&
+      detail.value.membership.permissions.includes('shipments.view')
+    ) {
+      try {
+        const result = await api<{ overview: CompanyOverview }>('/companies/me/overview')
+        overview.value = result.overview
+      } catch (err) {
+        metricsError.value = apiErrorMessage(err, 'Could not load your delivery overview.')
+      }
+    }
+    // Requests are a bookings-page subset of deliveries. Only fetch them when the
+    // member can see bookings but not the wider delivery list.
+    if (
+      detail.value.company.status === 'verified' &&
+      !detail.value.membership.permissions.includes('shipments.view') &&
+      detail.value.membership.permissions.includes('bookings.manage')
+    ) {
+      try {
+        const result = await api<{ requests: OverviewBooking[] }>('/companies/me/requests')
+        requests.value = result.requests ?? []
+      } catch (err) {
+        metricsError.value = apiErrorMessage(err, 'Could not load booking requests.')
       }
     }
     if (
@@ -234,26 +294,135 @@ function formatCurrency(amount: number) {
   return `${currency} ${amount.toLocaleString('en-NG')}`
 }
 
-const financialMetrics = computed(() => [
-  { label: 'Earned today', value: formatCurrency(0), detail: 'From deliveries completed today' },
-  { label: 'Collected today', value: formatCurrency(0), detail: 'Payments received today' },
-  { label: 'Amount owed', value: formatCurrency(0), detail: 'Outstanding delivery payments' },
-  { label: 'Cash with drivers', value: formatCurrency(0), detail: 'Cash awaiting reconciliation' },
-])
+const inProgressStatuses = ['assigned', 'picked_up', 'in_transit']
+const waitingStatuses = ['created', 'requested']
 
-const bookingMetrics = [
-  { label: 'Bookings created today', value: 0 },
-  { label: 'In progress', value: 0 },
-  { label: 'Waiting for drivers', value: 0 },
-  { label: 'Booking requests', value: 0 },
-]
+function isToday(value: string) {
+  if (!value) return false
+  const date = new Date(value)
+  const now = new Date()
+  return (
+    date.getFullYear() === now.getFullYear() &&
+    date.getMonth() === now.getMonth() &&
+    date.getDate() === now.getDate()
+  )
+}
 
-const analyticsDays = computed(() =>
-  Array.from({ length: 7 }, (_, index) => {
-    const date = new Date()
-    date.setDate(date.getDate() - 6 + index)
-    return date.toLocaleDateString('en-NG', { weekday: 'short' })
-  }),
+function isCancelled(booking: OverviewBooking) {
+  return booking.status === 'cancelled' || booking.request_status === 'declined'
+}
+
+const recordCount = computed(
+  () => overview.value?.bookings.total ?? requests.value.length,
+)
+
+const financialMetrics = computed(() => {
+  const financial = overview.value?.financial
+  return [
+    {
+      label: 'Earned today',
+      value: formatCurrency((financial?.earned_today_minor ?? 0) / 100),
+      detail: 'From deliveries completed today',
+    },
+    {
+      label: 'Collected today',
+      value: formatCurrency((financial?.collected_today_minor ?? 0) / 100),
+      detail: 'Payments captured today',
+    },
+    {
+      label: 'Amount owed',
+      value: formatCurrency((financial?.amount_owed_minor ?? 0) / 100),
+      detail: 'Outstanding delivery payments',
+    },
+    {
+      label: 'Cash with drivers',
+      value: formatCurrency((financial?.cash_with_drivers_minor ?? 0) / 100),
+      detail: 'Cash awaiting reconciliation',
+    },
+  ]
+})
+
+const bookingMetrics = computed(() => {
+  if (overview.value) {
+    const bookings = overview.value.bookings
+    return [
+      { label: 'Bookings created today', value: bookings.created_today },
+      { label: 'In progress', value: bookings.in_progress },
+      { label: 'Waiting for drivers', value: bookings.waiting_for_drivers },
+      { label: 'Booking requests', value: bookings.requests },
+    ]
+  }
+  // Members without shipments.view only get the capped requests list.
+  const list = requests.value
+  return [
+    {
+      label: 'Bookings created today',
+      value: list.filter((booking) => isToday(booking.created_at)).length,
+    },
+    {
+      label: 'In progress',
+      value: list.filter(
+        (booking) => inProgressStatuses.includes(booking.status) && !isCancelled(booking),
+      ).length,
+    },
+    {
+      label: 'Waiting for drivers',
+      value: list.filter(
+        (booking) => waitingStatuses.includes(booking.status) && !isCancelled(booking),
+      ).length,
+    },
+    {
+      label: 'Booking requests',
+      value: list.filter((booking) => booking.request_status === 'pending').length,
+    },
+  ]
+})
+
+const financialTones = ['brand', 'accent', 'success', 'neutral'] as const
+const bookingTones = ['neutral', 'accent', 'success', 'brand'] as const
+
+const analyticsDays = computed(() => {
+  if (overview.value?.daily?.length) {
+    return overview.value.daily.map((day) => ({
+      label: new Date(`${day.date}T12:00:00`).toLocaleDateString('en-NG', { weekday: 'short' }),
+      count: day.bookings,
+    }))
+  }
+  return Array.from({ length: 7 }, (_, index) => {
+    const start = new Date()
+    start.setHours(0, 0, 0, 0)
+    start.setDate(start.getDate() - 6 + index)
+    const end = new Date(start)
+    end.setDate(end.getDate() + 1)
+    const count = requests.value.filter((booking) => {
+      if (!booking.created_at) return false
+      const created = new Date(booking.created_at)
+      return created >= start && created < end
+    }).length
+    return {
+      label: start.toLocaleDateString('en-NG', { weekday: 'short' }),
+      count,
+    }
+  })
+})
+
+const analyticsTotal = computed(() =>
+  analyticsDays.value.reduce((total, day) => total + day.count, 0),
+)
+
+const analyticsPoints = computed(() => {
+  const max = Math.max(1, ...analyticsDays.value.map((day) => day.count))
+  return analyticsDays.value.map((day, index) => ({
+    x: 30 + index * 110,
+    y: 78 - Math.round((day.count / max) * 54),
+    count: day.count,
+  }))
+})
+
+const analyticsPath = computed(() =>
+  analyticsPoints.value
+    .map((point, index) => `${index === 0 ? 'M' : 'L'}${point.x} ${point.y}`)
+    .join(' '),
 )
 </script>
 
@@ -464,25 +633,29 @@ const analyticsDays = computed(() =>
           </div>
         </section>
 
+        <p v-if="metricsError" role="alert" class="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-[11px] text-red-700">
+          {{ metricsError }}
+        </p>
+
         <div>
           <div class="mb-3 flex flex-wrap items-end justify-between gap-2">
             <div>
               <h2 class="text-[14px] font-semibold">Financial overview</h2>
               <p class="mt-1 text-[11px] text-ink-900/40">Daily delivery earnings and cash position</p>
             </div>
-            <span class="text-[10px] text-ink-900/35">No financial records yet</span>
+            <span class="text-[10px] text-ink-900/35">
+              {{ recordCount ? `${recordCount} delivery records` : 'No financial records yet' }}
+            </span>
           </div>
           <div class="grid grid-cols-2 gap-3 xl:grid-cols-4">
-            <article
+            <DashboardStatCard
               v-for="(metric, index) in financialMetrics"
               :key="metric.label"
-              class="overview-card overview-tile rounded-xl border p-3.5 sm:p-4"
-              :class="`overview-tile--${['brand', 'accent', 'success', 'neutral'][index % 4]}`"
-            >
-              <p class="text-[10px] font-medium text-ink-900/45">{{ metric.label }}</p>
-              <p class="mt-1.5 text-[16px] font-semibold tracking-[-0.035em] sm:mt-2 sm:text-[18px]">{{ metric.value }}</p>
-              <p class="mt-1 text-[9.5px] leading-snug text-ink-900/35 sm:text-[10px]">{{ metric.detail }}</p>
-            </article>
+              :label="metric.label"
+              :value="metric.value"
+              :detail="metric.detail"
+              :tone="financialTones[index % financialTones.length]"
+            />
           </div>
         </div>
 
@@ -492,18 +665,18 @@ const analyticsDays = computed(() =>
               <h2 class="text-[14px] font-semibold">Booking activity</h2>
               <p class="mt-1 text-[11px] text-ink-900/40">Today’s workload and requests</p>
             </div>
-            <span class="text-[10px] text-ink-900/35">No booking records yet</span>
+            <span class="text-[10px] text-ink-900/35">
+              {{ recordCount ? `${recordCount} booking records` : 'No booking records yet' }}
+            </span>
           </div>
           <div class="grid grid-cols-2 gap-3 xl:grid-cols-4">
-            <article
+            <DashboardStatCard
               v-for="(metric, index) in bookingMetrics"
               :key="metric.label"
-              class="overview-card overview-tile rounded-xl border p-3.5 sm:p-4"
-              :class="`overview-tile--${['neutral', 'accent', 'success', 'brand'][index % 4]}`"
-            >
-              <p class="text-[10px] font-medium text-ink-900/45">{{ metric.label }}</p>
-              <p class="mt-1.5 text-[17px] font-semibold tracking-[-0.035em] sm:mt-2 sm:text-[19px]">{{ metric.value }}</p>
-            </article>
+              :label="metric.label"
+              :value="metric.value"
+              :tone="bookingTones[index % bookingTones.length]"
+            />
           </div>
         </div>
 
@@ -515,36 +688,42 @@ const analyticsDays = computed(() =>
               <h2 id="analytics-title" class="text-[14px] font-semibold">Last 7 days</h2>
               <p class="mt-1 text-[11px] text-ink-900/40">Booking activity over the past week</p>
             </div>
-            <span class="rounded-md bg-canvas px-2 py-1 text-[10px] font-medium text-ink-900/50">0 bookings</span>
+            <span class="rounded-md bg-canvas px-2 py-1 text-[10px] font-medium text-ink-900/50">
+              {{ analyticsTotal }} {{ analyticsTotal === 1 ? 'booking' : 'bookings' }}
+            </span>
           </div>
           <div class="mt-4">
             <svg
               viewBox="0 0 700 110"
               class="h-24 w-full"
               role="img"
-              aria-label="No booking activity recorded during the last seven days"
+              :aria-label="`${analyticsTotal} bookings created in the last seven days`"
               preserveAspectRatio="none"
             >
               <line x1="30" y1="24" x2="690" y2="24" stroke="currentColor" class="text-ink-900/5" />
               <line x1="30" y1="51" x2="690" y2="51" stroke="currentColor" class="text-ink-900/5" />
               <line x1="30" y1="78" x2="690" y2="78" stroke="currentColor" class="text-ink-900/10" />
-              <path d="M30 78H690" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-dasharray="5 7" class="text-brand-400" />
+              <path :d="analyticsPath" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="text-brand-500" />
               <circle
-                v-for="(_, index) in analyticsDays"
+                v-for="(point, index) in analyticsPoints"
                 :key="index"
-                :cx="30 + index * 110"
-                cy="78"
+                :cx="point.x"
+                :cy="point.y"
                 r="3"
                 fill="currentColor"
                 class="text-brand-500"
-              />
+              >
+                <title>{{ point.count }} on {{ analyticsDays[index]?.label }}</title>
+              </circle>
             </svg>
             <div class="grid grid-cols-7 text-center text-[9.5px] text-ink-900/35">
-              <span v-for="(day, index) in analyticsDays" :key="`${day}-${index}`">{{ day }}</span>
+              <span v-for="(day, index) in analyticsDays" :key="`${day.label}-${index}`">{{ day.label }}</span>
             </div>
           </div>
           <p class="mt-3 text-center text-[10.5px] text-ink-900/35">
-            Analytics will populate when booking records are available.
+            {{ analyticsTotal
+              ? 'Bookings created per day over the last week.'
+              : 'Analytics will populate when booking records are available.' }}
           </p>
         </section>
       </section>

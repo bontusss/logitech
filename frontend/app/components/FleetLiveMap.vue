@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import type { Map as MapboxMap, Marker as MapboxMarker } from 'mapbox-gl'
-import 'mapbox-gl/dist/mapbox-gl.css'
+import type { Map as MapLibreMap, Marker as MapLibreMarker } from 'maplibre-gl'
+import 'maplibre-gl/dist/maplibre-gl.css'
 import { MapPin } from 'lucide-vue-next'
 import type { LiveDriver } from '~/types/fleet'
 
@@ -12,13 +12,13 @@ const mapElement = ref<HTMLElement | null>(null)
 const message = ref('')
 const locatedCount = computed(() => props.drivers.filter((driver) => driver.location).length)
 
-const { token, loadError, load } = useMapboxToken()
+const { provider, loadError, load } = useMapProvider()
 
-let mapboxModule: typeof import('mapbox-gl') | null = null
-let map: MapboxMap | null = null
+let maplibreModule: typeof import('maplibre-gl') | null = null
+let map: MapLibreMap | null = null
 let resizeObserver: ResizeObserver | null = null
 let hasFitted = false
-const markers = new Map<string, { marker: MapboxMarker; status: string }>()
+const markers = new Map<string, { marker: MapLibreMarker; status: string }>()
 
 const STATUS_COLORS: Record<string, string> = {
   assigned: '#0B1F44',
@@ -28,23 +28,22 @@ const STATUS_COLORS: Record<string, string> = {
 
 onMounted(async () => {
   await load()
-  if (!token.value) {
-    message.value = loadError.value || 'Live map is unavailable right now. Add a Mapbox token to enable it.'
+  const mapProvider = provider.value
+  if (!mapProvider) {
+    message.value = loadError.value || 'Live map is unavailable right now.'
     return
   }
   if (!mapElement.value) return
 
   try {
-    mapboxModule = await import('mapbox-gl')
-    mapboxModule.default.accessToken = token.value
-    map = new mapboxModule.default.Map({
+    maplibreModule = await import('maplibre-gl')
+    map = new maplibreModule.Map({
       container: mapElement.value,
-      style: 'mapbox://styles/mapbox/streets-v12',
+      style: mapProvider.styleUrl(),
       center: [8.6753, 9.082],
       zoom: 5.2,
-      attributionControl: true,
     })
-    map.addControl(new mapboxModule.default.NavigationControl({ showCompass: false }), 'top-right')
+    map.addControl(new maplibreModule.NavigationControl({ showCompass: false }), 'top-right')
     map.on('load', syncMarkers)
 
     resizeObserver = new ResizeObserver(() => map?.resize())
@@ -69,7 +68,7 @@ watch(
 )
 
 function syncMarkers() {
-  if (!map || !mapboxModule) return
+  if (!map || !maplibreModule) return
 
   const activeIds = new Set<string>()
   for (const driver of props.drivers) {
@@ -121,11 +120,11 @@ function createMarker(driver: LiveDriver, coordinates: [number, number]) {
 
   element.append(dot, label)
 
-  const marker = new mapboxModule!.default.Marker({ element, anchor: 'left' })
+  const marker = new maplibreModule!.Marker({ element, anchor: 'left' })
     .setLngLat(coordinates)
     .addTo(map!)
 
-  const popup = new mapboxModule!.default.Popup({ offset: 18, closeButton: false }).setDOMContent(
+  const popup = new maplibreModule!.Popup({ offset: 18, closeButton: false }).setDOMContent(
     buildPopup(driver),
   )
   element.addEventListener('click', () => {
@@ -152,8 +151,8 @@ function buildPopup(driver: LiveDriver) {
 }
 
 function fitToDrivers() {
-  if (!map || !mapboxModule) return
-  const bounds = new mapboxModule.default.LngLatBounds()
+  if (!map || !maplibreModule) return
+  const bounds = new maplibreModule.LngLatBounds()
   let hasCoordinates = false
   for (const driver of props.drivers) {
     if (!driver.location) continue

@@ -41,7 +41,7 @@ const lastSentAt = ref('')
 let watchId: number | null = null
 let lastPostAt = 0
 
-const token = computed(() => String(route.params.token ?? ''))
+const slug = computed(() => String(route.params.slug ?? ''))
 const assignmentStatus = computed(() => {
   const status = portal.value?.active_assignment?.status
   if (status === 'picked_up') return { label: 'Picked up', class: 'bg-accent-50 text-accent-700' }
@@ -57,7 +57,7 @@ const lastSentLabel = computed(() =>
 
 onMounted(async () => {
   try {
-    portal.value = await api<DriverPortal>(`/public/riders/${encodeURIComponent(token.value)}`)
+    portal.value = await api<DriverPortal>(`/public/riders/${encodeURIComponent(slug.value)}`)
   } catch (err) {
     error.value = apiErrorMessage(err, 'This driver portal link is invalid or inactive.')
   } finally {
@@ -71,7 +71,7 @@ onBeforeUnmount(() => {
     watchId = null
   }
   if (sharing.value) {
-    void api(`/public/riders/${encodeURIComponent(token.value)}/location`, {
+    void api(`/public/riders/${encodeURIComponent(slug.value)}/location`, {
       method: 'DELETE',
       keepalive: true,
     }).catch(() => {})
@@ -122,7 +122,7 @@ async function pushLocation(position: GeolocationPosition) {
 
   try {
     const result = await api<{ location: { updated_at: string } }>(
-      `/public/riders/${encodeURIComponent(token.value)}/location`,
+      `/public/riders/${encodeURIComponent(slug.value)}/location`,
       {
         method: 'POST',
         body: {
@@ -162,7 +162,7 @@ async function stopSharing(notifyServer = true) {
 
   if (notifyServer) {
     try {
-      await api(`/public/riders/${encodeURIComponent(token.value)}/location`, { method: 'DELETE' })
+      await api(`/public/riders/${encodeURIComponent(slug.value)}/location`, { method: 'DELETE' })
     } catch {
       // The dashboard stops showing the position within five minutes regardless.
     }

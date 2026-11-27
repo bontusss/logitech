@@ -47,6 +47,7 @@ const filter = ref<'pending' | 'accepted' | 'declined'>('pending')
 const acceptOpen = ref(false)
 const accepting = ref<RequestItem | null>(null)
 const selectedDriver = ref('')
+const acceptedPrice = ref('')
 const currency = computed(() => detail.value?.settings.currency || 'NGN')
 
 onMounted(async () => { await load(); await Promise.all([fetchRequests(), fetchDrivers()]) })
@@ -67,13 +68,23 @@ const filtered = computed(() => {
 const counts=computed(()=>({pending:requests.value.filter(r=>r.request_status==='pending').length,accepted:requests.value.filter(r=>r.request_status==='accepted').length,declined:requests.value.filter(r=>r.request_status==='declined').length}))
 
 function formatMoney(minor:number){return new Intl.NumberFormat('en-NG',{style:'currency',currency:currency.value,maximumFractionDigits:2}).format(minor/100)}
-function openAccept(request:RequestItem){accepting.value=request;selectedDriver.value='';acceptOpen.value=true}
+function openAccept(request:RequestItem){
+  accepting.value=request
+  selectedDriver.value=''
+  acceptedPrice.value=(request.delivery_price_minor/100).toFixed(2)
+  error.value=''
+  acceptOpen.value=true
+}
+function priceMinor(){return Math.round(Number(acceptedPrice.value)*100)}
 async function acceptRequest(){
   if(!accepting.value||!selectedDriver.value){error.value='Choose a driver to accept this request.';return}
+  const minor=priceMinor()
+  if(!Number.isFinite(minor)||minor<0){error.value='Enter the final delivery price before accepting.';return}
   saving.value=true
+  error.value=''
   try{
-    await api(`/companies/me/requests/${accepting.value.id}/accept`,{method:'POST',body:{driver_id:selectedDriver.value}})
-    acceptOpen.value=false;notify('Request accepted and delivery created.');await fetchRequests();filter.value='accepted'
+    await api(`/companies/me/requests/${accepting.value.id}/accept`,{method:'POST',body:{driver_id:selectedDriver.value,delivery_price_minor:minor}})
+    acceptOpen.value=false;notify('Request accepted at the confirmed price.');await fetchRequests();filter.value='accepted'
   }catch(err){error.value=apiErrorMessage(err,'Could not accept this request.')}
   finally{saving.value=false}
 }
@@ -264,7 +275,30 @@ function openDelivery(id:string){navigateTo(`/dashboard/deliveries?id=${encodeUR
             <X :size="18" />
           </button>
         </div>
-        <div class="p-5">
+        <div class="space-y-4 p-5">
+          <label class="block">
+            <span class="mb-1.5 flex items-center justify-between gap-2 text-[11px] font-medium">
+              Final delivery price
+              <span v-if="accepting?.price_is_estimate" class="rounded-full bg-accent-50 px-2 py-0.5 text-[9px] font-semibold text-accent-700">
+                Booking estimate: {{ formatMoney(accepting.delivery_price_minor) }}
+              </span>
+            </span>
+            <span class="relative block">
+              <span class="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-[11px] text-ink-900/45">{{ currency }}</span>
+              <input
+                v-model="acceptedPrice"
+                type="number"
+                min="0"
+                step="0.01"
+                inputmode="decimal"
+                required
+                class="w-full rounded-lg border border-slate-300 py-2.5 pr-3 pl-12 text-[12px]"
+              />
+            </span>
+            <span class="mt-1.5 block text-[10px] leading-relaxed text-ink-900/45">
+              This price is saved as the final confirmed amount when you accept. The customer sees it on their booking and receipt.
+            </span>
+          </label>
           <label class="block">
             <span class="mb-1.5 block text-[11px] font-medium">Driver</span>
             <select v-model="selectedDriver" required class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-[12px]">
